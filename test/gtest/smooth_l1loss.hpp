@@ -70,27 +70,12 @@ inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs(const size_t nt
     // No Reduction
     for(size_t i = 0; i < ntest_permode; ++i)
     {
-        tcs.push_back(SmoothL1LossTestCase{prng::gen_A_to_B(1, 100000),
-                                            MIOPEN_LOSS_NO_REDUCTION,
-                                            prng::gen_A_to_B(0.0f, 4.0f)});
+        auto size = prng::gen_A_to_B(1, 100000);
+        auto beta = prng::gen_A_to_B(0.0f, 4.0f);
+        tcs.push_back(SmoothL1LossTestCase{size, MIOPEN_LOSS_NO_REDUCTION, beta});
+        // tcs.push_back(SmoothL1LossTestCase{size, MIOPEN_LOSS_SUM_REDUCTION, beta});
+        // tcs.push_back(SmoothL1LossTestCase{size, MIOPEN_LOSS_MEAN_REDUCTION, beta});
     }
-
-    // // Sum Reduction
-    // for(size_t i = 0; i < ntest_permode; ++i)
-    // {
-    //     tcs.push_back(SmoothL1LossTestCase{prng::gen_A_to_B(1, 100000),
-    //                                         MIOPEN_LOSS_SUM_REDUCTION,
-    //                                         prng::gen_A_to_B(0.0f, 4.0f)});
-    // }
-
-    // // Mean Reduction
-    // for(size_t i = 0; i < ntest_permode; ++i)
-    // {
-    //     tcs.push_back(SmoothL1LossTestCase{prng::gen_A_to_B(1, 100000),
-    //                                         MIOPEN_LOSS_MEAN_REDUCTION,
-    //                                         prng::gen_A_to_B(0.0f, 4.0f)});
-    // }
-
     return tcs;
 }
 

@@ -46,10 +46,6 @@ struct SmoothL1LossTestFloat : SmoothL1LossTest<float>
 {
 };
 
-} // namespace smooth_l1loss
-
-using namespace smooth_l1loss;
-
 TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
 {
     if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--float"))
@@ -65,3 +61,4 @@ TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
 
 INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet, SmoothL1LossTestFloat, testing::ValuesIn(SmoothL1LossTestConfigs(1000)));
 
+} // namespace smooth_l1loss
