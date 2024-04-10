@@ -269,10 +269,12 @@ set( MIOpen_Source
     solver/pooling/backwardNd.cpp
     solver/reduce/forward_argmax.cpp
     solver/reduce/forward_sum.cpp
+    solver/loss/forward_smooth_l1loss.cpp
     solver/softmax/attn_softmax.cpp
     solver/softmax/softmax.cpp
     subbuffers.cpp
     sum_api.cpp
+    smooth_l1loss_api.cpp
     target_properties.cpp
     temp_file.cpp
     tensor.cpp
@@ -468,6 +470,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/MIOpenSoftmax.cl
         kernels/MIOpenSoftmaxAttn.cpp
         kernels/MIOpenSum.cpp
+        kernels/MIOpenSmoothL1Loss.cpp
         kernels/MIOpenUtilKernels3.cl
         kernels/MIOpenUtilKernels4.cl
         kernels/MIOpenUtilKernels5.cl
@@ -602,6 +605,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         ocl/fusionopconvocl.cpp
         ocl/fusionopbiasbnactivocl.cpp
         sum.cpp
+        smooth_l1loss.cpp
         ${PROJECT_BINARY_DIR}/db_path.cpp
         )
 

@@ -6582,6 +6582,69 @@ MIOPEN_EXPORT miopenStatus_t miopenBackendInitialize(miopenBackendDescriptor_t d
 // CLOSEOUT BackendAPI DOXYGEN GROUP
 #endif // MIOPEN_BETA_API
 
+#ifdef MIOPEN_BETA_API
+
+/*! @ingroup LossFunction
+ * @enum miopenLossReduction_t
+ * Reduction modes for loss
+ */
+using miopenLossReduction_t = enum {
+    MIOPEN_LOSS_NO_REDUCCTION = 0, /*!< no reduction will be applied */
+    MIOPEN_LOSS_MEAN_REDUCTION =
+        1, /*!< the sum output will be divided by the number of elements in the output */
+    MIOPEN_LOSS_SUM_REDUCTION = 2, /*!< the output will be summed */
+};
+
+/** @addtogroup LossFunction
+ *
+ *  @{
+ */
+
+/*! @brief Helper function to query the minimum workspace size required by the smooth L1Loss call
+ *
+ * @param handle                   MIOpen Handle (input)
+ * @param reduction                Specifies the reduction to apply to the output (intput)
+ * @param iDesc                    Tensor descriptor for input tensor (input)
+ * @param tDesc                    Tensor descriptor for target tensor (input)
+ * @param oDesc                    Tensor descriptor for output tensor (output)
+ * @param sizeInBytes              Pointer to data to return the minimum workspace size
+ * @return                         miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t
+miopenGetSmoothL1LossWorkspaceSize(miopenHandle_t handle,
+                                   miopenLossReduction_t reduction,
+                                   const miopenTensorDescriptor_t iDesc,
+                                   const miopenTensorDescriptor_t tDesc,
+                                   const miopenTensorDescriptor_t oDesc,
+                                   size_t* sizeInBytes);
+
+/*! @brief Execute a smooth L1Loss forward layer
+ *
+ * @param handle                   MIOpen handle (input)
+ * @param reduction                Specifies the reduction to apply to the output (intput)
+ * @param iDesc                    Tensor descriptor for input tensor (input)
+ * @param i                        Data tensor input (input)
+ * @param tDesc                    Tensor descriptor for target tensor (input)
+ * @param t                        Data tensor target (input)
+ * @param oDesc                    Tensor descriptor for output tensor (input)
+ * @param o                        Data tensor output (output)
+ * @param beta                     Beta (input)
+ * @return                         miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
+                                                       miopenLossReduction_t reduction,
+                                                       const miopenTensorDescriptor_t iDesc,
+                                                       const void* i,
+                                                       const miopenTensorDescriptor_t tDesc,
+                                                       const void* t,
+                                                       const miopenTensorDescriptor_t oDesc,
+                                                       void* o,
+                                                       const float* beta);
+
+/** @} */
+// CLOSEOUT BackendAPI DOXYGEN GROUP
+#endif // MIOPEN_BETA_API
+
 #ifdef __cplusplus
 }
 #endif
