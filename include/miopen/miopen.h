@@ -6639,7 +6639,7 @@ MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                                        const void* t,
                                                        const miopenTensorDescriptor_t oDesc,
                                                        void* o,
-                                                       const float* beta);
+                                                       const float beta);
 
 /** @} */
 // CLOSEOUT BackendAPI DOXYGEN GROUP

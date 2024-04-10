@@ -57,7 +57,7 @@ extern "C" miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                                     const void* t,
                                                     const miopenTensorDescriptor_t oDesc,
                                                     void* o,
-                                                    const float* beta)
+                                                    const float beta)
 {
     MIOPEN_LOG_FUNCTION(handle, reduction, iDesc, i, tDesc, t, oDesc, o, beta);
 
@@ -70,6 +70,6 @@ extern "C" miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                     DataCast(t),
                                     miopen::deref(oDesc),
                                     DataCast(o),
-                                    miopen::deref(beta));
+                                    beta);
     });
 }
