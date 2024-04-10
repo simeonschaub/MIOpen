@@ -23,31 +23,37 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef MIOPEN_SMOOTH_L1LOSS_HPP_
-#define MIOPEN_SMOOTH_L1LOSS_HPP_
+#ifndef GUARD_CPU_SMOOTH_L1LOSS_HPP
+#define GUARD_CPU_SMOOTH_L1LOSS_HPP
 
-#include <miopen/common.hpp>
+#include "tensor_holder.hpp"
+template <class T>
+void cpu_smooth_l1loss_forward(tensor<T> input,
+                               tensor<T> target,
+                               tensor<T>& ref_output,
+                               miopenLossReduction_t reduction,
+                               float beta)
+{
+    auto dims   = input.desc.GetLengths();
+    size_t size = dims[0];
 
-namespace miopen {
+    auto loss_no_reduce = [&]() {
+        par_ford(size)([&](size_t i) {
+            auto diff     = abs(input[i] - target[i]);
+            ref_output[i] = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
+        });
+    };
 
-struct Handle;
-struct TensorDescriptor;
+    auto loss_mean_reduce = [&]() { std::cout << "Unsupported Mean Reduction"; };
 
-size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
-                                    miopenLossReduction_t reduction,
-                                    const TensorDescriptor& iDesc,
-                                    const TensorDescriptor& tDesc,
-                                    const TensorDescriptor& oDesc);
+    auto loss_sum_reduce = [&]() { std::cout << "Unsupported Sum Reduction"; };
 
-miopenStatus_t SmoothL1LossForward(Handle& handle,
-                                   miopenLossReduction_t reduction,
-                                   const TensorDescriptor& iDesc,
-                                   ConstData_t i,
-                                   const TensorDescriptor& tDesc,
-                                   ConstData_t t,
-                                   const TensorDescriptor& oDesc,
-                                   Data_t o,
-                                   float beta);
+    switch(reduction)
+    {
+    case MIOPEN_LOSS_MEAN_REDUCTION: loss_mean_reduce(); break;
+    case MIOPEN_LOSS_SUM_REDUCTION: loss_sum_reduce(); break;
+    default: loss_no_reduce(); break;
+    }
+}
 
-} // namespace miopen
-#endif // MIOPEN_SMOOTH_L1LOSS_HPP_
+#endif // GUARD_CPU_SMOOTH_L1LOSS_HPP

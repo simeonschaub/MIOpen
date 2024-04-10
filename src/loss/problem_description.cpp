@@ -23,31 +23,30 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef MIOPEN_SMOOTH_L1LOSS_HPP_
-#define MIOPEN_SMOOTH_L1LOSS_HPP_
 
-#include <miopen/common.hpp>
+#include <miopen/loss/problem_description.hpp>
+#include <miopen/names.hpp>
+
+#include <sstream>
 
 namespace miopen {
 
-struct Handle;
-struct TensorDescriptor;
+namespace loss {
 
-size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
-                                    miopenLossReduction_t reduction,
-                                    const TensorDescriptor& iDesc,
-                                    const TensorDescriptor& tDesc,
-                                    const TensorDescriptor& oDesc);
+NetworkConfig ProblemDescription::MakeNetworkConfig() const
+{
+    auto dtype = iDesc.GetType();
+    auto size = iDesc.GetElementSize();
 
-miopenStatus_t SmoothL1LossForward(Handle& handle,
-                                   miopenLossReduction_t reduction,
-                                   const TensorDescriptor& iDesc,
-                                   ConstData_t i,
-                                   const TensorDescriptor& tDesc,
-                                   ConstData_t t,
-                                   const TensorDescriptor& oDesc,
-                                   Data_t o,
-                                   float beta);
+    std::ostringstream ss;
+
+    ss << "dtype" << dtype;
+    ss << "size" << size;
+    ss << "beta" << beta;
+
+    return NetworkConfig{ss.str()};
+}
+
+} // namespace loss
 
 } // namespace miopen
-#endif // MIOPEN_SMOOTH_L1LOSS_HPP_

@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,35 +23,45 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#pragma once
 
-#include <miopen/loss/problem_description.hpp>
-#include <miopen/solver.hpp>
-#include <utility>
+#include "smooth_l1loss.hpp"
+#include <miopen/env.hpp>
 
-namespace miopen {
-
-namespace solver {
+MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
+MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
 
 namespace smooth_l1loss {
 
-using SmoothL1LossSolver = NonTunableSolverBase<ExecutionContext, miopen::smooth_l1loss::ProblemDescription>;
-
-struct SmoothL1LossUnreducedForward final : SmoothL1LossSolver
+std::string GetFloatArg()
 {
-    const std::string& SolverDbId() const override { return GetSolverDbId<SmoothL1LossUnreducedForward>(); }
+    const auto& tmp = miopen::GetStringEnv(ENV(MIOPEN_TEST_FLOAT_ARG));
+    if(tmp.empty())
+    {
+        return "";
+    }
+    return tmp;
+}
 
-    bool IsApplicable(const ExecutionContext& context,
-                      const miopen::smooth_l1loss::ProblemDescription& problem) const override;
-    ConvSolution GetSolution(const ExecutionContext& context,
-                             const miopen::smooth_l1loss::ProblemDescription& problem) const override;
-    std::size_t GetWorkspaceSize(const ExecutionContext& context,
-                                 const miopen::smooth_l1loss::ProblemDescription& problem) const override;
-    bool MayNeedWorkspace() const override { return false; }
+struct SmoothL1LossTestFloat : SmoothL1LossTest<float>
+{
 };
 
 } // namespace smooth_l1loss
 
-} // namespace solver
+using namespace smooth_l1loss;
 
-} // namespace miopen
+TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
+{
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--float"))
+    {
+        RunTest();
+        Verify();
+    }
+    else
+    {
+        GTEST_SKIP();
+    }
+};
+
+INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet, SmoothL1LossTestFloat, testing::ValuesIn(SmoothL1LossTestConfigs(1000)));
+

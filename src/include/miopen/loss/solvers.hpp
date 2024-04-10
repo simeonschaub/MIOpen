@@ -33,24 +33,24 @@ namespace miopen {
 
 namespace solver {
 
-namespace smooth_l1loss {
+namespace loss {
 
-using SmoothL1LossSolver = NonTunableSolverBase<ExecutionContext, miopen::smooth_l1loss::ProblemDescription>;
+using SmoothL1LossSolver = NonTunableSolverBase<ExecutionContext, miopen::loss::ProblemDescription>;
 
 struct SmoothL1LossUnreducedForward final : SmoothL1LossSolver
 {
     const std::string& SolverDbId() const override { return GetSolverDbId<SmoothL1LossUnreducedForward>(); }
 
     bool IsApplicable(const ExecutionContext& context,
-                      const miopen::smooth_l1loss::ProblemDescription& problem) const override;
+                      const miopen::loss::ProblemDescription& problem) const override;
     ConvSolution GetSolution(const ExecutionContext& context,
-                             const miopen::smooth_l1loss::ProblemDescription& problem) const override;
+                             const miopen::loss::ProblemDescription& problem) const override;
     std::size_t GetWorkspaceSize(const ExecutionContext& context,
-                                 const miopen::smooth_l1loss::ProblemDescription& problem) const override;
-    bool MayNeedWorkspace() const override { return false; }
+                                 const miopen::loss::ProblemDescription& problem) const override;
+    bool MayNeedWorkspace() const override { return true; }
 };
 
-} // namespace smooth_l1loss
+} // namespace loss
 
 } // namespace solver
 

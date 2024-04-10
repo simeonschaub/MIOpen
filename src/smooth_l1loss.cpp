@@ -37,15 +37,15 @@ namespace miopen {
 
 size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
                                     miopenLossReduction_t reduction,
-                                    const TensorDescriptor iDesc,
-                                    const TensorDescriptor tDesc,
-                                    const TensorDescriptor oDesc)
+                                    const TensorDescriptor& iDesc,
+                                    const TensorDescriptor& tDesc,
+                                    const TensorDescriptor& oDesc)
 {
     auto ctx           = ExecutionContext{&handle};
-    const auto problem = smooth_l1loss::ProblemDescription{reduction, iDesc, tDesc, oDesc};
+    const auto problem = loss::ProblemDescription{reduction, iDesc, tDesc, oDesc};
 
     const auto algo    = AlgorithmName{"SmoothL1LossForward"};
-    const auto solvers = solver::SolverContainer<solver::smooth_l1loss::SmoothL1LossUnreducedForward>{};
+    const auto solvers = solver::SolverContainer<solver::loss::SmoothL1LossUnreducedForward>{};
 
     auto pair_size_vector = solvers.GetWorkspaceSizes(ctx, problem);
 
@@ -62,10 +62,10 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
                                    Data_t o,
                                    float beta)
 {
-    const auto problem = smooth_l1loss::ProblemDescription{reduction, iDesc, tDesc, oDesc, beta};
+    const auto problem = loss::ProblemDescription{reduction, iDesc, tDesc, oDesc, beta};
 
     const auto invoke_params = [&]() {
-        auto tmp      = smooth_l1loss::InvokeParams{};
+        auto tmp      = loss::InvokeParams{};
         tmp.type      = InvokeType::Run;
         tmp.iDesc     = &iDesc;
         tmp.tDesc     = &tDesc;
@@ -79,7 +79,7 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
     }();
 
     const auto algo    = AlgorithmName{"SmoothL1LossForward"};
-    const auto solvers = solver::SolverContainer<solver::smooth_l1loss::SmoothL1LossUnreducedForward>{};
+    const auto solvers = solver::SolverContainer<solver::loss::SmoothL1LossUnreducedForward>{};
 
     solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 

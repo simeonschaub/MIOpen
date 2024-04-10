@@ -37,16 +37,16 @@ namespace miopen {
 
 namespace solver {
 
-namespace smooth_l1loss {
+namespace loss {
 
 bool IsImprovementOverROCm(const ExecutionContext&  /*context*/,
-                           const miopen::smooth_l1loss::ProblemDescription&  /*problem*/)
+                           const miopen::loss::ProblemDescription&  /*problem*/)
 {
     return true;
 }
 
 bool SmoothL1LossUnreducedForward::IsApplicable(
-    const ExecutionContext& context, const miopen::smooth_l1loss::ProblemDescription& problem) const
+    const ExecutionContext& context, const miopen::loss::ProblemDescription& problem) const
 {
     if(!problem.IsSameType())
         return false;
@@ -61,12 +61,12 @@ bool SmoothL1LossUnreducedForward::IsApplicable(
 
 ConvSolution
 SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
-                                          const miopen::smooth_l1loss::ProblemDescription& problem) const
+                                          const miopen::loss::ProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
     auto dtype = problem.GetIDesc().GetType();
-    auto size = problem.GetIDesc().GetSize();
+    auto size = problem.GetIDesc().GetElementSize();
 
     {
         size_t xlocalsize = LOCAL_SIZE;
@@ -78,7 +78,7 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
 
         auto kernel = KernelInfo{};
 
-        kernel.kernel_file = "MIOpenL1Loss.cpp";
+        kernel.kernel_file = "MIOpenSmoothL1Loss.cpp";
         kernel.kernel_name = "SmoothL1LossUnreducedForwardContiguous";
 
         const auto build_params = KernelBuildParameters{
@@ -104,9 +104,9 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
     result.invoker_factory = [](const std::vector<Kernel>& kernels) {
             return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
                 decltype(auto) kernel = handle_.Run(kernels.front());
-                decltype(auto) params = raw_params.CastTo<miopen::smooth_l1loss::InvokeParams>();
+                decltype(auto) params = raw_params.CastTo<miopen::loss::InvokeParams>();
 
-                auto size = params.iDesc->GetSize();
+                auto size = params.iDesc->GetElementSize();
 
                 kernel(params.i,
                        params.t,
@@ -120,12 +120,12 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
 }
 
 std::size_t SmoothL1LossUnreducedForward::GetWorkspaceSize(
-    const ExecutionContext&  /*context*/, const miopen::smooth_l1loss::ProblemDescription&  /*problem*/) const
+    const ExecutionContext&  /*context*/, const miopen::loss::ProblemDescription&  /*problem*/) const
 {
     return 0;
 }
 
-} // namespace smooth_l1loss
+} // namespace loss
 
 } // namespace solver
 

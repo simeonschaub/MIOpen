@@ -35,7 +35,7 @@ namespace miopen {
 
 struct NetworkConfig;
 
-namespace smooth_l1loss {
+namespace loss {
 
 struct ProblemDescription : ProblemDescriptionBase
 {
@@ -75,10 +75,10 @@ struct ProblemDescription : ProblemDescriptionBase
 
     bool IsRightLength() const
     {
-        if(iDesc.GetSize() != tDesc.GetSize() || iDesc.GetSize() != oDesc.GetSize())
+        if(iDesc.GetElementSize() != tDesc.GetElementSize() || iDesc.GetElementSize() != oDesc.GetElementSize())
         {
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "L1Loss: Tensor sizes do not match.");
+            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
 #else
             return false;
 #endif
@@ -88,7 +88,7 @@ struct ProblemDescription : ProblemDescriptionBase
 
     bool IsCorrectReduction() const
     {
-        if(reduction != MIOPEN_LOSS_NO_REDUCCTION)
+        if(reduction != MIOPEN_LOSS_NO_REDUCTION)
         {
             return false;
         }
@@ -107,6 +107,6 @@ private:
     NetworkConfig MakeForwardNetworkConfig() const;
 };
 
-} // namespace smooth_l1loss
+} // namespace loss
 
 } // namespace miopen

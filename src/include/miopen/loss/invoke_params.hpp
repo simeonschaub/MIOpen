@@ -30,7 +30,8 @@
 #include <miopen/tensor.hpp>
 
 namespace miopen {
-namespace smooth_l1loss {
+
+namespace loss {
 
 struct InvokeParams : public miopen::InvokeParams
 {
@@ -46,12 +47,12 @@ struct InvokeParams : public miopen::InvokeParams
     float beta                 = 0;
     Data_t workspace           = nullptr;
     std::size_t workspace_size = 0;
-    miopenLossReduction_t reduction = MIOPEN_LOSS_NO_REDUCCTION;
+    miopenLossReduction_t reduction = MIOPEN_LOSS_NO_REDUCTION;
 
     std::size_t GetWorkspaceSize() const { return workspace_size; }
     Data_t GetWorkspace() const { return workspace; }
 };
 
-} // namespace smooth_l1loss
+} // namespace loss
 
 } // namespace miopen
