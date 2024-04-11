@@ -35,7 +35,7 @@ void cpu_smooth_l1loss_forward(tensor<T> input,
                                float beta)
 {
     auto dims   = input.desc.GetLengths();
-    size_t size = dims[0];
+    size_t size = std::accumulate(dims.begin(), dims.end(), 1L, std::multiplies<int64_t>());
 
     auto loss_no_reduce = [&]() {
         par_ford(size)([&](size_t i) {

@@ -36,13 +36,18 @@
 
 struct SmoothL1LossTestCase
 {
-    size_t size;
+    size_t N;
+    size_t C;
+    size_t D;
+    size_t H;
+    size_t W;
     miopenLossReduction_t reduction;
     float beta;    
 
     friend std::ostream& operator<<(std::ostream& os, const SmoothL1LossTestCase& tc)
     {
-        return os << " Size:" << tc.size << " Reduction:" << tc.reduction << " Beta:" << tc.beta;
+        return os << " N:" << tc.N << " C:" << tc.C << " D:" << tc.D << " H:" << tc.H
+                  << " W:" << tc.W << " Reduction:" << tc.reduction << " Beta:" << tc.beta;
     }
 
     std::vector<size_t> GetInput()
@@ -51,9 +56,25 @@ struct SmoothL1LossTestCase
         {
             std::cout << "Error Beta Value\n" << std::endl;
         }
-        if((size != 0))
+        if((N != 0) && (C != 0) && (D != 0) && (H != 0) && (W != 0))
         {
-            return std::vector<size_t>({size});
+            return std::vector<size_t>({N, C, D, H, W});
+        }
+        else if((N != 0) && (C != 0) && (H != 0) && (W != 0))
+        {
+            return std::vector<size_t>({N, C, H, W});
+        }
+        else if((N != 0) && (C != 0) && (W != 0))
+        {
+            return std::vector<size_t>({N, C, W});
+        }
+        else if((N != 0) && (W != 0))
+        {
+            return std::vector<size_t>({N, W});
+        }
+        else if((N != 0))
+        {
+            return std::vector<size_t>({N});
         }
         else
         {
@@ -66,15 +87,17 @@ struct SmoothL1LossTestCase
 inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs(const size_t ntest_permode)
 {
     std::vector<SmoothL1LossTestCase> tcs;
-
-    // No Reduction
     for(size_t i = 0; i < ntest_permode; ++i)
     {
-        auto size = prng::gen_A_to_B(1, 100000);
+        auto N    = prng::gen_A_to_B(1, 50);
+        auto C    = prng::gen_A_to_B(0, 100);
+        auto D    = prng::gen_A_to_B(0, 100);
+        auto H    = prng::gen_A_to_B(0, 100);
+        auto W    = prng::gen_A_to_B(0, 100);
         auto beta = prng::gen_A_to_B(0.0f, 4.0f);
-        tcs.push_back(SmoothL1LossTestCase{size, MIOPEN_LOSS_NO_REDUCTION, beta});
-        // tcs.push_back(SmoothL1LossTestCase{size, MIOPEN_LOSS_SUM_REDUCTION, beta});
-        // tcs.push_back(SmoothL1LossTestCase{size, MIOPEN_LOSS_MEAN_REDUCTION, beta});
+        tcs.push_back({N, C, D, H, W, MIOPEN_LOSS_NO_REDUCTION, beta});
+        // tcs.push_back({N, C, D, H, W, MIOPEN_LOSS_MEAN_REDUCTION, beta});
+        // tcs.push_back({N, C, D, H, W, MIOPEN_LOSS_SUM_REDUCTION, beta});
     }
     return tcs;
 }
@@ -89,7 +112,6 @@ protected:
         smooth_l1loss_config     = GetParam();
         auto gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
 
-        size      = smooth_l1loss_config.size;
         reduction = smooth_l1loss_config.reduction;
         beta      = smooth_l1loss_config.beta;
 
@@ -164,7 +186,6 @@ protected:
 
     size_t ws_sizeInBytes;
 
-    size_t size;
     miopenLossReduction_t reduction;
     float beta;
 };
