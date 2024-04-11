@@ -39,6 +39,7 @@ extern "C" __global__ void SmoothL1LossUnreducedForwardContiguous(const FLOAT* I
     const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
     if(gid >= N)
         return;
-    FLOAT diff = fabs(I[gid] - T[gid]);
-    O[gid] = diff < beta ? 0.5 * diff * diff / beta : diff - 0.5 * beta;
+
+    FLOAT_ACCUM diff = fabs(CVT_FLOAT2ACCUM(I[gid]) - CVT_FLOAT2ACCUM(T[gid]));
+    O[gid] = CVT_ACCUM2FLOAT(diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta);
 }
