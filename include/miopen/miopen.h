@@ -6643,7 +6643,7 @@ MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                                        const float beta);
 
 /** @} */
-// CLOSEOUT BackendAPI DOXYGEN GROUP
+// CLOSEOUT LossFunction DOXYGEN GROUP
 #endif // MIOPEN_BETA_API
 
 #ifdef __cplusplus
