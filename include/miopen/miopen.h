@@ -6588,12 +6588,13 @@ MIOPEN_EXPORT miopenStatus_t miopenBackendInitialize(miopenBackendDescriptor_t d
  * @enum miopenLossReduction_t
  * Reduction modes for loss
  */
-using miopenLossReduction_t = enum {
-    MIOPEN_LOSS_NO_REDUCTION = 0, /*!< no reduction will be applied */
-    MIOPEN_LOSS_MEAN_REDUCTION =
-        1, /*!< the sum output will be divided by the number of elements in the output */
-    MIOPEN_LOSS_SUM_REDUCTION = 2, /*!< the output will be summed */
-};
+typedef enum
+{
+    MIOPEN_LOSS_NO_REDUCTION,   /*!< no reduction will be applied */
+    MIOPEN_LOSS_MEAN_REDUCTION, /*!< the sum output will be divided by the number of elements in the
+                                   output */
+    MIOPEN_LOSS_SUM_REDUCTION,  /*!< the output will be summed */
+} miopenLossReduction_t;
 
 /** @addtogroup LossFunction
  *
