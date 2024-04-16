@@ -36,13 +36,12 @@ namespace loss {
 NetworkConfig ProblemDescription::MakeNetworkConfig() const
 {
     auto dtype = iDesc.GetType();
-    auto size = iDesc.GetElementSize();
+    auto size  = iDesc.GetElementSize();
 
     std::ostringstream ss;
 
     ss << "dtype" << dtype;
     ss << "size" << size;
-    ss << "beta" << beta;
 
     return NetworkConfig{ss.str()};
 }
