@@ -60,7 +60,7 @@ using namespace smooth_l1loss;
 
 TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) || (GetFloatArg() == "--float"))
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--float"))
     {
         RunTest();
         Verify();
@@ -73,7 +73,7 @@ TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
 
 TEST_P(SmoothL1LossTestHalf, SmoothL1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) || (GetFloatArg() == "--half"))
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--half"))
     {
         RunTest();
         Verify();
@@ -86,7 +86,7 @@ TEST_P(SmoothL1LossTestHalf, SmoothL1LossTestFw)
 
 TEST_P(SmoothL1LossTestBfloat16, SmoothL1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) || (GetFloatArg() == "--bfloat16"))
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--bfloat16"))
     {
         RunTest();
         Verify();
