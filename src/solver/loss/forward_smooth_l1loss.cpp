@@ -126,7 +126,7 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
 }
 
 std::size_t SmoothL1LossUnreducedForward::GetWorkspaceSize(
-    const ExecutionContext&  /*context*/, const miopen::loss::ProblemDescription&  /*problem*/) const
+    const ExecutionContext& /*context*/, const miopen::loss::ProblemDescription& /*problem*/) const
 {
     return 0;
 }

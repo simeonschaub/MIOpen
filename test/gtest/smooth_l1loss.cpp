@@ -25,6 +25,7 @@
  *******************************************************************************/
 
 #include "smooth_l1loss.hpp"
+#include "miopen/bfloat16.hpp"
 #include <miopen/env.hpp>
 
 MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
@@ -46,12 +47,46 @@ struct SmoothL1LossTestFloat : SmoothL1LossTest<float>
 {
 };
 
+struct SmoothL1LossTestHalf : SmoothL1LossTest<half>
+{
+};
+
+struct SmoothL1LossTestBfloat16 : SmoothL1LossTest<bfloat16>
+{
+};
+
 } // namespace smooth_l1loss
 using namespace smooth_l1loss;
 
 TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--float"))
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) || (GetFloatArg() == "--float"))
+    {
+        RunTest();
+        Verify();
+    }
+    else
+    {
+        GTEST_SKIP();
+    }
+};
+
+TEST_P(SmoothL1LossTestHalf, SmoothL1LossTestFw)
+{
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) || (GetFloatArg() == "--half"))
+    {
+        RunTest();
+        Verify();
+    }
+    else
+    {
+        GTEST_SKIP();
+    }
+};
+
+TEST_P(SmoothL1LossTestBfloat16, SmoothL1LossTestFw)
+{
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) || (GetFloatArg() == "--bfloat16"))
     {
         RunTest();
         Verify();
@@ -64,4 +99,10 @@ TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
 
 INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
                          SmoothL1LossTestFloat,
+                         testing::ValuesIn(SmoothL1LossTestConfigs(10)));
+INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
+                         SmoothL1LossTestHalf,
+                         testing::ValuesIn(SmoothL1LossTestConfigs(10)));
+INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
+                         SmoothL1LossTestBfloat16,
                          testing::ValuesIn(SmoothL1LossTestConfigs(10)));
