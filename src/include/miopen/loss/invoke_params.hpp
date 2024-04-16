@@ -41,12 +41,12 @@ struct InvokeParams : public miopen::InvokeParams
     const TensorDescriptor* tDesc = nullptr;
     const TensorDescriptor* oDesc = nullptr;
 
-    ConstData_t i              = nullptr;
-    ConstData_t t              = nullptr;
-    Data_t o                   = nullptr;
-    float beta                 = 0;
-    Data_t workspace           = nullptr;
-    std::size_t workspace_size = 0;
+    ConstData_t i                   = nullptr;
+    ConstData_t t                   = nullptr;
+    Data_t o                        = nullptr;
+    float beta                      = 0;
+    Data_t workspace                = nullptr;
+    std::size_t workspace_size      = 0;
     miopenLossReduction_t reduction = MIOPEN_LOSS_NO_REDUCTION;
 
     std::size_t GetWorkspaceSize() const { return workspace_size; }

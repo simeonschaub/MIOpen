@@ -75,7 +75,8 @@ struct ProblemDescription : ProblemDescriptionBase
 
     bool IsRightLength() const
     {
-        if(iDesc.GetElementSize() != tDesc.GetElementSize() || iDesc.GetElementSize() != oDesc.GetElementSize())
+        if(iDesc.GetElementSize() != tDesc.GetElementSize() ||
+           iDesc.GetElementSize() != oDesc.GetElementSize())
         {
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
             MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");

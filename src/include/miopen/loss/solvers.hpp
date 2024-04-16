@@ -39,7 +39,10 @@ using SmoothL1LossSolver = NonTunableSolverBase<ExecutionContext, miopen::loss::
 
 struct SmoothL1LossUnreducedForward final : SmoothL1LossSolver
 {
-    const std::string& SolverDbId() const override { return GetSolverDbId<SmoothL1LossUnreducedForward>(); }
+    const std::string& SolverDbId() const override
+    {
+        return GetSolverDbId<SmoothL1LossUnreducedForward>();
+    }
 
     bool IsApplicable(const ExecutionContext& context,
                       const miopen::loss::ProblemDescription& problem) const override;
