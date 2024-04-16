@@ -31,7 +31,7 @@
 #include <miopen/smooth_l1loss.hpp>
 #include <miopen/target_properties.hpp>
 
-#define LOCAL_SIZE 64
+#define LOCAL_SIZE 1024
 
 namespace miopen {
 
