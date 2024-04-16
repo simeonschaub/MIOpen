@@ -62,7 +62,7 @@ struct ProblemDescription : ProblemDescriptionBase
 
     bool IsSameType() const
     {
-        if(iDesc.GetType() != tDesc.GetType() || iDesc.GetType() != oDesc.GetType())
+        if(iDesc.GetType() != tDesc.GetType())
         {
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
             MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");

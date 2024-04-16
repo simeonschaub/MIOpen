@@ -39,22 +39,14 @@ namespace solver {
 
 namespace loss {
 
-bool IsImprovementOverROCm(const ExecutionContext& /*context*/,
-                           const miopen::loss::ProblemDescription& /*problem*/)
-{
-    return true;
-}
-
 bool SmoothL1LossUnreducedForward::IsApplicable(
-    const ExecutionContext& context, const miopen::loss::ProblemDescription& problem) const
+    const ExecutionContext& /*context*/, const miopen::loss::ProblemDescription& problem) const
 {
     if(!problem.IsSameType())
         return false;
     if(!problem.IsRightLength())
         return false;
     if(!problem.IsCorrectReduction())
-        return false;
-    if(!IsImprovementOverROCm(context, problem))
         return false;
     return true;
 }
