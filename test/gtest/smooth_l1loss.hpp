@@ -42,7 +42,7 @@ struct SmoothL1LossTestCase
     size_t H;
     size_t W;
     miopenLossReduction_t reduction;
-    float beta;    
+    float beta;
 
     friend std::ostream& operator<<(std::ostream& os, const SmoothL1LossTestCase& tc)
     {
@@ -87,6 +87,11 @@ struct SmoothL1LossTestCase
 inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs(const size_t ntest_permode)
 {
     std::vector<SmoothL1LossTestCase> tcs;
+
+    // fixed testcase
+    tcs.push_back({256, 4, 8723, 0, 0, MIOPEN_LOSS_NO_REDUCTION, 1});
+
+    // random testcases
     for(size_t i = 0; i < ntest_permode; ++i)
     {
         auto N    = prng::gen_A_to_B(1, 50);
@@ -108,8 +113,8 @@ struct SmoothL1LossTest : public ::testing::TestWithParam<SmoothL1LossTestCase>
 protected:
     void SetUp() override
     {
-        auto&& handle  = get_handle();
-        smooth_l1loss_config     = GetParam();
+        auto&& handle        = get_handle();
+        smooth_l1loss_config = GetParam();
         auto gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
 
         reduction = smooth_l1loss_config.reduction;
@@ -117,7 +122,7 @@ protected:
 
         auto dims = smooth_l1loss_config.GetInput();
 
-        input = tensor<T>{dims}.generate(gen_value);
+        input  = tensor<T>{dims}.generate(gen_value);
         target = tensor<T>{dims}.generate(gen_value);
 
         output = tensor<T>{dims};
@@ -127,7 +132,8 @@ protected:
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
         std::vector<size_t> workspace_dims;
-        ws_sizeInBytes = miopen::GetSmoothL1LossWorkspaceSize(handle, reduction, input.desc, target.desc, output.desc);
+        ws_sizeInBytes = miopen::GetSmoothL1LossWorkspaceSize(
+            handle, reduction, input.desc, target.desc, output.desc);
         if(ws_sizeInBytes > 0)
         {
             workspace = tensor<T>{dims};
@@ -136,7 +142,7 @@ protected:
         }
 
         input_dev  = handle.Write(input.data);
-        target_dev  = handle.Write(target.data);
+        target_dev = handle.Write(target.data);
         output_dev = handle.Write(output.data);
     }
     void RunTest()
