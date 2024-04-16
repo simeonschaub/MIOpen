@@ -65,12 +65,14 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
-    auto dtype = problem.GetIDesc().GetType();
+    auto dtype        = problem.GetIDesc().GetType();
+    auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
+    auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size = problem.GetIDesc().GetElementSize();
 
     {
-        size_t xlocalsize = LOCAL_SIZE;
-        size_t xgridsize  = AlignUp(size, xlocalsize);
+        size_t xlocalsize;
+        size_t xgridsize;
         size_t ylocalsize = 1;
         size_t ygridsize  = 1;
         size_t zlocalsize = 1;
@@ -80,12 +82,16 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
 
         kernel.kernel_file = "MIOpenSmoothL1Loss.cpp";
         kernel.kernel_name = "SmoothL1LossUnreducedForwardContiguous";
+        xlocalsize         = LOCAL_SIZE;
+        xgridsize          = AlignUp(size, xlocalsize);
 
         const auto build_params = KernelBuildParameters{
             {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
             {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
             {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
             {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
         };
 
         kernel.comp_options = build_params.GenerateFor(kbp::HIP{});

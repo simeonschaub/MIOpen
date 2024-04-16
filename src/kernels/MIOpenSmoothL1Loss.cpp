@@ -30,16 +30,32 @@
 
 #include "float_types.h"
 
-extern "C" __global__ void SmoothL1LossUnreducedForwardContiguous(const FLOAT* I,
-                                                                  const FLOAT* T,
-                                                                  FLOAT* O,
-                                                                  const float beta,
-                                                                  const ulong N)
+#ifndef INPUT_TYPE
+#define INPUT_TYPE float
+#endif
+
+#ifndef OUTPUT_TYPE
+#define OUTPUT_TYPE float
+#endif
+
+template <typename TI, typename TO>
+__device__ void smoothl1lossunreducedforwardcontiguous(
+    const TI* I, const TI* T, TO* O, const float beta, const ulong n)
 {
     const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
-    if(gid >= N)
+    if(gid >= n)
         return;
 
     FLOAT_ACCUM diff = fabs(CVT_FLOAT2ACCUM(I[gid]) - CVT_FLOAT2ACCUM(T[gid]));
     O[gid] = CVT_ACCUM2FLOAT(diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta);
+}
+
+extern "C" __global__ void SmoothL1LossUnreducedForwardContiguous(const INPUT_TYPE* __restrict__ I,
+                                                                  const INPUT_TYPE* __restrict__ T,
+                                                                  OUTPUT_TYPE* __restrict__ O,
+                                                                  const float beta,
+                                                                  const ulong n)
+{
+    // instantiate the kernel
+    smoothl1lossunreducedforwardcontiguous<INPUT_TYPE, OUTPUT_TYPE>(I, T, O, beta, n);
 }
