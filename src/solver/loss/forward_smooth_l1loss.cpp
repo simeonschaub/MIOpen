@@ -39,8 +39,8 @@ namespace solver {
 
 namespace loss {
 
-bool IsImprovementOverROCm(const ExecutionContext&  /*context*/,
-                           const miopen::loss::ProblemDescription&  /*problem*/)
+bool IsImprovementOverROCm(const ExecutionContext& /*context*/,
+                           const miopen::loss::ProblemDescription& /*problem*/)
 {
     return true;
 }
@@ -60,7 +60,7 @@ bool SmoothL1LossUnreducedForward::IsApplicable(
 }
 
 ConvSolution
-SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
+SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext& /*context*/,
                                           const miopen::loss::ProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
@@ -68,7 +68,7 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
     auto dtype        = problem.GetIDesc().GetType();
     auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
-    auto size = problem.GetIDesc().GetElementSize();
+    auto size         = problem.GetIDesc().GetElementSize();
 
     {
         size_t xlocalsize;
@@ -108,19 +108,15 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext&  /*context*/,
     }
 
     result.invoker_factory = [](const std::vector<Kernel>& kernels) {
-            return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
-                decltype(auto) kernel = handle_.Run(kernels.front());
-                decltype(auto) params = raw_params.CastTo<miopen::loss::InvokeParams>();
+        return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
+            decltype(auto) kernel = handle_.Run(kernels.front());
+            decltype(auto) params = raw_params.CastTo<miopen::loss::InvokeParams>();
 
-                auto size = params.iDesc->GetElementSize();
+            auto size = params.iDesc->GetElementSize();
 
-                kernel(params.i,
-                       params.t,
-                       params.o,
-                       params.beta,
-                       size);
-            };
+            kernel(params.i, params.t, params.o, params.beta, size);
         };
+    };
 
     return result;
 }
