@@ -139,7 +139,6 @@ set( MIOpen_Source
     load_file.cpp
     lock_file.cpp
     logger.cpp
-    loss/problem_description.cpp
     lrn_api.cpp
     mha/mha_descriptor.cpp
     mha/problem_description.cpp
@@ -159,6 +158,7 @@ set( MIOpen_Source
     rnn_api.cpp
     rnn/rnn_util.cpp
     rnn/Solutions/rnn_transformer.cpp
+    smoothl1loss/problem_description.cpp
     smooth_l1loss_api.cpp
     softmax.cpp
     softmax_api.cpp
@@ -265,7 +265,6 @@ set( MIOpen_Source
     solver/layernorm/forward_layernorm.cpp
     solver/layernorm/forward_layernorm2d_ck.cpp
     solver/layernorm/forward_layernorm4d_ck.cpp
-    solver/loss/forward_smooth_l1loss.cpp
     solver/mha/mha_solver.cpp
     solver/pooling/forward2d.cpp
     solver/pooling/forwardNaive.cpp
@@ -274,6 +273,7 @@ set( MIOpen_Source
     solver/pooling/backwardNd.cpp
     solver/reduce/forward_argmax.cpp
     solver/reduce/forward_sum.cpp
+    solver/smoothl1loss/forward_smooth_l1loss.cpp
     solver/softmax/attn_softmax.cpp
     solver/softmax/softmax.cpp
     subbuffers.cpp

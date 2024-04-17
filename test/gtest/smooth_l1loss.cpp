@@ -31,7 +31,7 @@
 MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
 
-namespace smooth_l1loss {
+namespace smoothl1loss {
 
 std::string GetFloatArg()
 {
@@ -55,8 +55,8 @@ struct SmoothL1LossTestBfloat16 : SmoothL1LossTest<bfloat16>
 {
 };
 
-} // namespace smooth_l1loss
-using namespace smooth_l1loss;
+} // namespace smoothl1loss
+using namespace smoothl1loss;
 
 TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
 {

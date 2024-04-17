@@ -25,7 +25,7 @@
  *******************************************************************************/
 #pragma once
 
-#include <miopen/loss/problem_description.hpp>
+#include <miopen/smoothl1loss/problem_description.hpp>
 #include <miopen/solver.hpp>
 
 #include <utility>
@@ -34,9 +34,10 @@ namespace miopen {
 
 namespace solver {
 
-namespace loss {
+namespace smoothl1loss {
 
-using SmoothL1LossSolver = NonTunableSolverBase<ExecutionContext, miopen::loss::ProblemDescription>;
+using SmoothL1LossSolver =
+    NonTunableSolverBase<ExecutionContext, miopen::smoothl1loss::ProblemDescription>;
 
 struct SmoothL1LossUnreducedForward final : SmoothL1LossSolver
 {
@@ -46,15 +47,17 @@ struct SmoothL1LossUnreducedForward final : SmoothL1LossSolver
     }
 
     bool IsApplicable(const ExecutionContext& context,
-                      const miopen::loss::ProblemDescription& problem) const override;
-    ConvSolution GetSolution(const ExecutionContext& context,
-                             const miopen::loss::ProblemDescription& problem) const override;
-    std::size_t GetWorkspaceSize(const ExecutionContext& context,
-                                 const miopen::loss::ProblemDescription& problem) const override;
+                      const miopen::smoothl1loss::ProblemDescription& problem) const override;
+    ConvSolution
+    GetSolution(const ExecutionContext& context,
+                const miopen::smoothl1loss::ProblemDescription& problem) const override;
+    std::size_t
+    GetWorkspaceSize(const ExecutionContext& context,
+                     const miopen::smoothl1loss::ProblemDescription& problem) const override;
     bool MayNeedWorkspace() const override { return true; }
 };
 
-} // namespace loss
+} // namespace smoothl1loss
 
 } // namespace solver
 

@@ -30,7 +30,7 @@
 
 namespace miopen {
 
-namespace loss {
+namespace smoothl1loss {
 
 struct InvokeParams : public miopen::InvokeParams
 {
@@ -52,6 +52,6 @@ struct InvokeParams : public miopen::InvokeParams
     Data_t GetWorkspace() const { return workspace; }
 };
 
-} // namespace loss
+} // namespace smoothl1loss
 
 } // namespace miopen

@@ -26,8 +26,8 @@
 
 #include <miopen/datatype.hpp>
 #include <miopen/kernel_build_params.hpp>
-#include <miopen/loss/invoke_params.hpp>
-#include <miopen/loss/solvers.hpp>
+#include <miopen/smoothl1loss/invoke_params.hpp>
+#include <miopen/smoothl1loss/solvers.hpp>
 #include <miopen/smooth_l1loss.hpp>
 #include <miopen/target_properties.hpp>
 
@@ -37,10 +37,11 @@ namespace miopen {
 
 namespace solver {
 
-namespace loss {
+namespace smoothl1loss {
 
 bool SmoothL1LossUnreducedForward::IsApplicable(
-    const ExecutionContext& /*context*/, const miopen::loss::ProblemDescription& problem) const
+    const ExecutionContext& /*context*/,
+    const miopen::smoothl1loss::ProblemDescription& problem) const
 {
     if(!problem.IsSameType())
         return false;
@@ -51,9 +52,9 @@ bool SmoothL1LossUnreducedForward::IsApplicable(
     return true;
 }
 
-ConvSolution
-SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext& /*context*/,
-                                          const miopen::loss::ProblemDescription& problem) const
+ConvSolution SmoothL1LossUnreducedForward::GetSolution(
+    const ExecutionContext& /*context*/,
+    const miopen::smoothl1loss::ProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
@@ -102,7 +103,7 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext& /*context*/,
     result.invoker_factory = [](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
             decltype(auto) kernel = handle_.Run(kernels.front());
-            decltype(auto) params = raw_params.CastTo<miopen::loss::InvokeParams>();
+            decltype(auto) params = raw_params.CastTo<miopen::smoothl1loss::InvokeParams>();
 
             auto size = params.iDesc->GetElementSize();
 
@@ -114,12 +115,13 @@ SmoothL1LossUnreducedForward::GetSolution(const ExecutionContext& /*context*/,
 }
 
 std::size_t SmoothL1LossUnreducedForward::GetWorkspaceSize(
-    const ExecutionContext& /*context*/, const miopen::loss::ProblemDescription& /*problem*/) const
+    const ExecutionContext& /*context*/,
+    const miopen::smoothl1loss::ProblemDescription& /*problem*/) const
 {
     return 0;
 }
 
-} // namespace loss
+} // namespace smoothl1loss
 
 } // namespace solver
 

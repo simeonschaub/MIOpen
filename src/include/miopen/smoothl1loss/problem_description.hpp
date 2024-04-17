@@ -36,7 +36,7 @@ namespace miopen {
 
 struct NetworkConfig;
 
-namespace loss {
+namespace smoothl1loss {
 
 struct ProblemDescription : ProblemDescriptionBase
 {
@@ -109,6 +109,6 @@ private:
     NetworkConfig MakeForwardNetworkConfig() const;
 };
 
-} // namespace loss
+} // namespace smoothl1loss
 
 } // namespace miopen

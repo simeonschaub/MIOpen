@@ -28,8 +28,8 @@
 #include <miopen/find_solution.hpp>
 #include <miopen/float_equal.hpp>
 #include <miopen/kernel_cache.hpp>
-#include <miopen/loss/invoke_params.hpp>
-#include <miopen/loss/solvers.hpp>
+#include <miopen/smoothl1loss/invoke_params.hpp>
+#include <miopen/smoothl1loss/solvers.hpp>
 #include <miopen/smooth_l1loss.hpp>
 #include <miopen/tensor.hpp>
 
@@ -42,10 +42,11 @@ size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
                                     const TensorDescriptor& oDesc)
 {
     auto ctx           = ExecutionContext{&handle};
-    const auto problem = loss::ProblemDescription{reduction, iDesc, tDesc, oDesc};
+    const auto problem = smoothl1loss::ProblemDescription{reduction, iDesc, tDesc, oDesc};
 
     const auto algo    = AlgorithmName{"SmoothL1LossForward"};
-    const auto solvers = solver::SolverContainer<solver::loss::SmoothL1LossUnreducedForward>{};
+    const auto solvers =
+        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForward>{};
 
     auto pair_size_vector = solvers.GetWorkspaceSizes(ctx, problem);
 
@@ -62,10 +63,10 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
                                    Data_t o,
                                    float beta)
 {
-    const auto problem = loss::ProblemDescription{reduction, iDesc, tDesc, oDesc, beta};
+    const auto problem = smoothl1loss::ProblemDescription{reduction, iDesc, tDesc, oDesc, beta};
 
     const auto invoke_params = [&]() {
-        auto tmp      = loss::InvokeParams{};
+        auto tmp      = smoothl1loss::InvokeParams{};
         tmp.type      = InvokeType::Run;
         tmp.iDesc     = &iDesc;
         tmp.tDesc     = &tDesc;
@@ -79,7 +80,8 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
     }();
 
     const auto algo    = AlgorithmName{"SmoothL1LossForward"};
-    const auto solvers = solver::SolverContainer<solver::loss::SmoothL1LossUnreducedForward>{};
+    const auto solvers =
+        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForward>{};
 
     solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 

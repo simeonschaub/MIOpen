@@ -24,20 +24,20 @@
  *
  *******************************************************************************/
 
-#include <miopen/loss/problem_description.hpp>
+#include <miopen/smoothl1loss/problem_description.hpp>
 #include <miopen/names.hpp>
 
 #include <sstream>
 
 namespace miopen {
 
-namespace loss {
+namespace smoothl1loss {
 
 NetworkConfig ProblemDescription::MakeNetworkConfig() const
 {
     auto input_dtype  = iDesc.GetType();
     auto output_dtype = oDesc.GetType();
-    auto size  = iDesc.GetElementSize();
+    auto size         = iDesc.GetElementSize();
 
     std::ostringstream ss;
 
@@ -49,6 +49,6 @@ NetworkConfig ProblemDescription::MakeNetworkConfig() const
     return NetworkConfig{ss.str()};
 }
 
-} // namespace loss
+} // namespace smoothl1loss
 
 } // namespace miopen
