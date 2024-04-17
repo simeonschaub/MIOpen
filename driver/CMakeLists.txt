@@ -48,10 +48,10 @@ add_executable(MIOpenDriver
     dm_pool.cpp
     dm_reduce.cpp
     dm_rnn.cpp
+    dm_smooth_l1loss.cpp
     dm_softmax.cpp
     dm_sum.cpp
     dm_tensorop.cpp
-    dm_smooth_l1loss.cpp
     main.cpp
     registry_driver_maker.cpp
     rocrand_wrapper.cpp)

@@ -31,12 +31,15 @@
 #include "miopen/errors.hpp"
 #include "tensor_driver.hpp"
 #include "timer.hpp"
-#include <miopen/miopen.h>
-#include <miopen/tensor.hpp>
-#include <vector>
+
+#include <../test/ford.hpp>
 #include <../test/tensor_holder.hpp>
 #include <../test/verify.hpp>
-#include <../test/ford.hpp>
+
+#include <miopen/miopen.h>
+#include <miopen/tensor.hpp>
+
+#include <vector>
 
 #ifndef MLO_SMOOTH_L1LOSSMHOST_H_
 #define MLO_SMOOTH_L1LOSSMHOST_H_

@@ -28,6 +28,7 @@
 #include <miopen/activ.hpp>
 #include <miopen/problem_description_base.hpp>
 #include <miopen/tensor.hpp>
+
 #include <cassert>
 #include <string>
 

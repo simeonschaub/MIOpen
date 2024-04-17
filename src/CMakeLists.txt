@@ -139,6 +139,7 @@ set( MIOpen_Source
     load_file.cpp
     lock_file.cpp
     logger.cpp
+    loss/problem_description.cpp
     lrn_api.cpp
     mha/mha_descriptor.cpp
     mha/problem_description.cpp
@@ -154,11 +155,11 @@ set( MIOpen_Source
     reducetensor.cpp
     reducetensor_api.cpp
     reduce/problem_description.cpp
-    loss/problem_description.cpp
     rnn.cpp
     rnn_api.cpp
     rnn/rnn_util.cpp
     rnn/Solutions/rnn_transformer.cpp
+    smooth_l1loss_api.cpp
     softmax.cpp
     softmax_api.cpp
     softmax/problem_description.cpp
@@ -264,6 +265,7 @@ set( MIOpen_Source
     solver/layernorm/forward_layernorm.cpp
     solver/layernorm/forward_layernorm2d_ck.cpp
     solver/layernorm/forward_layernorm4d_ck.cpp
+    solver/loss/forward_smooth_l1loss.cpp
     solver/mha/mha_solver.cpp
     solver/pooling/forward2d.cpp
     solver/pooling/forwardNaive.cpp
@@ -272,12 +274,10 @@ set( MIOpen_Source
     solver/pooling/backwardNd.cpp
     solver/reduce/forward_argmax.cpp
     solver/reduce/forward_sum.cpp
-    solver/loss/forward_smooth_l1loss.cpp
     solver/softmax/attn_softmax.cpp
     solver/softmax/softmax.cpp
     subbuffers.cpp
     sum_api.cpp
-    smooth_l1loss_api.cpp
     target_properties.cpp
     temp_file.cpp
     tensor.cpp
@@ -470,10 +470,10 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/MIOpenConv1x1S.cl
         kernels/MIOpenConv1x1J1.cl
         kernels/MIOpenConv1x1J1_stride.cl
+        kernels/MIOpenSmoothL1Loss.cpp
         kernels/MIOpenSoftmax.cl
         kernels/MIOpenSoftmaxAttn.cpp
         kernels/MIOpenSum.cpp
-        kernels/MIOpenSmoothL1Loss.cpp
         kernels/MIOpenUtilKernels3.cl
         kernels/MIOpenUtilKernels4.cl
         kernels/MIOpenUtilKernels5.cl
@@ -607,8 +607,8 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         pooling.cpp
         ocl/fusionopconvocl.cpp
         ocl/fusionopbiasbnactivocl.cpp
-        sum.cpp
         smooth_l1loss.cpp
+        sum.cpp
         ${PROJECT_BINARY_DIR}/db_path.cpp
         )
 

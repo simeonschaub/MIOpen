@@ -23,6 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+
 #include "registry_driver_maker.hpp"
 #include "smooth_l1loss_driver.hpp"
 

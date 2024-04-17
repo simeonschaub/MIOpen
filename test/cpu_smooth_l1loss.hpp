@@ -27,6 +27,7 @@
 #define GUARD_CPU_SMOOTH_L1LOSS_HPP
 
 #include "tensor_holder.hpp"
+
 template <class T>
 void cpu_smooth_l1loss_forward(tensor<T> input,
                                tensor<T> target,
