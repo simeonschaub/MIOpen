@@ -44,7 +44,7 @@ size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
     auto ctx           = ExecutionContext{&handle};
     const auto problem = smoothl1loss::ProblemDescription{reduction, iDesc, tDesc, oDesc};
 
-    const auto algo    = AlgorithmName{"SmoothL1LossForward"};
+    const auto algo = AlgorithmName{"SmoothL1LossForward"};
     const auto solvers =
         solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForward>{};
 
@@ -79,7 +79,7 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
         return tmp;
     }();
 
-    const auto algo    = AlgorithmName{"SmoothL1LossForward"};
+    const auto algo = AlgorithmName{"SmoothL1LossForward"};
     const auto solvers =
         solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForward>{};
 
