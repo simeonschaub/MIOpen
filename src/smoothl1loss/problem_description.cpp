@@ -41,6 +41,7 @@ NetworkConfig ProblemDescription::MakeNetworkConfig() const
 
     std::ostringstream ss;
 
+    ss << "smoothl1loss";
     ss << "input_dtype" << input_dtype;
     ss << "output_dtype" << output_dtype;
     ss << "size" << size;
