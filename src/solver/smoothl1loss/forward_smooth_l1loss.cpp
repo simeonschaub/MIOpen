@@ -47,8 +47,6 @@ bool SmoothL1LossUnreducedForward::IsApplicable(
         return false;
     if(!problem.IsRightLength())
         return false;
-    if(!problem.IsCorrectReduction())
-        return false;
     return true;
 }
 
@@ -62,7 +60,9 @@ ConvSolution SmoothL1LossUnreducedForward::GetSolution(
     auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetIDesc().GetElementSize();
+    auto reduction    = problem.GetReduction();
 
+    if(reduction == MIOPEN_LOSS_NO_REDUCTION)
     {
         size_t xlocalsize;
         size_t xgridsize;
@@ -100,16 +100,25 @@ ConvSolution SmoothL1LossUnreducedForward::GetSolution(
         result.construction_params.push_back(kernel);
     }
 
-    result.invoker_factory = [](const std::vector<Kernel>& kernels) {
-        return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
-            decltype(auto) kernel = handle_.Run(kernels.front());
-            decltype(auto) params = raw_params.CastTo<miopen::smoothl1loss::InvokeParams>();
+    if(reduction == MIOPEN_LOSS_NO_REDUCTION)
+    {
+        result.invoker_factory = [](const std::vector<Kernel>& kernels) {
+            return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
+                decltype(auto) kernel = handle_.Run(kernels.front());
+                decltype(auto) params = raw_params.CastTo<miopen::smoothl1loss::InvokeParams>();
 
-            auto size = params.iDesc->GetElementSize();
+                auto size = params.iDesc->GetElementSize();
 
-            kernel(params.i, params.t, params.o, params.beta, size);
+                kernel(params.i, params.t, params.o, params.beta, size);
+            };
         };
-    };
+    }
+    else
+    {
+        result.invoker_factory = [](const std::vector<Kernel>& /*kernels*/) {
+            return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {};
+        };
+    }
 
     return result;
 }

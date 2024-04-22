@@ -60,6 +60,7 @@ struct ProblemDescription : ProblemDescriptionBase
     const TensorDescriptor& GetIDesc() const { return iDesc; }
     const TensorDescriptor& GetTDesc() const { return tDesc; }
     const TensorDescriptor& GetODesc() const { return oDesc; }
+    miopenLossReduction_t GetReduction() const { return reduction; }
 
     bool IsSameType() const
     {
@@ -84,15 +85,6 @@ struct ProblemDescription : ProblemDescriptionBase
 #else
             return false;
 #endif
-        }
-        return true;
-    }
-
-    bool IsCorrectReduction() const
-    {
-        if(reduction != MIOPEN_LOSS_NO_REDUCTION)
-        {
-            return false;
         }
         return true;
     }
