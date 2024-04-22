@@ -61,14 +61,10 @@ int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t tensorDesc,
         });
     };
 
-    auto loss_mean_reduce = [&]() { std::cout << "Unsupported Mean Reduction"; };
-
-    auto loss_sum_reduce = [&]() { std::cout << "Unsupported Sum Reduction"; };
-
     switch(reduction)
     {
-    case MIOPEN_LOSS_MEAN_REDUCTION: loss_mean_reduce(); break;
-    case MIOPEN_LOSS_SUM_REDUCTION: loss_sum_reduce(); break;
+    case MIOPEN_LOSS_MEAN_REDUCTION: std::cout << "Unsupported Mean Reduction" << std::endl; break;
+    case MIOPEN_LOSS_SUM_REDUCTION: std::cout << "Unsupported Sum Reduction" << std::endl; break;
     default: loss_no_reduce(); break;
     }
 
