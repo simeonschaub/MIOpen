@@ -30,6 +30,7 @@
 #include <miopen/smoothl1loss/solvers.hpp>
 #include <miopen/smooth_l1loss.hpp>
 #include <miopen/target_properties.hpp>
+#include <miopen/tensor_view_5d.hpp>
 
 #define LOCAL_SIZE 1024
 
@@ -39,18 +40,36 @@ namespace solver {
 
 namespace smoothl1loss {
 
-bool SmoothL1LossUnreducedForward::IsApplicable(
+bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
     const ExecutionContext& /*context*/,
     const miopen::smoothl1loss::ProblemDescription& problem) const
 {
     if(!problem.IsSameType())
         return false;
-    if(!problem.IsRightLength())
+    if(!problem.IsRightStride())
+        return false;
+    if(problem.GetReduction() != MIOPEN_LOSS_NO_REDUCTION)
         return false;
     return true;
 }
 
-ConvSolution SmoothL1LossUnreducedForward::GetSolution(
+std::size_t SmoothL1LossUnreducedForwardSolver::GetWorkspaceSize(
+    const ExecutionContext& /*context*/,
+    const miopen::smoothl1loss::ProblemDescription& /*problem*/) const
+{
+    return 0;
+}
+
+bool SmoothL1LossUnreducedForwardContiguous::IsApplicable(
+    const ExecutionContext& context, const miopen::smoothl1loss::ProblemDescription& problem) const
+{
+    SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem);
+    if(!problem.IsContiguous())
+        return false;
+    return true;
+}
+
+ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
     const ExecutionContext& /*context*/,
     const miopen::smoothl1loss::ProblemDescription& problem) const
 {
@@ -59,10 +78,8 @@ ConvSolution SmoothL1LossUnreducedForward::GetSolution(
     auto dtype        = problem.GetIDesc().GetType();
     auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
-    auto size         = problem.GetIDesc().GetElementSize();
-    auto reduction    = problem.GetReduction();
+    auto size         = problem.GetODesc().GetElementSize();
 
-    if(reduction == MIOPEN_LOSS_NO_REDUCTION)
     {
         size_t xlocalsize;
         size_t xgridsize;
@@ -100,34 +117,82 @@ ConvSolution SmoothL1LossUnreducedForward::GetSolution(
         result.construction_params.push_back(kernel);
     }
 
-    if(reduction == MIOPEN_LOSS_NO_REDUCTION)
-    {
-        result.invoker_factory = [](const std::vector<Kernel>& kernels) {
-            return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
-                decltype(auto) kernel = handle_.Run(kernels.front());
-                decltype(auto) params = raw_params.CastTo<miopen::smoothl1loss::InvokeParams>();
+    result.invoker_factory = [](const std::vector<Kernel>& kernels) {
+        return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
+            decltype(auto) kernel = handle_.Run(kernels.front());
+            decltype(auto) params = raw_params.CastTo<miopen::smoothl1loss::InvokeParams>();
 
-                auto size = params.iDesc->GetElementSize();
+            auto size = params.iDesc->GetElementSize();
 
-                kernel(params.i, params.t, params.o, params.beta, size);
-            };
+            kernel(params.i, params.t, params.o, params.beta, size);
         };
-    }
-    else
-    {
-        result.invoker_factory = [](const std::vector<Kernel>& /*kernels*/) {
-            return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {};
-        };
-    }
+    };
 
     return result;
 }
 
-std::size_t SmoothL1LossUnreducedForward::GetWorkspaceSize(
+ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::ProblemDescription& /*problem*/) const
+    const miopen::smoothl1loss::ProblemDescription& problem) const
 {
-    return 0;
+    auto result = ConvSolution{miopenStatusSuccess};
+
+    auto dtype        = problem.GetIDesc().GetType();
+    auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
+    auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
+    auto size         = problem.GetODesc().GetElementSize();
+
+    {
+        size_t xlocalsize;
+        size_t xgridsize;
+        size_t ylocalsize = 1;
+        size_t ygridsize  = 1;
+        size_t zlocalsize = 1;
+        size_t zgridsize  = 1;
+
+        auto kernel = KernelInfo{};
+
+        kernel.kernel_file = "MIOpenSmoothL1Loss.cpp";
+        kernel.kernel_name = "SmoothL1LossUnreducedForward5d";
+        xlocalsize         = LOCAL_SIZE;
+        xgridsize          = AlignUp(size, xlocalsize);
+
+        const auto build_params = KernelBuildParameters{
+            {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
+            {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
+            {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
+            {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
+        };
+
+        kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
+
+        kernel.l_wk.push_back(xlocalsize);
+        kernel.l_wk.push_back(ylocalsize);
+        kernel.l_wk.push_back(zlocalsize);
+
+        kernel.g_wk.push_back(xgridsize);
+        kernel.g_wk.push_back(ygridsize);
+        kernel.g_wk.push_back(zgridsize);
+
+        result.construction_params.push_back(kernel);
+    }
+
+    result.invoker_factory = [](const std::vector<Kernel>& kernels) {
+        return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
+            decltype(auto) kernel = handle_.Run(kernels.front());
+            decltype(auto) params = raw_params.CastTo<miopen::smoothl1loss::InvokeParams>();
+
+            auto I_tv = get_inner_expanded_tv(deref(params.iDesc));
+            auto T_tv = get_inner_expanded_tv(deref(params.tDesc));
+            auto O_tv = get_inner_expanded_tv(deref(params.oDesc));
+
+            kernel(params.i, params.t, params.o, params.beta, I_tv, T_tv, O_tv);
+        };
+    };
+
+    return result;
 }
 
 } // namespace smoothl1loss

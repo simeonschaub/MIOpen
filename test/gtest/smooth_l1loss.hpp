@@ -154,6 +154,8 @@ protected:
 
         status = miopen::SmoothL1LossForward(handle,
                                              reduction,
+                                             nullptr,
+                                             0,
                                              input.desc,
                                              input_dev.get(),
                                              target.desc,

@@ -6604,7 +6604,7 @@ typedef enum
 /*! @brief Helper function to query the minimum workspace size required by the smooth L1Loss call
  *
  * @param handle                   MIOpen Handle (input)
- * @param reduction                Specifies the reduction to apply to the output (intput)
+ * @param reduction                Specifies the reduction to apply to the output (input)
  * @param iDesc                    Tensor descriptor for input tensor (input)
  * @param tDesc                    Tensor descriptor for target tensor (input)
  * @param oDesc                    Tensor descriptor for output tensor (output)
@@ -6619,10 +6619,12 @@ miopenGetSmoothL1LossWorkspaceSize(miopenHandle_t handle,
                                    const miopenTensorDescriptor_t oDesc,
                                    size_t* sizeInBytes);
 
-/*! @brief Execute a smooth L1Loss forward layer
+/*! @brief Execute a Smooth L1Loss forward layer
  *
  * @param handle                   MIOpen handle (input)
- * @param reduction                Specifies the reduction to apply to the output (intput)
+ * @param reduction                Specifies the reduction to apply to the output (input)
+ * @param workspace                Address of the allocated workspace data (input)
+ * @param workspaceSizeInBytes     Size in bytes of the allocated workspace data (input)
  * @param iDesc                    Tensor descriptor for input tensor (input)
  * @param i                        Data tensor input (input)
  * @param tDesc                    Tensor descriptor for target tensor (input)
@@ -6634,6 +6636,8 @@ miopenGetSmoothL1LossWorkspaceSize(miopenHandle_t handle,
  */
 MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                                        miopenLossReduction_t reduction,
+                                                       void* workspace,
+                                                       size_t workspaceSizeInBytes,
                                                        const miopenTensorDescriptor_t iDesc,
                                                        const void* i,
                                                        const miopenTensorDescriptor_t tDesc,

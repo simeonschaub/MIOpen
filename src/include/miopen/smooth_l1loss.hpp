@@ -41,6 +41,8 @@ size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
 
 miopenStatus_t SmoothL1LossForward(Handle& handle,
                                    miopenLossReduction_t reduction,
+                                   Data_t workspace,
+                                   size_t workspaceSizeInBytes,
                                    const TensorDescriptor& iDesc,
                                    ConstData_t i,
                                    const TensorDescriptor& tDesc,

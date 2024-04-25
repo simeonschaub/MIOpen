@@ -75,18 +75,55 @@ struct ProblemDescription : ProblemDescriptionBase
         return true;
     }
 
-    bool IsRightLength() const
+    bool IsRightStride() const
     {
-        if(iDesc.GetElementSize() != tDesc.GetElementSize() ||
-           iDesc.GetElementSize() != oDesc.GetElementSize())
-        {
+        if(iDesc.GetSize() != tDesc.GetSize() || iDesc.GetSize() != oDesc.GetSize())
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
             MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
 #else
             return false;
 #endif
+        for(int32_t i = 0; i < iDesc.GetSize(); ++i)
+        {
+            if(iDesc.GetStrides()[i] != tDesc.GetStrides()[i])
+            {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+                MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
+#else
+                return false;
+#endif
+            }
+        }
+        if(reduction == MIOPEN_LOSS_NO_REDUCTION)
+        {
+            for(int32_t i = 0; i < iDesc.GetSize(); ++i)
+            {
+                if(iDesc.GetStrides()[i] != oDesc.GetStrides()[i])
+                {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+                    MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
+#else
+                    return false;
+#endif
+                }
+            }
         }
         return true;
+    }
+
+    bool IsContiguous() const
+    {
+        auto isContiguous = [](TensorDescriptor td) {
+            size_t s = 1;
+            for(int i = td.GetSize(); i >= 0; ++i)
+            {
+                if(s != td.GetStrides()[i])
+                    return false;
+                s *= td.GetLengths()[i];
+            }
+            return true;
+        };
+        return isContiguous(iDesc) && isContiguous(tDesc) && isContiguous(oDesc);
     }
 
     NetworkConfig MakeNetworkConfig() const override;

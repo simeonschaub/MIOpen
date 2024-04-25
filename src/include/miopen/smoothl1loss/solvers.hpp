@@ -39,11 +39,21 @@ namespace smoothl1loss {
 using SmoothL1LossSolver =
     NonTunableSolverBase<ExecutionContext, miopen::smoothl1loss::ProblemDescription>;
 
-struct SmoothL1LossUnreducedForward final : SmoothL1LossSolver
+struct SmoothL1LossUnreducedForwardSolver : SmoothL1LossSolver
+{
+    bool IsApplicable(const ExecutionContext& context,
+                      const miopen::smoothl1loss::ProblemDescription& problem) const override;
+    std::size_t
+    GetWorkspaceSize(const ExecutionContext& context,
+                     const miopen::smoothl1loss::ProblemDescription& problem) const override;
+    bool MayNeedWorkspace() const override { return true; }
+};
+
+struct SmoothL1LossUnreducedForwardContiguous final : SmoothL1LossUnreducedForwardSolver
 {
     const std::string& SolverDbId() const override
     {
-        return GetSolverDbId<SmoothL1LossUnreducedForward>();
+        return GetSolverDbId<SmoothL1LossUnreducedForwardContiguous>();
     }
 
     bool IsApplicable(const ExecutionContext& context,
@@ -51,10 +61,18 @@ struct SmoothL1LossUnreducedForward final : SmoothL1LossSolver
     ConvSolution
     GetSolution(const ExecutionContext& context,
                 const miopen::smoothl1loss::ProblemDescription& problem) const override;
-    std::size_t
-    GetWorkspaceSize(const ExecutionContext& context,
-                     const miopen::smoothl1loss::ProblemDescription& problem) const override;
-    bool MayNeedWorkspace() const override { return true; }
+};
+
+struct SmoothL1LossUnreducedForward5d final : SmoothL1LossUnreducedForwardSolver
+{
+    const std::string& SolverDbId() const override
+    {
+        return GetSolverDbId<SmoothL1LossUnreducedForward5d>();
+    }
+
+    ConvSolution
+    GetSolution(const ExecutionContext& context,
+                const miopen::smoothl1loss::ProblemDescription& problem) const override;
 };
 
 } // namespace smoothl1loss

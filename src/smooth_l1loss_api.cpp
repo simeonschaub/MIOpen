@@ -105,6 +105,8 @@ extern "C" miopenStatus_t miopenGetSmoothL1LossWorkspaceSize(miopenHandle_t hand
 
 extern "C" miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                                     miopenLossReduction_t reduction,
+                                                    void* workspace,
+                                                    size_t workspaceSizeInBytes,
                                                     const miopenTensorDescriptor_t iDesc,
                                                     const void* i,
                                                     const miopenTensorDescriptor_t tDesc,
@@ -113,12 +115,15 @@ extern "C" miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                                     void* o,
                                                     const float beta)
 {
-    MIOPEN_LOG_FUNCTION(handle, reduction, iDesc, i, tDesc, t, oDesc, o, beta);
+    MIOPEN_LOG_FUNCTION(
+        handle, reduction, workspace, workspaceSizeInBytes, iDesc, i, tDesc, t, oDesc, o, beta);
 
     LogCmdSmoothL1Loss(iDesc, reduction, beta, true);
     return miopen::try_([&] {
         miopen::SmoothL1LossForward(miopen::deref(handle),
                                     reduction,
+                                    DataCast(workspace),
+                                    workspaceSizeInBytes,
                                     miopen::deref(iDesc),
                                     DataCast(i),
                                     miopen::deref(tDesc),

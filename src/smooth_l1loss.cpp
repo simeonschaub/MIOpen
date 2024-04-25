@@ -46,7 +46,8 @@ size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
 
     const auto algo = AlgorithmName{"SmoothL1LossForward"};
     const auto solvers =
-        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForward>{};
+        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForwardContiguous,
+                                solver::smoothl1loss::SmoothL1LossUnreducedForward5d>{};
 
     auto pair_size_vector = solvers.GetWorkspaceSizes(ctx, problem);
 
@@ -55,6 +56,8 @@ size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
 
 miopenStatus_t SmoothL1LossForward(Handle& handle,
                                    miopenLossReduction_t reduction,
+                                   Data_t workspace,
+                                   size_t workspaceSizeInBytes,
                                    const TensorDescriptor& iDesc,
                                    ConstData_t i,
                                    const TensorDescriptor& tDesc,
@@ -66,22 +69,25 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
     const auto problem = smoothl1loss::ProblemDescription{reduction, iDesc, tDesc, oDesc, beta};
 
     const auto invoke_params = [&]() {
-        auto tmp      = smoothl1loss::InvokeParams{};
-        tmp.type      = InvokeType::Run;
-        tmp.iDesc     = &iDesc;
-        tmp.tDesc     = &tDesc;
-        tmp.oDesc     = &oDesc;
-        tmp.i         = i;
-        tmp.t         = t;
-        tmp.o         = o;
-        tmp.reduction = reduction;
-        tmp.beta      = beta;
+        auto tmp           = smoothl1loss::InvokeParams{};
+        tmp.type           = InvokeType::Run;
+        tmp.iDesc          = &iDesc;
+        tmp.tDesc          = &tDesc;
+        tmp.oDesc          = &oDesc;
+        tmp.i              = i;
+        tmp.t              = t;
+        tmp.o              = o;
+        tmp.workspace      = workspace;
+        tmp.workspace_size = workspaceSizeInBytes;
+        tmp.reduction      = reduction;
+        tmp.beta           = beta;
         return tmp;
     }();
 
     const auto algo = AlgorithmName{"SmoothL1LossForward"};
     const auto solvers =
-        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForward>{};
+        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForwardContiguous,
+                                solver::smoothl1loss::SmoothL1LossUnreducedForward5d>{};
 
     solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 

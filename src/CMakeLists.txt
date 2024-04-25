@@ -424,6 +424,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/neuron.inc
         kernels/rocm_version.inc
         kernels/stride_array.hpp
+        kernels/tensor_view_5d.hpp
         kernels/utilities.inc
         kernels/workaround_issue_1431.hpp
         kernels/xform_bidirect_winograd_code.inc
@@ -431,7 +432,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/xform_kd_cov2.inc
         kernels/xform_metadata.inc
         )
-
+        
     set(MIOPEN_KERNELS
         ${STATIC_COMPOSABLE_KERNEL_SOURCE}
         ${COMPOSABLE_KERNEL_SOURCE}
