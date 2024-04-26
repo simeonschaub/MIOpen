@@ -36,7 +36,7 @@ void cpu_smooth_l1loss_forward(tensor<T> input,
                                miopenLossReduction_t reduction,
                                float beta)
 {
-    // Resolve contiguous tensors as none contiguous tensors (for consistency)
+    // Treat contiguous tensors as non-contiguous tensors (for consistency)
     auto I_tv = get_inner_expanded_tv(input.desc);
     auto T_tv = get_inner_expanded_tv(target.desc);
     auto O_tv = get_inner_expanded_tv(ref_output.desc);

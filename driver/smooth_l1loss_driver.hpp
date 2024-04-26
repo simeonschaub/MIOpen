@@ -38,6 +38,7 @@
 
 #include <miopen/miopen.h>
 #include <miopen/tensor.hpp>
+#include <miopen/tensor_view_5d.hpp>
 
 #include <vector>
 
@@ -52,12 +53,24 @@ int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t tensorDesc,
                                       const miopenLossReduction_t reduction,
                                       const float beta)
 {
-    size_t size = miopen::deref(tensorDesc).GetElementSize();
+    // Treat contiguous tensors as non-contiguous tensors (for consistency)
+    auto I_tv = get_inner_expanded_tv(miopen::deref(tensorDesc));
+    auto T_tv = get_inner_expanded_tv(miopen::deref(tensorDesc));
+    auto O_tv = get_inner_expanded_tv(miopen::deref(tensorDesc));
+
+    auto size = miopen::deref(tensorDesc).GetElementSize();
 
     auto loss_no_reduce = [&]() {
         par_ford(size)([&](size_t i) {
-            auto diff     = static_cast<Tcheck>(abs(input[i] - target[i]));
-            outputhost[i] = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
+            uint64_t n[5];
+            GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, O_tv);
+
+            uint64_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+            uint64_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+            uint64_t Oidx = TV5D_IDX(O_tv, n[0], n[1], n[2], n[3], n[4]);
+
+            auto diff        = abs(input[Iidx] - target[Tidx]);
+            outputhost[Oidx] = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
         });
     };
 
@@ -89,6 +102,7 @@ public:
 
     int GetandSetData() override;
     std::vector<int> GetTensorLengthsFromCmdLine();
+    std::vector<int> GetTensorStridesFromCmdLine();
 
     int AllocateBuffersAndCopy() override;
 
@@ -140,10 +154,14 @@ int SmoothL1LossDriver<Tgpu, Tref>::ParseCmdLineArgs(int argc, char* argv[])
 template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::GetandSetData()
 {
-    std::vector<int> in_len = GetTensorLengthsFromCmdLine();
-    beta                    = inflags.GetValueInt("Beta");
+    std::vector<int> in_len     = GetTensorLengthsFromCmdLine();
+    std::vector<int> in_strides = GetTensorStridesFromCmdLine();
+    beta                        = inflags.GetValueInt("Beta");
 
-    SetTensorNd(tensorDesc, in_len, data_type);
+    if(in_strides.empty())
+        SetTensorNd(tensorDesc, in_len, data_type);
+    else
+        SetTensorNd(tensorDesc, in_len, in_strides, data_type);
 
     reduction = static_cast<miopenLossReduction_t>(inflags.GetValueInt("Reduction"));
 
@@ -159,6 +177,11 @@ int SmoothL1LossDriver<Tgpu, Tref>::AddCmdLineArgs()
     inflags.AddInputFlag("in_d", 'D', "0", "Input Depth (Default=0)", "int");
     inflags.AddInputFlag("in_h", 'H', "32", "Input Height (Default=32)", "int");
     inflags.AddInputFlag("in_w", 'W', "32", "Input Width (Default=32)", "int");
+    inflags.AddInputFlag("dim_permutation",
+                         'P',
+                         "",
+                         "Dimentions order of non contiguous tensor (Default=\"\")",
+                         "string");
 
     inflags.AddInputFlag("Reduction",
                          'R',
@@ -218,6 +241,36 @@ std::vector<int> SmoothL1LossDriver<Tgpu, Tref>::GetTensorLengthsFromCmdLine()
 }
 
 template <typename Tgpu, typename Tref>
+std::vector<int> SmoothL1LossDriver<Tgpu, Tref>::GetTensorStridesFromCmdLine()
+{
+    auto permutation = inflags.GetValueStr("dim_permutation");
+
+    if(permutation.empty())
+        return {};
+    auto dims = GetTensorLengthsFromCmdLine();
+    std::vector<int> strides(dims.size());
+    int cur_stride = 1;
+    for(auto c : permutation)
+    {
+        int idx = c - '0';
+        if(idx < 0 || dims.size() <= idx)
+        {
+            cur_stride = 0;
+            break;
+        }
+        strides[idx] = cur_stride;
+        cur_stride *= dims[idx];
+        dims[idx] = 0;
+    }
+    if(cur_stride == 0)
+    {
+        std::cout << "Error Input Tensor Shape Permutations\n" << std::endl;
+        return std::vector<int>(dims.size(), 0);
+    }
+    return strides;
+}
+
+template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 {
     size_t size = GetTensorSize(tensorDesc);
@@ -269,6 +322,8 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunForwardGPU()
     {
         miopenSmoothL1LossForward(GetHandle(),
                                   reduction,
+                                  workspace_dev->GetMem(),
+                                  ws_sizeInBytes,
                                   tensorDesc,
                                   in_dev->GetMem(),
                                   tensorDesc,
