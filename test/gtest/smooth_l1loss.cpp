@@ -99,10 +99,10 @@ TEST_P(SmoothL1LossTestBfloat16, SmoothL1LossTestFw)
 
 INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
                          SmoothL1LossTestFloat,
-                         testing::ValuesIn(SmoothL1LossTestConfigs(10)));
+                         testing::ValuesIn(SmoothL1LossTestConfigs()));
 INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
                          SmoothL1LossTestHalf,
-                         testing::ValuesIn(SmoothL1LossTestConfigs(10)));
+                         testing::ValuesIn(SmoothL1LossTestConfigs()));
 INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
                          SmoothL1LossTestBfloat16,
-                         testing::ValuesIn(SmoothL1LossTestConfigs(10)));
+                         testing::ValuesIn(SmoothL1LossTestConfigs()));

@@ -43,14 +43,16 @@ struct SmoothL1LossTestCase
     size_t W;
     miopenLossReduction_t reduction;
     float beta;
+    std::string permutation;
 
     friend std::ostream& operator<<(std::ostream& os, const SmoothL1LossTestCase& tc)
     {
         return os << " N:" << tc.N << " C:" << tc.C << " D:" << tc.D << " H:" << tc.H
-                  << " W:" << tc.W << " Reduction:" << tc.reduction << " Beta:" << tc.beta;
+                  << " W:" << tc.W << " Reduction:" << tc.reduction << " Beta:" << tc.beta
+                  << " Permutation:\"" << tc.permutation << "\"";
     }
 
-    std::vector<size_t> GetInput()
+    std::vector<size_t> GetInputDims()
     {
         if(beta < 0)
         {
@@ -82,28 +84,62 @@ struct SmoothL1LossTestCase
             return std::vector<size_t>({0});
         }
     }
+
+    std::vector<size_t> GetInputStrides()
+    {
+        if(permutation.empty())
+            return {};
+        auto dims = GetInputDims();
+        std::vector<size_t> strides(dims.size());
+        size_t cur_stride = 1;
+        for(auto c : permutation)
+        {
+            int idx = c - '0';
+            if(idx < 0 || dims.size() <= idx)
+            {
+                cur_stride = 0;
+                break;
+            }
+            strides[idx] = cur_stride;
+            cur_stride *= dims[idx];
+            dims[idx] = 0;
+        }
+        if(cur_stride == 0)
+        {
+            std::cout << "Error Input Tensor Shape Permutations\n" << std::endl;
+            return std::vector<size_t>(dims.size(), 0);
+        }
+        return strides;
+    }
 };
 
-inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs(const size_t ntest_permode)
+inline std::vector<SmoothL1LossTestCase> SmoothL1LossUnreducedForwardContiguousTestConfigs()
 {
     std::vector<SmoothL1LossTestCase> tcs;
+    tcs.push_back({1, 1, 0, 2, 2, MIOPEN_LOSS_NO_REDUCTION, 1, ""});
+    tcs.push_back({2, 10, 0, 128, 128, MIOPEN_LOSS_NO_REDUCTION, 1, ""});
+    tcs.push_back({5, 13, 0, 17, 11, MIOPEN_LOSS_NO_REDUCTION, 1, ""});
+    tcs.push_back({256, 4, 0, 0, 8723, MIOPEN_LOSS_NO_REDUCTION, 1, ""});
+    return tcs;
+}
 
-    // fixed testcase
-    tcs.push_back({256, 4, 8723, 0, 0, MIOPEN_LOSS_NO_REDUCTION, 1});
+inline std::vector<SmoothL1LossTestCase> SmoothL1LossUnreducedForwardTestConfigs()
+{
+    std::vector<SmoothL1LossTestCase> tcs;
+    tcs.push_back({1, 1, 0, 2, 2, MIOPEN_LOSS_NO_REDUCTION, 1, "1320"});
+    tcs.push_back({2, 10, 0, 128, 128, MIOPEN_LOSS_NO_REDUCTION, 1, "0231"});
+    tcs.push_back({5, 13, 0, 17, 11, MIOPEN_LOSS_NO_REDUCTION, 1, "2013"});
+    tcs.push_back({256, 4, 0, 0, 8723, MIOPEN_LOSS_NO_REDUCTION, 1, "102"});
+    return tcs;
+}
 
-    // random testcases
-    for(size_t i = 0; i < ntest_permode; ++i)
-    {
-        auto N    = prng::gen_A_to_B(1, 50);
-        auto C    = prng::gen_A_to_B(0, 100);
-        auto D    = prng::gen_A_to_B(0, 100);
-        auto H    = prng::gen_A_to_B(0, 100);
-        auto W    = prng::gen_A_to_B(0, 100);
-        auto beta = prng::gen_A_to_B(0.0f, 4.0f);
-        tcs.push_back({N, C, D, H, W, MIOPEN_LOSS_NO_REDUCTION, beta});
-        // tcs.push_back({N, C, D, H, W, MIOPEN_LOSS_MEAN_REDUCTION, beta});
-        // tcs.push_back({N, C, D, H, W, MIOPEN_LOSS_SUM_REDUCTION, beta});
-    }
+inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs()
+{
+    std::vector<SmoothL1LossTestCase> tcs, temp;
+    temp = SmoothL1LossUnreducedForwardContiguousTestConfigs();
+    tcs.insert(tcs.end(), temp.begin(), temp.end());
+    temp = SmoothL1LossUnreducedForwardTestConfigs();
+    tcs.insert(tcs.end(), temp.begin(), temp.end());
     return tcs;
 }
 
@@ -120,15 +156,24 @@ protected:
         reduction = smooth_l1loss_config.reduction;
         beta      = smooth_l1loss_config.beta;
 
-        auto dims = smooth_l1loss_config.GetInput();
+        auto dims    = smooth_l1loss_config.GetInputDims();
+        auto strides = smooth_l1loss_config.GetInputStrides();
 
-        input  = tensor<T>{dims}.generate(gen_value);
-        target = tensor<T>{dims}.generate(gen_value);
-
-        output = tensor<T>{dims};
+        if(strides.empty())
+        {
+            input      = tensor<T>{dims}.generate(gen_value);
+            target     = tensor<T>{dims}.generate(gen_value);
+            output     = tensor<T>{dims};
+            ref_output = tensor<T>{dims};
+        }
+        else
+        {
+            input      = tensor<T>{dims, strides}.generate(gen_value);
+            target     = tensor<T>{dims, strides}.generate(gen_value);
+            output     = tensor<T>{dims, strides};
+            ref_output = tensor<T>{dims, strides};
+        }
         std::fill(output.begin(), output.end(), std::numeric_limits<T>::quiet_NaN());
-
-        ref_output = tensor<T>{dims};
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
         std::vector<size_t> workspace_dims;

@@ -27,6 +27,7 @@
 #define GUARD_CPU_SMOOTH_L1LOSS_HPP
 
 #include "tensor_holder.hpp"
+#include <miopen/tensor_view_5d.hpp>
 
 template <class T>
 void cpu_smooth_l1loss_forward(tensor<T> input,
@@ -35,12 +36,24 @@ void cpu_smooth_l1loss_forward(tensor<T> input,
                                miopenLossReduction_t reduction,
                                float beta)
 {
-    auto size = input.desc.GetElementSize();
+    // Resolve contiguous tensors as none contiguous tensors (for consistency)
+    auto I_tv = get_inner_expanded_tv(input.desc);
+    auto T_tv = get_inner_expanded_tv(target.desc);
+    auto O_tv = get_inner_expanded_tv(ref_output.desc);
+
+    auto size = ref_output.desc.GetElementSize();
 
     auto loss_no_reduce = [&]() {
         par_ford(size)([&](size_t i) {
-            auto diff     = abs(input[i] - target[i]);
-            ref_output[i] = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
+            uint64_t n[5];
+            GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, O_tv);
+
+            uint64_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+            uint64_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+            uint64_t Oidx = TV5D_IDX(O_tv, n[0], n[1], n[2], n[3], n[4]);
+
+            auto diff        = abs(input[Iidx] - target[Tidx]);
+            ref_output[Oidx] = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
         });
     };
 

@@ -29,11 +29,11 @@
 
 #include <miopen/tensor.hpp>
 
-typedef struct
+using tensor_view_5d_t = struct
 {
     uint64_t stride[5];
     uint64_t size[5];
-} tensor_view_5d_t;
+};
 
 #define TV_IDX(tv, d, n) (tv.stride[d] * (n))
 
