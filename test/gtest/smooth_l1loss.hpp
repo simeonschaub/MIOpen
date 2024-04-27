@@ -114,8 +114,8 @@ protected:
         smooth_l1loss_config = GetParam();
         auto gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
 
-        reduction = smooth_l1loss_config.reduction;
-        beta      = smooth_l1loss_config.beta;
+        reduction       = smooth_l1loss_config.reduction;
+        beta            = smooth_l1loss_config.beta;
         auto lengths    = smooth_l1loss_config.lengths;
         auto contiguous = smooth_l1loss_config.contiguous;
 
