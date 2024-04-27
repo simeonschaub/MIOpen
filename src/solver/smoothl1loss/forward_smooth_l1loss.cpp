@@ -46,6 +46,8 @@ bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
 {
     if(!problem.IsSameType())
         return false;
+    if(!problem.IsRightLength())
+        return false;
     if(!problem.IsRightStride())
         return false;
     if(problem.GetReduction() != MIOPEN_LOSS_NO_REDUCTION)
@@ -64,7 +66,7 @@ bool SmoothL1LossUnreducedForwardContiguous::IsApplicable(
     const ExecutionContext& context, const miopen::smoothl1loss::ProblemDescription& problem) const
 {
     SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem);
-    if(!problem.IsContiguous())
+    if(!problem.IsSameStride() && !problem.IsAllContiguous())
         return false;
     return true;
 }
@@ -129,6 +131,15 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
     };
 
     return result;
+}
+
+bool SmoothL1LossUnreducedForward5d::IsApplicable(
+    const ExecutionContext& context, const miopen::smoothl1loss::ProblemDescription& problem) const
+{
+    SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem);
+    if(problem.GetIDesc().GetSize() > 5)
+        return false;
+    return true;
 }
 
 ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(

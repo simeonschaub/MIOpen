@@ -46,7 +46,9 @@
 #define MLO_SMOOTH_L1LOSSMHOST_H_
 
 template <typename Tgpu, typename Tcheck>
-int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t tensorDesc,
+int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t iDesc,
+                                      const miopenTensorDescriptor_t tDesc,
+                                      const miopenTensorDescriptor_t oDesc,
                                       const Tgpu* input,
                                       const Tgpu* target,
                                       Tcheck* outputhost,
@@ -54,11 +56,11 @@ int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t tensorDesc,
                                       const float beta)
 {
     // Treat contiguous tensors as non-contiguous tensors (for consistency)
-    auto I_tv = get_inner_expanded_tv(miopen::deref(tensorDesc));
-    auto T_tv = get_inner_expanded_tv(miopen::deref(tensorDesc));
-    auto O_tv = get_inner_expanded_tv(miopen::deref(tensorDesc));
+    auto I_tv = get_inner_expanded_tv(miopen::deref(iDesc));
+    auto T_tv = get_inner_expanded_tv(miopen::deref(tDesc));
+    auto O_tv = get_inner_expanded_tv(miopen::deref(oDesc));
 
-    auto size = miopen::deref(tensorDesc).GetElementSize();
+    auto size = miopen::deref(oDesc).GetElementSize();
 
     auto loss_no_reduce = [&]() {
         par_ford(size)([&](size_t i) {
@@ -69,7 +71,7 @@ int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t tensorDesc,
             uint64_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
             uint64_t Oidx = TV5D_IDX(O_tv, n[0], n[1], n[2], n[3], n[4]);
 
-            auto diff        = abs(input[Iidx] - target[Tidx]);
+            auto diff        = fabs(input[Iidx] - target[Tidx]);
             outputhost[Oidx] = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
         });
     };
@@ -85,13 +87,30 @@ int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t tensorDesc,
 }
 #endif
 
+inline std::vector<int> GetStrides(std::vector<int> lengths, int contiguous)
+{
+    if(contiguous != 0 && contiguous != 1)
+        std::cerr << "Error Tensor Contiguous should be 0 or 1" << std::endl;
+    if(contiguous == 0)
+        std::swap(lengths.front(), lengths.back());
+    std::vector<int> strides(lengths.size());
+    strides.back() = 1;
+    for(int i = lengths.size() - 2; i >= 0; --i)
+        strides[i] = strides[i + 1] * lengths[i + 1];
+    if(contiguous == 0)
+        std::swap(strides.front(), strides.back());
+    return strides;
+}
+
 template <typename Tgpu, typename Tref>
 class SmoothL1LossDriver : public Driver
 {
 public:
     SmoothL1LossDriver() : Driver()
     {
-        miopenCreateTensorDescriptor(&tensorDesc);
+        miopenCreateTensorDescriptor(&inputDesc);
+        miopenCreateTensorDescriptor(&targetDesc);
+        miopenCreateTensorDescriptor(&outputDesc);
 
         data_type = miopen_type<Tgpu>{};
     }
@@ -102,7 +121,6 @@ public:
 
     int GetandSetData() override;
     std::vector<int> GetTensorLengthsFromCmdLine();
-    std::vector<int> GetTensorStridesFromCmdLine();
 
     int AllocateBuffersAndCopy() override;
 
@@ -114,14 +132,21 @@ public:
     Tref GetTolerance();
     int VerifyBackward() override;
     int VerifyForward() override;
-    ~SmoothL1LossDriver() override { miopenDestroyTensorDescriptor(tensorDesc); }
+    ~SmoothL1LossDriver() override
+    {
+        miopenDestroyTensorDescriptor(inputDesc);
+        miopenDestroyTensorDescriptor(targetDesc);
+        miopenDestroyTensorDescriptor(outputDesc);
+    }
 
 private:
     InputFlags inflags;
 
     int forw;
 
-    miopenTensorDescriptor_t tensorDesc;
+    miopenTensorDescriptor_t inputDesc;
+    miopenTensorDescriptor_t targetDesc;
+    miopenTensorDescriptor_t outputDesc;
 
     std::unique_ptr<GPUMem> in_dev;
     std::unique_ptr<GPUMem> tar_dev;
@@ -154,14 +179,14 @@ int SmoothL1LossDriver<Tgpu, Tref>::ParseCmdLineArgs(int argc, char* argv[])
 template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::GetandSetData()
 {
-    std::vector<int> in_len     = GetTensorLengthsFromCmdLine();
-    std::vector<int> in_strides = GetTensorStridesFromCmdLine();
-    beta                        = inflags.GetValueInt("Beta");
+    auto length      = GetTensorLengthsFromCmdLine();
+    auto in_strides  = GetStrides(length, inflags.GetValueInt("Contiguous"));
+    auto tar_strides = GetStrides(length, 1);
+    beta             = inflags.GetValueInt("Beta");
 
-    if(in_strides.empty())
-        SetTensorNd(tensorDesc, in_len, data_type);
-    else
-        SetTensorNd(tensorDesc, in_len, in_strides, data_type);
+    SetTensorNd(inputDesc, length, in_strides, data_type);
+    SetTensorNd(targetDesc, length, tar_strides, data_type);
+    SetTensorNd(outputDesc, length, in_strides, data_type);
 
     reduction = static_cast<miopenLossReduction_t>(inflags.GetValueInt("Reduction"));
 
@@ -172,17 +197,16 @@ template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::AddCmdLineArgs()
 {
     inflags.AddInputFlag("forw", 'F', "1", "Run only Forward SmoothL1Loss (Default=1)", "int");
-    inflags.AddInputFlag("batchsize", 'n', "100", "Mini-batch size (Default=100)", "int");
-    inflags.AddInputFlag("in_channels", 'c', "3", "Number of Input Channels (Default=3)", "int");
-    inflags.AddInputFlag("in_d", 'D', "0", "Input Depth (Default=0)", "int");
-    inflags.AddInputFlag("in_h", 'H', "32", "Input Height (Default=32)", "int");
-    inflags.AddInputFlag("in_w", 'W', "32", "Input Width (Default=32)", "int");
-    inflags.AddInputFlag("dim_permutation",
-                         'P',
-                         "",
-                         "Dimentions order of non contiguous tensor (Default=\"\")",
+    inflags.AddInputFlag("DimLengths",
+                         'D',
+                         "256,4,1,1,8723",
+                         "The dimensional lengths of the input tensor",
                          "string");
-
+    inflags.AddInputFlag("Contiguous",
+                         'C',
+                         "1",
+                         "Is input tensor contiguous? (Default=1 for contiguous tensor)",
+                         "int");
     inflags.AddInputFlag("Reduction",
                          'R',
                          "0",
@@ -207,94 +231,67 @@ int SmoothL1LossDriver<Tgpu, Tref>::AddCmdLineArgs()
 template <typename Tgpu, typename Tref>
 std::vector<int> SmoothL1LossDriver<Tgpu, Tref>::GetTensorLengthsFromCmdLine()
 {
-    int in_n = inflags.GetValueInt("batchsize");
-    int in_c = inflags.GetValueInt("in_channels");
-    int in_w = inflags.GetValueInt("in_w");
-    int in_h = inflags.GetValueInt("in_h");
-    int in_d = inflags.GetValueInt("in_d");
+    std::string lengthsStr = inflags.GetValueStr("DimLengths");
 
-    if((in_n != 0) && (in_c != 0) && (in_d != 0) && (in_h != 0) && (in_w != 0))
-    {
-        return std::vector<int>({in_n, in_c, in_d, in_h, in_w});
-    }
-    else if((in_n != 0) && (in_c != 0) && (in_h != 0) && (in_w != 0))
-    {
-        return std::vector<int>({in_n, in_c, in_h, in_w});
-    }
-    else if((in_n != 0) && (in_c != 0) && (in_w != 0))
-    {
-        return std::vector<int>({in_n, in_c, in_w});
-    }
-    else if((in_n != 0) && (in_w != 0))
-    {
-        return std::vector<int>({in_n, in_w});
-    }
-    else if(in_n != 0)
-    {
-        return std::vector<int>({in_n});
-    }
-    else
-    {
-        std::cerr << "Error Input Tensor Lengths\n" << std::endl;
-        return std::vector<int>({0});
-    }
-}
+    std::vector<int> lengths;
+    std::size_t pos = 0;
+    std::size_t new_pos;
 
-template <typename Tgpu, typename Tref>
-std::vector<int> SmoothL1LossDriver<Tgpu, Tref>::GetTensorStridesFromCmdLine()
-{
-    auto permutation = inflags.GetValueStr("dim_permutation");
+    new_pos = lengthsStr.find(',', pos);
+    while(new_pos != std::string::npos)
+    {
+        std::string sliceStr = lengthsStr.substr(pos, new_pos - pos);
 
-    if(permutation.empty())
-        return {};
-    auto dims = GetTensorLengthsFromCmdLine();
-    std::vector<int> strides(dims.size());
-    int cur_stride = 1;
-    for(auto c : permutation)
-    {
-        int idx = c - '0';
-        if(idx < 0 || dims.size() <= idx)
-        {
-            cur_stride = 0;
-            break;
-        }
-        strides[idx] = cur_stride;
-        cur_stride *= dims[idx];
-        dims[idx] = 0;
-    }
-    if(cur_stride == 0)
-    {
-        std::cout << "Error Input Tensor Shape Permutations\n" << std::endl;
-        return std::vector<int>(dims.size(), 0);
-    }
-    return strides;
+        int len = std::stoi(sliceStr);
+
+        lengths.push_back(len);
+
+        pos     = new_pos + 1;
+        new_pos = lengthsStr.find(',', pos);
+    };
+
+    std::string sliceStr = lengthsStr.substr(pos);
+    int len              = std::stoi(sliceStr);
+
+    lengths.push_back(len);
+
+    return (lengths);
 }
 
 template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 {
-    size_t size = GetTensorSize(tensorDesc);
+    size_t in_sz  = GetTensorSize(inputDesc);
+    size_t tar_sz = GetTensorSize(targetDesc);
+    size_t out_sz = GetTensorSize(outputDesc);
 
     miopenGetSmoothL1LossWorkspaceSize(
-        GetHandle(), reduction, tensorDesc, tensorDesc, tensorDesc, &ws_sizeInBytes);
+        GetHandle(), reduction, inputDesc, targetDesc, outputDesc, &ws_sizeInBytes);
     if(ws_sizeInBytes == static_cast<size_t>(-1))
         return miopenStatusAllocFailed;
 
     uint32_t ctx = 0;
 
-    in_dev        = std::unique_ptr<GPUMem>(new GPUMem(ctx, size, sizeof(Tgpu)));
-    tar_dev       = std::unique_ptr<GPUMem>(new GPUMem(ctx, size, sizeof(Tgpu)));
-    out_dev       = std::unique_ptr<GPUMem>(new GPUMem(ctx, size, sizeof(Tgpu)));
+    in_dev        = std::unique_ptr<GPUMem>(new GPUMem(ctx, in_sz, sizeof(Tgpu)));
+    tar_dev       = std::unique_ptr<GPUMem>(new GPUMem(ctx, tar_sz, sizeof(Tgpu)));
+    out_dev       = std::unique_ptr<GPUMem>(new GPUMem(ctx, out_sz, sizeof(Tgpu)));
     workspace_dev = std::unique_ptr<GPUMem>(new GPUMem(ctx, ws_sizeInBytes, sizeof(std::byte)));
 
-    in      = std::vector<Tgpu>(size, static_cast<Tgpu>(0));
-    tar     = std::vector<Tgpu>(size, static_cast<Tgpu>(0));
-    out     = std::vector<Tgpu>(size, static_cast<Tgpu>(0));
-    outhost = std::vector<Tref>(size, static_cast<Tref>(0));
+    in      = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
+    tar     = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
+    out     = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
+    outhost = std::vector<Tref>(out_sz, static_cast<Tref>(0));
 
-    for(int i = 0; i < size; i++)
+    for(int i = 0; i < in_sz; i++)
     {
         in[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(0.0), static_cast<Tgpu>(1.0));
+        // in[i] = 0;
+    }
+
+    for(int i = 0; i < tar_sz; i++)
+    {
+        tar[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(0.0), static_cast<Tgpu>(1.0));
+        // tar[i] = 0;
     }
 
     if(in_dev->ToGPU(GetStream(), in.data()) != 0)
@@ -324,11 +321,11 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunForwardGPU()
                                   reduction,
                                   workspace_dev->GetMem(),
                                   ws_sizeInBytes,
-                                  tensorDesc,
+                                  inputDesc,
                                   in_dev->GetMem(),
-                                  tensorDesc,
+                                  targetDesc,
                                   tar_dev->GetMem(),
-                                  tensorDesc,
+                                  outputDesc,
                                   out_dev->GetMem(),
                                   beta);
 
@@ -363,7 +360,7 @@ template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::RunForwardCPU()
 {
     mloSmoothL1LossForwardRunHost<Tgpu, Tref>(
-        tensorDesc, in.data(), tar.data(), outhost.data(), reduction, beta);
+        inputDesc, targetDesc, outputDesc, in.data(), tar.data(), outhost.data(), reduction, beta);
 
     return miopenStatusSuccess;
 }

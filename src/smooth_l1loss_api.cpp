@@ -78,7 +78,7 @@ static void LogCmdSmoothL1Loss(const miopenTensorDescriptor_t iDesc,
             ss << " -c " << miopen::deref(iDesc).GetLengths()[1];
         }
 
-        ss << " -F " << ((is_fwd) ? "1" : "2") << " -b" << beta << " -r " << reduction;
+        ss << " -F " << ((is_fwd) ? "1" : "2") << " -b " << beta << " -r " << reduction;
 
         MIOPEN_LOG_DRIVER_CMD(ss.str());
     }

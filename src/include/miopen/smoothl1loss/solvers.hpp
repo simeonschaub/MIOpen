@@ -70,6 +70,8 @@ struct SmoothL1LossUnreducedForward5d final : SmoothL1LossUnreducedForwardSolver
         return GetSolverDbId<SmoothL1LossUnreducedForward5d>();
     }
 
+    bool IsApplicable(const ExecutionContext& context,
+                      const miopen::smoothl1loss::ProblemDescription& problem) const override;
     ConvSolution
     GetSolution(const ExecutionContext& context,
                 const miopen::smoothl1loss::ProblemDescription& problem) const override;

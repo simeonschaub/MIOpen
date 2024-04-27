@@ -34,102 +34,50 @@
 #include <miopen/miopen.h>
 #include <miopen/smooth_l1loss.hpp>
 
+inline std::ostream& operator<<(std::ostream& os, const std::vector<size_t>& v)
+{
+    os << '{';
+    for(int i = 0; i < v.size(); ++i)
+    {
+        if(i != 0)
+            os << ',';
+        os << v[i];
+    }
+    os << '}';
+    return os;
+}
+
 struct SmoothL1LossTestCase
 {
-    size_t N;
-    size_t C;
-    size_t D;
-    size_t H;
-    size_t W;
+    std::vector<size_t> lengths;
     miopenLossReduction_t reduction;
     float beta;
-    std::string permutation;
+    bool contiguous;
 
     friend std::ostream& operator<<(std::ostream& os, const SmoothL1LossTestCase& tc)
     {
-        return os << " N:" << tc.N << " C:" << tc.C << " D:" << tc.D << " H:" << tc.H
-                  << " W:" << tc.W << " Reduction:" << tc.reduction << " Beta:" << tc.beta
-                  << " Permutation:\"" << tc.permutation << "\"";
-    }
-
-    std::vector<size_t> GetInputDims()
-    {
-        if(beta < 0)
-        {
-            std::cout << "Error Beta Value\n" << std::endl;
-        }
-        if((N != 0) && (C != 0) && (D != 0) && (H != 0) && (W != 0))
-        {
-            return std::vector<size_t>({N, C, D, H, W});
-        }
-        else if((N != 0) && (C != 0) && (H != 0) && (W != 0))
-        {
-            return std::vector<size_t>({N, C, H, W});
-        }
-        else if((N != 0) && (C != 0) && (W != 0))
-        {
-            return std::vector<size_t>({N, C, W});
-        }
-        else if((N != 0) && (W != 0))
-        {
-            return std::vector<size_t>({N, W});
-        }
-        else if((N != 0))
-        {
-            return std::vector<size_t>({N});
-        }
-        else
-        {
-            std::cout << "Error Input Tensor Lengths\n" << std::endl;
-            return std::vector<size_t>({0});
-        }
-    }
-
-    std::vector<size_t> GetInputStrides()
-    {
-        if(permutation.empty())
-            return {};
-        auto dims = GetInputDims();
-        std::vector<size_t> strides(dims.size());
-        size_t cur_stride = 1;
-        for(auto c : permutation)
-        {
-            int idx = c - '0';
-            if(idx < 0 || dims.size() <= idx)
-            {
-                cur_stride = 0;
-                break;
-            }
-            strides[idx] = cur_stride;
-            cur_stride *= dims[idx];
-            dims[idx] = 0;
-        }
-        if(cur_stride == 0)
-        {
-            std::cout << "Error Input Tensor Shape Permutations\n" << std::endl;
-            return std::vector<size_t>(dims.size(), 0);
-        }
-        return strides;
+        return os << " Lengths:" << tc.lengths << " Reduction:" << tc.reduction
+                  << " Beta:" << tc.beta << " Contiguous:" << (tc.contiguous ? "True" : "False");
     }
 };
 
 inline std::vector<SmoothL1LossTestCase> SmoothL1LossUnreducedForwardContiguousTestConfigs()
 {
     std::vector<SmoothL1LossTestCase> tcs;
-    tcs.push_back({1, 1, 0, 2, 2, MIOPEN_LOSS_NO_REDUCTION, 1, ""});
-    tcs.push_back({2, 10, 0, 128, 128, MIOPEN_LOSS_NO_REDUCTION, 1, ""});
-    tcs.push_back({5, 13, 0, 17, 11, MIOPEN_LOSS_NO_REDUCTION, 1, ""});
-    tcs.push_back({256, 4, 0, 0, 8723, MIOPEN_LOSS_NO_REDUCTION, 1, ""});
+    tcs.push_back({{1, 1, 2, 2}, MIOPEN_LOSS_NO_REDUCTION, 1, true});
+    tcs.push_back({{2, 10, 128, 128}, MIOPEN_LOSS_NO_REDUCTION, 1, true});
+    tcs.push_back({{5, 13, 17, 11}, MIOPEN_LOSS_NO_REDUCTION, 1, true});
+    tcs.push_back({{256, 4, 8723}, MIOPEN_LOSS_NO_REDUCTION, 1, true});
     return tcs;
 }
 
 inline std::vector<SmoothL1LossTestCase> SmoothL1LossUnreducedForwardTestConfigs()
 {
     std::vector<SmoothL1LossTestCase> tcs;
-    tcs.push_back({1, 1, 0, 2, 2, MIOPEN_LOSS_NO_REDUCTION, 1, "1320"});
-    tcs.push_back({2, 10, 0, 128, 128, MIOPEN_LOSS_NO_REDUCTION, 1, "0231"});
-    tcs.push_back({5, 13, 0, 17, 11, MIOPEN_LOSS_NO_REDUCTION, 1, "2013"});
-    tcs.push_back({256, 4, 0, 0, 8723, MIOPEN_LOSS_NO_REDUCTION, 1, "102"});
+    tcs.push_back({{1, 1, 2, 2}, MIOPEN_LOSS_NO_REDUCTION, 1, false});
+    tcs.push_back({{2, 10, 128, 128}, MIOPEN_LOSS_NO_REDUCTION, 1, false});
+    tcs.push_back({{5, 13, 17, 11}, MIOPEN_LOSS_NO_REDUCTION, 1, false});
+    tcs.push_back({{256, 4, 8723}, MIOPEN_LOSS_NO_REDUCTION, 1, false});
     return tcs;
 }
 
@@ -141,6 +89,19 @@ inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs()
     temp = SmoothL1LossUnreducedForwardTestConfigs();
     tcs.insert(tcs.end(), temp.begin(), temp.end());
     return tcs;
+}
+
+inline std::vector<size_t> GetStrides(std::vector<size_t> lengths, bool contiguous)
+{
+    if(!contiguous)
+        std::swap(lengths.front(), lengths.back());
+    std::vector<size_t> strides(lengths.size());
+    strides.back() = 1;
+    for(int i = lengths.size() - 2; i >= 0; --i)
+        strides[i] = strides[i + 1] * lengths[i + 1];
+    if(!contiguous)
+        std::swap(strides.front(), strides.back());
+    return strides;
 }
 
 template <typename T = float>
@@ -155,33 +116,27 @@ protected:
 
         reduction = smooth_l1loss_config.reduction;
         beta      = smooth_l1loss_config.beta;
+        auto lengths    = smooth_l1loss_config.lengths;
+        auto contiguous = smooth_l1loss_config.contiguous;
 
-        auto dims    = smooth_l1loss_config.GetInputDims();
-        auto strides = smooth_l1loss_config.GetInputStrides();
+        auto in_strides = GetStrides(lengths, contiguous);
+        input           = tensor<T>{lengths, in_strides}.generate(gen_value);
 
-        if(strides.empty())
-        {
-            input      = tensor<T>{dims}.generate(gen_value);
-            target     = tensor<T>{dims}.generate(gen_value);
-            output     = tensor<T>{dims};
-            ref_output = tensor<T>{dims};
-        }
-        else
-        {
-            input      = tensor<T>{dims, strides}.generate(gen_value);
-            target     = tensor<T>{dims, strides}.generate(gen_value);
-            output     = tensor<T>{dims, strides};
-            ref_output = tensor<T>{dims, strides};
-        }
+        auto tar_strides = GetStrides(lengths, true);
+        target           = tensor<T>{lengths, tar_strides}.generate(gen_value);
+
+        output = tensor<T>{lengths, in_strides};
         std::fill(output.begin(), output.end(), std::numeric_limits<T>::quiet_NaN());
+
+        ref_output = tensor<T>{lengths, in_strides};
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
-        std::vector<size_t> workspace_dims;
+        std::vector<size_t> workspace_lengths;
         ws_sizeInBytes = miopen::GetSmoothL1LossWorkspaceSize(
             handle, reduction, input.desc, target.desc, output.desc);
         if(ws_sizeInBytes > 0)
         {
-            workspace = tensor<T>{dims};
+            workspace = tensor<T>{lengths};
             std::fill(workspace.begin(), workspace.end(), std::numeric_limits<T>::quiet_NaN());
             workspace_dev = handle.Write(workspace.data);
         }
