@@ -70,16 +70,16 @@ __device__ void smoothl1lossunreducedforward5d(const TI* I,
                                                tensor_view_5d_t T_tv,
                                                tensor_view_5d_t O_tv)
 {
-    const uint64_t gid = blockIdx.x * blockDim.x + threadIdx.x;
-    uint64_t n[5];
+    const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t n[5];
     GET_NCDHW(n[0], n[1], n[2], n[3], n[4], gid, O_tv);
 
     if(n[0] >= O_tv.size[0])
         return;
 
-    uint64_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
-    uint64_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
-    uint64_t Oidx = TV5D_IDX(O_tv, n[0], n[1], n[2], n[3], n[4]);
+    size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+    size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+    size_t Oidx = TV5D_IDX(O_tv, n[0], n[1], n[2], n[3], n[4]);
 
     FLOAT_ACCUM diff = fabs(CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx]));
     O[Oidx]          = CVT_ACCUM2FLOAT(diff < beta ? 0.5 * diff * diff / beta : diff - 0.5 * beta);

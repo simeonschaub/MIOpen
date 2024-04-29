@@ -180,8 +180,8 @@ template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::GetandSetData()
 {
     auto length      = GetTensorLengthsFromCmdLine();
-    auto in_strides  = GetStrides(length, inflags.GetValueInt("Contiguous"));
-    auto tar_strides = GetStrides(length, 1);
+    auto in_strides  = GetStrides(length, 1);
+    auto tar_strides = GetStrides(length, inflags.GetValueInt("Contiguous"));
     beta             = inflags.GetValueInt("Beta");
 
     SetTensorNd(inputDesc, length, in_strides, data_type);

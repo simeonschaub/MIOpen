@@ -32,7 +32,8 @@
 #include <miopen/target_properties.hpp>
 #include <miopen/tensor_view_5d.hpp>
 
-#define LOCAL_SIZE 1024
+#define LOCAL_SIZE_CONTIGUOUS 256
+#define LOCAL_SIZE_NONCONTIGUOUS 256
 
 namespace miopen {
 
@@ -44,13 +45,13 @@ bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
     const ExecutionContext& /*context*/,
     const miopen::smoothl1loss::ProblemDescription& problem) const
 {
+    if(problem.GetReduction() != MIOPEN_LOSS_NO_REDUCTION)
+        return false;
     if(!problem.IsSameType())
         return false;
     if(!problem.IsRightLength())
         return false;
     if(!problem.IsRightStride())
-        return false;
-    if(problem.GetReduction() != MIOPEN_LOSS_NO_REDUCTION)
         return false;
     return true;
 }
@@ -94,7 +95,7 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
 
         kernel.kernel_file = "MIOpenSmoothL1Loss.cpp";
         kernel.kernel_name = "SmoothL1LossUnreducedForwardContiguous";
-        xlocalsize         = LOCAL_SIZE;
+        xlocalsize         = LOCAL_SIZE_CONTIGUOUS;
         xgridsize          = AlignUp(size, xlocalsize);
 
         const auto build_params = KernelBuildParameters{
@@ -165,7 +166,7 @@ ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
 
         kernel.kernel_file = "MIOpenSmoothL1Loss.cpp";
         kernel.kernel_name = "SmoothL1LossUnreducedForward5d";
-        xlocalsize         = LOCAL_SIZE;
+        xlocalsize         = LOCAL_SIZE_NONCONTIGUOUS;
         xgridsize          = AlignUp(size, xlocalsize);
 
         const auto build_params = KernelBuildParameters{

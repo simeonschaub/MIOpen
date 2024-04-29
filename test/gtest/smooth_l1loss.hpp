@@ -119,10 +119,10 @@ protected:
         auto lengths    = smooth_l1loss_config.lengths;
         auto contiguous = smooth_l1loss_config.contiguous;
 
-        auto in_strides = GetStrides(lengths, contiguous);
+        auto in_strides = GetStrides(lengths, true);
         input           = tensor<T>{lengths, in_strides}.generate(gen_value);
 
-        auto tar_strides = GetStrides(lengths, true);
+        auto tar_strides = GetStrides(lengths, contiguous);
         target           = tensor<T>{lengths, tar_strides}.generate(gen_value);
 
         output = tensor<T>{lengths, in_strides};
