@@ -267,8 +267,10 @@ int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 
     miopenGetSmoothL1LossWorkspaceSize(
         GetHandle(), reduction, inputDesc, targetDesc, outputDesc, &ws_sizeInBytes);
-    if(ws_sizeInBytes == static_cast<size_t>(-1))
+    if(reduction != MIOPEN_LOSS_NO_REDUCTION && ws_sizeInBytes == static_cast<size_t>(-1))
         return miopenStatusAllocFailed;
+    else
+        ws_sizeInBytes = 0;
 
     uint32_t ctx = 0;
 
@@ -317,17 +319,14 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunForwardGPU()
 
     for(int i = 0; i < inflags.GetValueInt("iter"); i++)
     {
-        miopenSmoothL1LossForward(GetHandle(),
-                                  reduction,
-                                  workspace_dev->GetMem(),
-                                  ws_sizeInBytes,
-                                  inputDesc,
-                                  in_dev->GetMem(),
-                                  targetDesc,
-                                  tar_dev->GetMem(),
-                                  outputDesc,
-                                  out_dev->GetMem(),
-                                  beta);
+        miopenSmoothL1LossUnreducedForward(GetHandle(),
+                                           inputDesc,
+                                           in_dev->GetMem(),
+                                           targetDesc,
+                                           tar_dev->GetMem(),
+                                           outputDesc,
+                                           out_dev->GetMem(),
+                                           beta);
 
         float time = 0.0;
         miopenGetKernelTime(GetHandle(), &time);

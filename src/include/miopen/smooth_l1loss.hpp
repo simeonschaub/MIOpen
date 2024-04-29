@@ -51,5 +51,14 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
                                    Data_t o,
                                    float beta);
 
+miopenStatus_t SmoothL1LossUnreducedForward(Handle& handle,
+                                            const TensorDescriptor& iDesc,
+                                            ConstData_t i,
+                                            const TensorDescriptor& tDesc,
+                                            ConstData_t t,
+                                            const TensorDescriptor& oDesc,
+                                            Data_t o,
+                                            float beta);
+
 } // namespace miopen
 #endif // MIOPEN_SMOOTH_L1LOSS_HPP_

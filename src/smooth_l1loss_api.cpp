@@ -133,3 +133,27 @@ extern "C" miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                     beta);
     });
 }
+
+extern "C" miopenStatus_t miopenSmoothL1LossUnreducedForward(miopenHandle_t handle,
+                                                             const miopenTensorDescriptor_t iDesc,
+                                                             const void* i,
+                                                             const miopenTensorDescriptor_t tDesc,
+                                                             const void* t,
+                                                             const miopenTensorDescriptor_t oDesc,
+                                                             void* o,
+                                                             const float beta)
+{
+    MIOPEN_LOG_FUNCTION(handle, iDesc, i, tDesc, t, oDesc, o, beta);
+
+    LogCmdSmoothL1Loss(iDesc, MIOPEN_LOSS_NO_REDUCTION, beta, true);
+    return miopen::try_([&] {
+        miopen::SmoothL1LossUnreducedForward(miopen::deref(handle),
+                                             miopen::deref(iDesc),
+                                             DataCast(i),
+                                             miopen::deref(tDesc),
+                                             DataCast(t),
+                                             miopen::deref(oDesc),
+                                             DataCast(o),
+                                             beta);
+    });
+}

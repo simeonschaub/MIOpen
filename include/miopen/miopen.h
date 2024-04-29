@@ -6646,6 +6646,27 @@ MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
                                                        void* o,
                                                        const float beta);
 
+/*! @brief Execute a Smooth L1Loss forward layer
+ *
+ * @param handle                   MIOpen handle (input)
+ * @param iDesc                    Tensor descriptor for input tensor (input)
+ * @param i                        Data tensor input (input)
+ * @param tDesc                    Tensor descriptor for target tensor (input)
+ * @param t                        Data tensor target (input)
+ * @param oDesc                    Tensor descriptor for output tensor (input)
+ * @param o                        Data tensor output (output)
+ * @param beta                     Beta (input)
+ * @return                         miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossUnreducedForward(miopenHandle_t handle,
+                                                                miopenTensorDescriptor_t iDesc,
+                                                                const void* i,
+                                                                miopenTensorDescriptor_t tDesc,
+                                                                const void* t,
+                                                                miopenTensorDescriptor_t oDesc,
+                                                                void* o,
+                                                                float beta);
+
 /** @} */
 // CLOSEOUT LossFunction DOXYGEN GROUP
 #endif // MIOPEN_BETA_API

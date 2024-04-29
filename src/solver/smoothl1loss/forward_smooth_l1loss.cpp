@@ -43,10 +43,8 @@ namespace smoothl1loss {
 
 bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::ProblemDescription& problem) const
+    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
 {
-    if(problem.GetReduction() != MIOPEN_LOSS_NO_REDUCTION)
-        return false;
     if(!problem.IsSameType())
         return false;
     if(!problem.IsRightLength())
@@ -56,15 +54,9 @@ bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
     return true;
 }
 
-std::size_t SmoothL1LossUnreducedForwardSolver::GetWorkspaceSize(
-    const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::ProblemDescription& /*problem*/) const
-{
-    return 0;
-}
-
 bool SmoothL1LossUnreducedForwardContiguous::IsApplicable(
-    const ExecutionContext& context, const miopen::smoothl1loss::ProblemDescription& problem) const
+    const ExecutionContext& context,
+    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
 {
     SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem);
     if(!problem.IsSameStride() && !problem.IsAllContiguous())
@@ -74,7 +66,7 @@ bool SmoothL1LossUnreducedForwardContiguous::IsApplicable(
 
 ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::ProblemDescription& problem) const
+    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
@@ -135,7 +127,8 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
 }
 
 bool SmoothL1LossUnreducedForward5d::IsApplicable(
-    const ExecutionContext& context, const miopen::smoothl1loss::ProblemDescription& problem) const
+    const ExecutionContext& context,
+    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
 {
     SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem);
     if(problem.GetIDesc().GetSize() > 5)
@@ -145,7 +138,7 @@ bool SmoothL1LossUnreducedForward5d::IsApplicable(
 
 ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::ProblemDescription& problem) const
+    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 

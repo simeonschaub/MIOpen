@@ -149,20 +149,35 @@ protected:
     {
         auto&& handle = get_handle();
 
-        cpu_smooth_l1loss_forward<T>(input, target, ref_output, reduction, beta);
         miopenStatus_t status;
 
-        status = miopen::SmoothL1LossForward(handle,
-                                             reduction,
-                                             nullptr,
-                                             0,
-                                             input.desc,
-                                             input_dev.get(),
-                                             target.desc,
-                                             target_dev.get(),
-                                             output.desc,
-                                             output_dev.get(),
-                                             beta);
+        if(output.desc.GetElementSize() > 1) // unreduced cases
+        {
+            cpu_smooth_l1loss_unreduced_forward<T>(input, target, ref_output, beta);
+            status = miopen::SmoothL1LossUnreducedForward(handle,
+                                                          input.desc,
+                                                          input_dev.get(),
+                                                          target.desc,
+                                                          target_dev.get(),
+                                                          output.desc,
+                                                          output_dev.get(),
+                                                          beta);
+        }
+        else // reduced cases
+        {
+            cpu_smooth_l1loss_reduced_forward<T>(input, target, ref_output, beta, 1);
+            status = miopen::SmoothL1LossForward(handle,
+                                                 reduction,
+                                                 nullptr,
+                                                 0,
+                                                 input.desc,
+                                                 input_dev.get(),
+                                                 target.desc,
+                                                 target_dev.get(),
+                                                 output.desc,
+                                                 output_dev.get(),
+                                                 beta);
+        }
 
         EXPECT_EQ(status, miopenStatusSuccess);
 
