@@ -261,7 +261,7 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
                 }
                 size = AlignUp(size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
                 if(handle_.IsProfilingEnabled())
-                    elapsed = handle_.GetKernelTime();
+                    elapsed += handle_.GetKernelTime();
             }
             if(handle_.IsProfilingEnabled())
             {
