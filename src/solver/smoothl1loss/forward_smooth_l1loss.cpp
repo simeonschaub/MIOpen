@@ -40,6 +40,21 @@ namespace miopen {
 
 namespace solver {
 
+KernelInfo make_hip_kernel(std::vector<size_t> localsize,
+                           std::vector<size_t> gridsize,
+                           std::string kernel_file,
+                           std::string kernel_name,
+                           KernelBuildParameters build_params)
+{
+    while(localsize.size() < 3)
+        localsize.push_back(1);
+    while(gridsize.size() < 3)
+        gridsize.push_back(1);
+    for(int i = 0; i < localsize.size(); ++i)
+        gridsize[i] = AlignUp(gridsize[i], localsize[i]);
+    return {build_params.GenerateFor(kbp::HIP{}), localsize, gridsize, kernel_file, kernel_name};
+}
+
 namespace smoothl1loss {
 
 bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
@@ -57,8 +72,9 @@ bool SmoothL1LossUnreducedForwardContiguous::IsApplicable(
     const ExecutionContext& context,
     const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
 {
-    SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem);
     if(!problem.IsSameStride() && !problem.IsAllContiguous())
+        return false;
+    if(!SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem))
         return false;
     return true;
 }
@@ -74,42 +90,19 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetODesc().GetElementSize();
 
-    {
-        size_t xlocalsize;
-        size_t xgridsize;
-        size_t ylocalsize = 1;
-        size_t ygridsize  = 1;
-        size_t zlocalsize = 1;
-        size_t zgridsize  = 1;
-
-        auto kernel = KernelInfo{};
-
-        kernel.kernel_file = "MIOpenSmoothL1Loss.cpp";
-        kernel.kernel_name = "SmoothL1LossUnreducedForwardContiguous";
-        xlocalsize         = LOCAL_SIZE_CONTIGUOUS;
-        xgridsize          = AlignUp(size, xlocalsize);
-
-        const auto build_params = KernelBuildParameters{
-            {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
-            {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
-            {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
-            {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
-            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
-        };
-
-        kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
-
-        kernel.l_wk.push_back(xlocalsize);
-        kernel.l_wk.push_back(ylocalsize);
-        kernel.l_wk.push_back(zlocalsize);
-
-        kernel.g_wk.push_back(xgridsize);
-        kernel.g_wk.push_back(ygridsize);
-        kernel.g_wk.push_back(zgridsize);
-
-        result.construction_params.push_back(kernel);
-    }
+    result.construction_params.push_back(
+        make_hip_kernel({LOCAL_SIZE_CONTIGUOUS},
+                        {size},
+                        "MIOpenSmoothL1Loss.cpp",
+                        "SmoothL1LossUnreducedForwardContiguous",
+                        KernelBuildParameters{
+                            {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
+                            {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
+                            {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
+                            {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+                            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+                            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
+                        }));
 
     result.invoker_factory = [](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
@@ -129,8 +122,9 @@ bool SmoothL1LossUnreducedForward5d::IsApplicable(
     const ExecutionContext& context,
     const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
 {
-    SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem);
     if(problem.GetIDesc().GetSize() > 5)
+        return false;
+    if(!SmoothL1LossUnreducedForwardSolver::IsApplicable(context, problem))
         return false;
     return true;
 }
@@ -146,42 +140,19 @@ ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetODesc().GetElementSize();
 
-    {
-        size_t xlocalsize;
-        size_t xgridsize;
-        size_t ylocalsize = 1;
-        size_t ygridsize  = 1;
-        size_t zlocalsize = 1;
-        size_t zgridsize  = 1;
-
-        auto kernel = KernelInfo{};
-
-        kernel.kernel_file = "MIOpenSmoothL1Loss.cpp";
-        kernel.kernel_name = "SmoothL1LossUnreducedForward5d";
-        xlocalsize         = LOCAL_SIZE_NONCONTIGUOUS;
-        xgridsize          = AlignUp(size, xlocalsize);
-
-        const auto build_params = KernelBuildParameters{
-            {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
-            {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
-            {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
-            {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
-            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
-        };
-
-        kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
-
-        kernel.l_wk.push_back(xlocalsize);
-        kernel.l_wk.push_back(ylocalsize);
-        kernel.l_wk.push_back(zlocalsize);
-
-        kernel.g_wk.push_back(xgridsize);
-        kernel.g_wk.push_back(ygridsize);
-        kernel.g_wk.push_back(zgridsize);
-
-        result.construction_params.push_back(kernel);
-    }
+    result.construction_params.push_back(
+        make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS},
+                        {size},
+                        "MIOpenSmoothL1Loss.cpp",
+                        "SmoothL1LossUnreducedForward5d",
+                        KernelBuildParameters{
+                            {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
+                            {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
+                            {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
+                            {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+                            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+                            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
+                        }));
 
     result.invoker_factory = [](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
@@ -210,21 +181,6 @@ bool SmoothL1LossReducedForward5d::IsApplicable(
     if(!problem.IsRightStride())
         return false;
     return true;
-}
-
-KernelInfo make_hip_kernel(std::vector<size_t> localsize,
-                           std::vector<size_t> gridsize,
-                           std::string kernel_file,
-                           std::string kernel_name,
-                           KernelBuildParameters build_params)
-{
-    while(localsize.size() < 3)
-        localsize.push_back(1);
-    while(gridsize.size() < 3)
-        gridsize.push_back(1);
-    for(int i = 0; i < localsize.size(); ++i)
-        gridsize[i] = AlignUp(gridsize[i], localsize[i]);
-    return {build_params.GenerateFor(kbp::HIP{}), localsize, gridsize, kernel_file, kernel_name};
 }
 
 ConvSolution SmoothL1LossReducedForward5d::GetSolution(

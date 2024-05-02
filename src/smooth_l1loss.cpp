@@ -100,7 +100,7 @@ miopenStatus_t SmoothL1LossUnreducedForward(Handle& handle,
                                             Data_t o,
                                             float beta)
 {
-    const auto problem = smoothl1loss::UnreducedProblemDescription{iDesc, tDesc, oDesc, beta};
+    const auto problem = smoothl1loss::UnreducedProblemDescription{iDesc, tDesc, oDesc};
 
     const auto invoke_params = [&]() {
         auto tmp  = smoothl1loss::InvokeParams{};
