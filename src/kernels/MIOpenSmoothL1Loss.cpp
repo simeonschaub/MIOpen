@@ -39,6 +39,14 @@
 #define OUTPUT_TYPE float
 #endif
 
+#ifndef D_TYPE
+#define D_TYPE float
+#endif
+
+#ifndef REDUCE_SIZE
+#define REDUCE_SIZE 256
+#endif
+
 template <typename TI, typename TO>
 __device__ void smoothl1lossunreducedforwardcontiguous(
     const TI* I, const TI* T, TO* O, const float beta, const ulong n)
@@ -93,5 +101,70 @@ extern "C" __global__ void SmoothL1LossUnreducedForward5d(const INPUT_TYPE* __re
                                                           tensor_view_5d_t T_tv,
                                                           tensor_view_5d_t O_tv)
 {
+    // instantiate the kernel
     smoothl1lossunreducedforward5d<INPUT_TYPE, OUTPUT_TYPE>(I, T, O, beta, I_tv, T_tv, O_tv);
+}
+
+template <typename TI, typename TO>
+__device__ void smoothl1lossreducedforward5d(const TI* I,
+                                             const TI* T,
+                                             TO* lsum,
+                                             const float beta,
+                                             const float divisor,
+                                             tensor_view_5d_t I_tv,
+                                             tensor_view_5d_t T_tv)
+{
+    const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t n[5];
+    GET_NCDHW(n[0], n[1], n[2], n[3], n[4], gid, I_tv);
+
+    if(n[0] >= I_tv.size[0])
+        return;
+
+    size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+    size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+
+    float diff = abs(CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx]));
+    lsum[Iidx] =
+        CVT_ACCUM2FLOAT((diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta) / divisor);
+}
+
+extern "C" __global__ void SmoothL1LossReducedForward5d(const INPUT_TYPE* __restrict__ I,
+                                                        const INPUT_TYPE* __restrict__ T,
+                                                        OUTPUT_TYPE* __restrict__ lsum,
+                                                        const float beta,
+                                                        const float divisor,
+                                                        tensor_view_5d_t I_tv,
+                                                        tensor_view_5d_t T_tv)
+{
+    // instantiate the kernel
+    smoothl1lossreducedforward5d<INPUT_TYPE, OUTPUT_TYPE>(I, T, lsum, beta, divisor, I_tv, T_tv);
+}
+
+template <typename DTYPE>
+__device__ void losssum(const DTYPE* input, DTYPE* output, size_t N)
+{
+    static __shared__ FLOAT_ACCUM local_mem[REDUCE_SIZE];
+    auto gid = blockIdx.x * blockDim.x + threadIdx.x;
+    auto lid = threadIdx.x;
+
+    local_mem[lid] = gid < N ? CVT_FLOAT2ACCUM(input[gid]) : static_cast<FLOAT_ACCUM>(0.0f);
+    __syncthreads();
+
+    for(auto i = blockDim.x / 2; i > 0; i >>= 1)
+    {
+        if(lid < i)
+            local_mem[lid] += local_mem[lid + i];
+        __syncthreads();
+    }
+
+    if(lid == 0)
+        output[blockIdx.x] = CVT_ACCUM2FLOAT(local_mem[0]);
+}
+
+extern "C" __global__ void
+LossSum(const D_TYPE* __restrict__ input, D_TYPE* __restrict__ output, size_t N)
+{
+    // instantiate the kernel
+    losssum<D_TYPE>(input, output, N);
 }

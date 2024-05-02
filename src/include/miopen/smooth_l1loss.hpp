@@ -33,23 +33,22 @@ namespace miopen {
 struct Handle;
 struct TensorDescriptor;
 
-size_t GetSmoothL1LossWorkspaceSize(Handle& handle,
-                                    miopenLossReduction_t reduction,
-                                    const TensorDescriptor& iDesc,
-                                    const TensorDescriptor& tDesc,
-                                    const TensorDescriptor& oDesc);
+size_t GetSmoothL1LossReducedWorkspaceSize(Handle& handle,
+                                           const TensorDescriptor& iDesc,
+                                           const TensorDescriptor& tDesc,
+                                           const TensorDescriptor& oDesc);
 
-miopenStatus_t SmoothL1LossForward(Handle& handle,
-                                   miopenLossReduction_t reduction,
-                                   Data_t workspace,
-                                   size_t workspaceSizeInBytes,
-                                   const TensorDescriptor& iDesc,
-                                   ConstData_t i,
-                                   const TensorDescriptor& tDesc,
-                                   ConstData_t t,
-                                   const TensorDescriptor& oDesc,
-                                   Data_t o,
-                                   float beta);
+miopenStatus_t SmoothL1LossReducedForward(Handle& handle,
+                                          Data_t workspace,
+                                          size_t workspaceSizeInBytes,
+                                          const TensorDescriptor& iDesc,
+                                          ConstData_t i,
+                                          const TensorDescriptor& tDesc,
+                                          ConstData_t t,
+                                          const TensorDescriptor& oDesc,
+                                          Data_t o,
+                                          float beta,
+                                          float divisor);
 
 miopenStatus_t SmoothL1LossUnreducedForward(Handle& handle,
                                             const TensorDescriptor& iDesc,

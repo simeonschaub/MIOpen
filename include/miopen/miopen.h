@@ -6584,18 +6584,6 @@ MIOPEN_EXPORT miopenStatus_t miopenBackendInitialize(miopenBackendDescriptor_t d
 
 #ifdef MIOPEN_BETA_API
 
-/*! @ingroup LossFunction
- * @enum miopenLossReduction_t
- * Reduction modes for loss
- */
-typedef enum
-{
-    MIOPEN_LOSS_NO_REDUCTION,   /*!< no reduction will be applied */
-    MIOPEN_LOSS_MEAN_REDUCTION, /*!< the sum output will be divided by the number of elements in the
-                                   output */
-    MIOPEN_LOSS_SUM_REDUCTION,  /*!< the output will be summed */
-} miopenLossReduction_t;
-
 /** @addtogroup LossFunction
  *
  *  @{
@@ -6604,25 +6592,22 @@ typedef enum
 /*! @brief Helper function to query the minimum workspace size required by the smooth L1Loss call
  *
  * @param handle                   MIOpen Handle (input)
- * @param reduction                Specifies the reduction to apply to the output (input)
  * @param iDesc                    Tensor descriptor for input tensor (input)
  * @param tDesc                    Tensor descriptor for target tensor (input)
- * @param oDesc                    Tensor descriptor for output tensor (output)
+ * @param oDesc                    Tensor descriptor for output tensor (input)
  * @param sizeInBytes              Pointer to data to return the minimum workspace size
  * @return                         miopenStatus_t
  */
 MIOPEN_EXPORT miopenStatus_t
-miopenGetSmoothL1LossWorkspaceSize(miopenHandle_t handle,
-                                   miopenLossReduction_t reduction,
-                                   const miopenTensorDescriptor_t iDesc,
-                                   const miopenTensorDescriptor_t tDesc,
-                                   const miopenTensorDescriptor_t oDesc,
-                                   size_t* sizeInBytes);
+miopenGetSmoothL1LossReducedWorkspaceSize(miopenHandle_t handle,
+                                          miopenTensorDescriptor_t iDesc,
+                                          miopenTensorDescriptor_t tDesc,
+                                          miopenTensorDescriptor_t oDesc,
+                                          size_t* sizeInBytes);
 
 /*! @brief Execute a Smooth L1Loss forward layer
  *
  * @param handle                   MIOpen handle (input)
- * @param reduction                Specifies the reduction to apply to the output (input)
  * @param workspace                Address of the allocated workspace data (input)
  * @param workspaceSizeInBytes     Size in bytes of the allocated workspace data (input)
  * @param iDesc                    Tensor descriptor for input tensor (input)
@@ -6632,19 +6617,20 @@ miopenGetSmoothL1LossWorkspaceSize(miopenHandle_t handle,
  * @param oDesc                    Tensor descriptor for output tensor (input)
  * @param o                        Data tensor output (output)
  * @param beta                     Beta (input)
+ * @param divisor                  Divisor (input)
  * @return                         miopenStatus_t
  */
-MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
-                                                       miopenLossReduction_t reduction,
-                                                       void* workspace,
-                                                       size_t workspaceSizeInBytes,
-                                                       const miopenTensorDescriptor_t iDesc,
-                                                       const void* i,
-                                                       const miopenTensorDescriptor_t tDesc,
-                                                       const void* t,
-                                                       const miopenTensorDescriptor_t oDesc,
-                                                       void* o,
-                                                       const float beta);
+MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossReducedForward(miopenHandle_t handle,
+                                                              void* workspace,
+                                                              size_t workspaceSizeInBytes,
+                                                              miopenTensorDescriptor_t iDesc,
+                                                              const void* i,
+                                                              miopenTensorDescriptor_t tDesc,
+                                                              const void* t,
+                                                              miopenTensorDescriptor_t oDesc,
+                                                              void* o,
+                                                              float beta,
+                                                              float divisor);
 
 /*! @brief Execute a Smooth L1Loss forward layer
  *

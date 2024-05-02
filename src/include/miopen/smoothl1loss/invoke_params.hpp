@@ -28,6 +28,8 @@
 #include <miopen/invoke_params.hpp>
 #include <miopen/tensor.hpp>
 
+#include <limits>
+
 namespace miopen {
 
 namespace smoothl1loss {
@@ -40,13 +42,13 @@ struct InvokeParams : public miopen::InvokeParams
     const TensorDescriptor* tDesc = nullptr;
     const TensorDescriptor* oDesc = nullptr;
 
-    ConstData_t i                   = nullptr;
-    ConstData_t t                   = nullptr;
-    Data_t o                        = nullptr;
-    float beta                      = 0;
-    Data_t workspace                = nullptr;
-    std::size_t workspace_size      = 0;
-    miopenLossReduction_t reduction = MIOPEN_LOSS_NO_REDUCTION;
+    ConstData_t i              = nullptr;
+    ConstData_t t              = nullptr;
+    Data_t o                   = nullptr;
+    float beta                 = 0;
+    float divisor              = std::numeric_limits<float>::quiet_NaN();
+    Data_t workspace           = nullptr;
+    std::size_t workspace_size = 0;
 
     std::size_t GetWorkspaceSize() const { return workspace_size; }
     Data_t GetWorkspace() const { return workspace; }

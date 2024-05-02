@@ -30,9 +30,23 @@
 #include <miopen/logger.hpp>
 #include <miopen/tensor_ops.hpp>
 
+inline std::ostream& operator<<(std::ostream& os, const std::vector<size_t>& v)
+{
+    os << '{';
+    for(int i = 0; i < v.size(); ++i)
+    {
+        if(i != 0)
+            os << ',';
+        os << v[i];
+    }
+    os << '}';
+    return os;
+}
+
 static void LogCmdSmoothL1Loss(const miopenTensorDescriptor_t iDesc,
-                               const miopenLossReduction_t reduction,
+                               const miopenTensorDescriptor_t tDesc,
                                const float beta,
+                               const float divisor,
                                bool is_fwd)
 {
     if(miopen::IsLoggingCmd())
@@ -55,82 +69,62 @@ static void LogCmdSmoothL1Loss(const miopenTensorDescriptor_t iDesc,
         int32_t size = {0};
         miopenGetTensorDescriptorSize(iDesc, &size);
         ss << " -n " << miopen::deref(iDesc).GetLengths()[0];
-        if(size == 5)
-        {
-            ss << " -c " << miopen::deref(iDesc).GetLengths()[1] << " -D "
-               << miopen::deref(iDesc).GetLengths()[2] << " -H "
-               << miopen::deref(iDesc).GetLengths()[3] << " -W "
-               << miopen::deref(iDesc).GetLengths()[4];
-        }
-        else if(size == 4)
-        {
-            ss << " -c " << miopen::deref(iDesc).GetLengths()[1] << " -H "
-               << miopen::deref(iDesc).GetLengths()[2] << " -W "
-               << miopen::deref(iDesc).GetLengths()[3];
-        }
-        else if(size == 3)
-        {
-            ss << " -c " << miopen::deref(iDesc).GetLengths()[1] << " -W "
-               << miopen::deref(iDesc).GetLengths()[2];
-        }
-        else if(size == 2)
-        {
-            ss << " -c " << miopen::deref(iDesc).GetLengths()[1];
-        }
-
-        ss << " -F " << ((is_fwd) ? "1" : "2") << " -b " << beta << " -r " << reduction;
+        ss << " -T " << miopen::deref(iDesc).GetLengths();
+        ss << " -Si " << miopen::deref(iDesc).GetStrides();
+        ss << " -St " << miopen::deref(tDesc).GetStrides();
+        ss << " -F " << ((is_fwd) ? "1" : "2") << " -b " << beta << " -d " << divisor;
 
         MIOPEN_LOG_DRIVER_CMD(ss.str());
     }
 }
 
-extern "C" miopenStatus_t miopenGetSmoothL1LossWorkspaceSize(miopenHandle_t handle,
-                                                             miopenLossReduction_t reduction,
-                                                             const miopenTensorDescriptor_t iDesc,
-                                                             const miopenTensorDescriptor_t tDesc,
-                                                             const miopenTensorDescriptor_t oDesc,
-                                                             size_t* sizeInBytes)
+extern "C" miopenStatus_t
+miopenGetSmoothL1LossReducedWorkspaceSize(miopenHandle_t handle,
+                                          const miopenTensorDescriptor_t iDesc,
+                                          const miopenTensorDescriptor_t tDesc,
+                                          const miopenTensorDescriptor_t oDesc,
+                                          size_t* sizeInBytes)
 {
 
-    MIOPEN_LOG_FUNCTION(handle, reduction, iDesc, tDesc, oDesc, sizeInBytes);
+    MIOPEN_LOG_FUNCTION(handle, iDesc, tDesc, oDesc, sizeInBytes);
 
     return miopen::try_([&] {
-        miopen::deref(sizeInBytes) = miopen::GetSmoothL1LossWorkspaceSize(miopen::deref(handle),
-                                                                          reduction,
-                                                                          miopen::deref(iDesc),
-                                                                          miopen::deref(tDesc),
-                                                                          miopen::deref(oDesc));
+        miopen::deref(sizeInBytes) =
+            miopen::GetSmoothL1LossReducedWorkspaceSize(miopen::deref(handle),
+                                                        miopen::deref(iDesc),
+                                                        miopen::deref(tDesc),
+                                                        miopen::deref(oDesc));
     });
 }
 
-extern "C" miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
-                                                    miopenLossReduction_t reduction,
-                                                    void* workspace,
-                                                    size_t workspaceSizeInBytes,
-                                                    const miopenTensorDescriptor_t iDesc,
-                                                    const void* i,
-                                                    const miopenTensorDescriptor_t tDesc,
-                                                    const void* t,
-                                                    const miopenTensorDescriptor_t oDesc,
-                                                    void* o,
-                                                    const float beta)
+extern "C" miopenStatus_t miopenSmoothL1LossReducedForward(miopenHandle_t handle,
+                                                           void* workspace,
+                                                           size_t workspaceSizeInBytes,
+                                                           const miopenTensorDescriptor_t iDesc,
+                                                           const void* i,
+                                                           const miopenTensorDescriptor_t tDesc,
+                                                           const void* t,
+                                                           const miopenTensorDescriptor_t oDesc,
+                                                           void* o,
+                                                           const float beta,
+                                                           const float divisor)
 {
     MIOPEN_LOG_FUNCTION(
-        handle, reduction, workspace, workspaceSizeInBytes, iDesc, i, tDesc, t, oDesc, o, beta);
+        handle, workspace, workspaceSizeInBytes, iDesc, i, tDesc, t, oDesc, o, beta, divisor);
 
-    LogCmdSmoothL1Loss(iDesc, reduction, beta, true);
+    LogCmdSmoothL1Loss(iDesc, tDesc, beta, divisor, true);
     return miopen::try_([&] {
-        miopen::SmoothL1LossForward(miopen::deref(handle),
-                                    reduction,
-                                    DataCast(workspace),
-                                    workspaceSizeInBytes,
-                                    miopen::deref(iDesc),
-                                    DataCast(i),
-                                    miopen::deref(tDesc),
-                                    DataCast(t),
-                                    miopen::deref(oDesc),
-                                    DataCast(o),
-                                    beta);
+        miopen::SmoothL1LossReducedForward(miopen::deref(handle),
+                                           DataCast(workspace),
+                                           workspaceSizeInBytes,
+                                           miopen::deref(iDesc),
+                                           DataCast(i),
+                                           miopen::deref(tDesc),
+                                           DataCast(t),
+                                           miopen::deref(oDesc),
+                                           DataCast(o),
+                                           beta,
+                                           divisor);
     });
 }
 
@@ -145,7 +139,7 @@ extern "C" miopenStatus_t miopenSmoothL1LossUnreducedForward(miopenHandle_t hand
 {
     MIOPEN_LOG_FUNCTION(handle, iDesc, i, tDesc, t, oDesc, o, beta);
 
-    LogCmdSmoothL1Loss(iDesc, MIOPEN_LOSS_NO_REDUCTION, beta, true);
+    LogCmdSmoothL1Loss(iDesc, tDesc, beta, std::numeric_limits<float>::quiet_NaN(), true);
     return miopen::try_([&] {
         miopen::SmoothL1LossUnreducedForward(miopen::deref(handle),
                                              miopen::deref(iDesc),

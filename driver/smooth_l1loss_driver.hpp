@@ -46,14 +46,13 @@
 #define MLO_SMOOTH_L1LOSSMHOST_H_
 
 template <typename Tgpu, typename Tcheck>
-int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t iDesc,
-                                      const miopenTensorDescriptor_t tDesc,
-                                      const miopenTensorDescriptor_t oDesc,
-                                      const Tgpu* input,
-                                      const Tgpu* target,
-                                      Tcheck* outputhost,
-                                      const miopenLossReduction_t reduction,
-                                      const float beta)
+int32_t mloSmoothL1LossUnreducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
+                                               const miopenTensorDescriptor_t tDesc,
+                                               const miopenTensorDescriptor_t oDesc,
+                                               const Tgpu* input,
+                                               const Tgpu* target,
+                                               Tcheck* outputhost,
+                                               const float beta)
 {
     // Treat contiguous tensors as non-contiguous tensors (for consistency)
     auto I_tv = get_inner_expanded_tv(miopen::deref(iDesc));
@@ -61,27 +60,74 @@ int32_t mloSmoothL1LossForwardRunHost(const miopenTensorDescriptor_t iDesc,
     auto O_tv = get_inner_expanded_tv(miopen::deref(oDesc));
 
     auto size = miopen::deref(oDesc).GetElementSize();
+    par_ford(size)([&](size_t i) {
+        uint64_t n[5];
+        GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, O_tv);
 
-    auto loss_no_reduce = [&]() {
-        par_ford(size)([&](size_t i) {
-            uint64_t n[5];
-            GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, O_tv);
+        uint64_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+        uint64_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+        uint64_t Oidx = TV5D_IDX(O_tv, n[0], n[1], n[2], n[3], n[4]);
 
-            uint64_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
-            uint64_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
-            uint64_t Oidx = TV5D_IDX(O_tv, n[0], n[1], n[2], n[3], n[4]);
+        auto diff        = abs(input[Iidx] - target[Tidx]);
+        outputhost[Oidx] = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
+    });
 
-            auto diff        = fabs(input[Iidx] - target[Tidx]);
-            outputhost[Oidx] = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
-        });
-    };
+    return miopenStatusSuccess;
+}
 
-    switch(reduction)
+template <typename Tgpu, typename Tcheck>
+int32_t mloSmoothL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
+                                             const miopenTensorDescriptor_t tDesc,
+                                             const Tgpu* input,
+                                             const Tgpu* target,
+                                             Tcheck* workspacehost,
+                                             Tcheck* outputhost,
+                                             const float beta,
+                                             const float divisor)
+{
+    // Treat contiguous tensors as non-contiguous tensors (for consistency)
+    auto I_tv = get_inner_expanded_tv(miopen::deref(iDesc));
+    auto T_tv = get_inner_expanded_tv(miopen::deref(tDesc));
+
+    auto size = miopen::deref(iDesc).GetElementSize();
+
+    /* Phase 1: Calc loss for each element. */
+    par_ford(size)([&](size_t i) {
+        uint64_t n[5];
+        GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
+
+        uint64_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+        uint64_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+
+        auto diff = abs(input[Iidx] - target[Tidx]);
+        workspacehost[Iidx] =
+            (diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta) / divisor;
+    });
+
+    /* Phase 2: Reduce */
+    const int local_size = 256;
+    int offset_a         = 0;
+    int offset_b         = size;
+    size_t _size         = size;
+    do
     {
-    case MIOPEN_LOSS_MEAN_REDUCTION: std::cout << "Unsupported Mean Reduction" << std::endl; break;
-    case MIOPEN_LOSS_SUM_REDUCTION: std::cout << "Unsupported Sum Reduction" << std::endl; break;
-    default: loss_no_reduce(); break;
-    }
+        for(int i = 0; i < _size; i += local_size)
+        {
+            float shared[local_size];
+            for(int j = 0; j < local_size; ++j)
+                shared[j] = i + j < _size ? workspacehost[offset_a + i + j] : 0.0f;
+            for(int offset = local_size / 2; offset > 0; offset >>= 1)
+                for(int j = 0; j < local_size; ++j)
+                    if(j < offset)
+                        shared[j] += shared[j + offset];
+            if(_size <= local_size)
+                outputhost[0] = shared[0];
+            else
+                workspacehost[offset_b + i / local_size] = shared[0];
+        }
+        std::swap(offset_a, offset_b);
+        _size = (_size + local_size - 1) / local_size;
+    } while(_size > 1);
 
     return miopenStatusSuccess;
 }
@@ -156,12 +202,14 @@ private:
     std::vector<Tgpu> in;
     std::vector<Tgpu> tar;
     std::vector<Tgpu> out;
+    std::vector<Tgpu> workspace;
     std::vector<Tref> outhost;
+    std::vector<Tref> workspacehost;
 
     size_t ws_sizeInBytes;
 
     float beta;
-    miopenLossReduction_t reduction;
+    float divisor;
 };
 
 template <typename Tgpu, typename Tref>
@@ -179,6 +227,10 @@ int SmoothL1LossDriver<Tgpu, Tref>::ParseCmdLineArgs(int argc, char* argv[])
 template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::GetandSetData()
 {
+    auto reduction = inflags.GetValueStr("Reduction");
+    if(reduction != "none" && reduction != "mean" && reduction != "sum")
+        return miopenStatusInvalidValue;
+
     auto length      = GetTensorLengthsFromCmdLine();
     auto in_strides  = GetStrides(length, 1);
     auto tar_strides = GetStrides(length, inflags.GetValueInt("Contiguous"));
@@ -186,11 +238,23 @@ int SmoothL1LossDriver<Tgpu, Tref>::GetandSetData()
 
     SetTensorNd(inputDesc, length, in_strides, data_type);
     SetTensorNd(targetDesc, length, tar_strides, data_type);
-    SetTensorNd(outputDesc, length, in_strides, data_type);
 
-    reduction = static_cast<miopenLossReduction_t>(inflags.GetValueInt("Reduction"));
+    if(reduction == "none")
+    {
+        divisor = std::numeric_limits<float>::quiet_NaN();
+        SetTensorNd(outputDesc, length, in_strides, data_type);
+    }
+    else
+    {
+        std::vector<int> out_lens = {1};
+        SetTensorNd(outputDesc, out_lens, data_type);
+        if(reduction == "sum")
+            divisor = 1;
+        if(reduction == "mean")
+            divisor = miopen::deref(inputDesc).GetElementSize();
+    }
 
-    return 0;
+    return miopenStatusSuccess;
 }
 
 template <typename Tgpu, typename Tref>
@@ -210,14 +274,14 @@ int SmoothL1LossDriver<Tgpu, Tref>::AddCmdLineArgs()
     inflags.AddInputFlag("Reduction",
                          'R',
                          "0",
-                         "Specifies the reduction to apply to the output (check the "
-                         "miopenLossReduction_t in miopen.h) (Default=0 to indicate no reduction)",
-                         "int");
+                         "Specifies the reduction to apply to the output ('none'|'mean'|'sum') "
+                         "(Default=none to indicate no reduction)",
+                         "string");
     inflags.AddInputFlag("Beta",
                          'B',
                          "1",
                          "Specifies the threshold at which to change between L1 and L2 loss. The "
-                         "value must be non-negative(Default=1)",
+                         "value must be non-negative (Default=1)",
                          "int");
     inflags.AddInputFlag("iter", 'i', "10", "Number of Iterations (Default=10)", "int");
     inflags.AddInputFlag("verify", 'V', "0", "Verify Each Layer (Default=0)", "int");
@@ -265,10 +329,13 @@ int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     size_t tar_sz = GetTensorSize(targetDesc);
     size_t out_sz = GetTensorSize(outputDesc);
 
-    miopenGetSmoothL1LossWorkspaceSize(
-        GetHandle(), reduction, inputDesc, targetDesc, outputDesc, &ws_sizeInBytes);
-    if(reduction != MIOPEN_LOSS_NO_REDUCTION && ws_sizeInBytes == static_cast<size_t>(-1))
-        return miopenStatusAllocFailed;
+    if(!std::isnan(divisor))
+    {
+        miopenGetSmoothL1LossReducedWorkspaceSize(
+            GetHandle(), inputDesc, targetDesc, outputDesc, &ws_sizeInBytes);
+        if(ws_sizeInBytes == static_cast<size_t>(-1))
+            return miopenStatusAllocFailed;
+    }
     else
         ws_sizeInBytes = 0;
 
@@ -279,21 +346,21 @@ int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     out_dev       = std::unique_ptr<GPUMem>(new GPUMem(ctx, out_sz, sizeof(Tgpu)));
     workspace_dev = std::unique_ptr<GPUMem>(new GPUMem(ctx, ws_sizeInBytes, sizeof(std::byte)));
 
-    in      = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
-    tar     = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
-    out     = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
-    outhost = std::vector<Tref>(out_sz, static_cast<Tref>(0));
+    in            = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
+    tar           = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
+    out           = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
+    workspace     = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
+    outhost       = std::vector<Tref>(out_sz, static_cast<Tref>(0));
+    workspacehost = std::vector<Tref>(in_sz, static_cast<Tref>(0));
 
     for(int i = 0; i < in_sz; i++)
     {
         in[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(0.0), static_cast<Tgpu>(1.0));
-        // in[i] = 0;
     }
 
     for(int i = 0; i < tar_sz; i++)
     {
         tar[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(0.0), static_cast<Tgpu>(1.0));
-        // tar[i] = 0;
     }
 
     if(in_dev->ToGPU(GetStream(), in.data()) != 0)
@@ -319,14 +386,31 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunForwardGPU()
 
     for(int i = 0; i < inflags.GetValueInt("iter"); i++)
     {
-        miopenSmoothL1LossUnreducedForward(GetHandle(),
-                                           inputDesc,
-                                           in_dev->GetMem(),
-                                           targetDesc,
-                                           tar_dev->GetMem(),
-                                           outputDesc,
-                                           out_dev->GetMem(),
-                                           beta);
+        if(std::isnan(divisor))
+        {
+            miopenSmoothL1LossUnreducedForward(GetHandle(),
+                                               inputDesc,
+                                               in_dev->GetMem(),
+                                               targetDesc,
+                                               tar_dev->GetMem(),
+                                               outputDesc,
+                                               out_dev->GetMem(),
+                                               beta);
+        }
+        else
+        {
+            miopenSmoothL1LossReducedForward(GetHandle(),
+                                             workspace_dev->GetMem(),
+                                             ws_sizeInBytes,
+                                             inputDesc,
+                                             in_dev->GetMem(),
+                                             targetDesc,
+                                             tar_dev->GetMem(),
+                                             outputDesc,
+                                             out_dev->GetMem(),
+                                             beta,
+                                             divisor);
+        }
 
         float time = 0.0;
         miopenGetKernelTime(GetHandle(), &time);
@@ -358,8 +442,20 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunForwardGPU()
 template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::RunForwardCPU()
 {
-    mloSmoothL1LossForwardRunHost<Tgpu, Tref>(
-        inputDesc, targetDesc, outputDesc, in.data(), tar.data(), outhost.data(), reduction, beta);
+    if(std::isnan(divisor))
+        mloSmoothL1LossUnreducedForwardRunHost<Tgpu, Tref>(
+            inputDesc, targetDesc, outputDesc, in.data(), tar.data(), outhost.data(), beta);
+    else
+    {
+        mloSmoothL1LossReducedForwardRunHost<Tgpu, Tref>(inputDesc,
+                                                         targetDesc,
+                                                         in.data(),
+                                                         tar.data(),
+                                                         workspacehost.data(),
+                                                         outhost.data(),
+                                                         beta,
+                                                         divisor);
+    }
 
     return miopenStatusSuccess;
 }

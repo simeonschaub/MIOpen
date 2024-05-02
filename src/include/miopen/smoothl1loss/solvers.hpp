@@ -76,6 +76,28 @@ struct SmoothL1LossUnreducedForward5d final : SmoothL1LossUnreducedForwardSolver
                 const miopen::smoothl1loss::UnreducedProblemDescription& problem) const override;
 };
 
+using SmoothL1LossReducedSolverBase =
+    NonTunableSolverBase<ExecutionContext, miopen::smoothl1loss::ReducedProblemDescription>;
+
+struct SmoothL1LossReducedForward5d final : SmoothL1LossReducedSolverBase
+{
+    const std::string& SolverDbId() const override
+    {
+        return GetSolverDbId<SmoothL1LossReducedForward5d>();
+    }
+
+    bool
+    IsApplicable(const ExecutionContext& context,
+                 const miopen::smoothl1loss::ReducedProblemDescription& problem) const override;
+    ConvSolution
+    GetSolution(const ExecutionContext& context,
+                const miopen::smoothl1loss::ReducedProblemDescription& problem) const override;
+    std::size_t
+    GetWorkspaceSize(const ExecutionContext& context,
+                     const miopen::smoothl1loss::ReducedProblemDescription& problem) const override;
+    bool MayNeedWorkspace() const override { return true; }
+};
+
 } // namespace smoothl1loss
 
 } // namespace solver

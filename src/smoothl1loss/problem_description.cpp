@@ -33,21 +33,18 @@ namespace miopen {
 
 namespace smoothl1loss {
 
-NetworkConfig ProblemDescription::MakeNetworkConfig() const
+NetworkConfig ReducedProblemDescription::MakeNetworkConfig() const
 {
-    auto contiguous   = IsAllContiguous();
     auto input_dtype  = iDesc.GetType();
     auto output_dtype = oDesc.GetType();
     auto size         = iDesc.GetElementSize();
 
     std::ostringstream ss;
 
-    ss << "smoothl1loss_fwd";
-    ss << "contiguous" << contiguous;
+    ss << "smoothl1loss_reduced_fwd";
     ss << "input_dtype" << input_dtype;
     ss << "output_dtype" << output_dtype;
     ss << "size" << size;
-    ss << "reduction" << reduction;
 
     return NetworkConfig{ss.str()};
 }

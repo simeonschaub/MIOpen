@@ -50,34 +50,49 @@ inline std::ostream& operator<<(std::ostream& os, const std::vector<size_t>& v)
 struct SmoothL1LossTestCase
 {
     std::vector<size_t> lengths;
-    miopenLossReduction_t reduction;
     float beta;
+    float divisor;
     bool contiguous;
 
     friend std::ostream& operator<<(std::ostream& os, const SmoothL1LossTestCase& tc)
     {
-        return os << " Lengths:" << tc.lengths << " Reduction:" << tc.reduction
-                  << " Beta:" << tc.beta << " Contiguous:" << (tc.contiguous ? "True" : "False");
+        return os << " Lengths:" << tc.lengths << " Beta:" << tc.beta << " Divisor:" << tc.divisor
+                  << " Contiguous:" << (tc.contiguous ? "True" : "False");
     }
 };
 
 inline std::vector<SmoothL1LossTestCase> SmoothL1LossUnreducedForwardContiguousTestConfigs()
 {
     std::vector<SmoothL1LossTestCase> tcs;
-    tcs.push_back({{1, 1, 2, 2}, MIOPEN_LOSS_NO_REDUCTION, 1, true});
-    tcs.push_back({{2, 10, 128, 128}, MIOPEN_LOSS_NO_REDUCTION, 1, true});
-    tcs.push_back({{5, 13, 17, 11}, MIOPEN_LOSS_NO_REDUCTION, 1, true});
-    tcs.push_back({{256, 4, 8723}, MIOPEN_LOSS_NO_REDUCTION, 1, true});
+    tcs.push_back({{1, 1, 2, 2}, 1, std::numeric_limits<float>::quiet_NaN(), true});
+    tcs.push_back({{2, 10, 128, 128}, 1, std::numeric_limits<float>::quiet_NaN(), true});
+    tcs.push_back({{5, 13, 17, 11}, 1, std::numeric_limits<float>::quiet_NaN(), true});
+    tcs.push_back({{256, 4, 8723}, 1, std::numeric_limits<float>::quiet_NaN(), true});
     return tcs;
 }
 
 inline std::vector<SmoothL1LossTestCase> SmoothL1LossUnreducedForwardTestConfigs()
 {
     std::vector<SmoothL1LossTestCase> tcs;
-    tcs.push_back({{1, 1, 2, 2}, MIOPEN_LOSS_NO_REDUCTION, 1, false});
-    tcs.push_back({{2, 10, 128, 128}, MIOPEN_LOSS_NO_REDUCTION, 1, false});
-    tcs.push_back({{5, 13, 17, 11}, MIOPEN_LOSS_NO_REDUCTION, 1, false});
-    tcs.push_back({{256, 4, 8723}, MIOPEN_LOSS_NO_REDUCTION, 1, false});
+    tcs.push_back({{1, 1, 2, 2}, 1, std::numeric_limits<float>::quiet_NaN(), false});
+    tcs.push_back({{2, 10, 128, 128}, 1, std::numeric_limits<float>::quiet_NaN(), false});
+    tcs.push_back({{5, 13, 17, 11}, 1, std::numeric_limits<float>::quiet_NaN(), false});
+    tcs.push_back({{256, 4, 8723}, 1, std::numeric_limits<float>::quiet_NaN(), false});
+    return tcs;
+}
+
+inline std::vector<SmoothL1LossTestCase> SmoothL1LossReducedForwardTestConfigs()
+{
+    std::vector<SmoothL1LossTestCase> tcs;
+    tcs.push_back({{1, 2, 3, 4}, 1, 1, false});
+    tcs.push_back({{1, 1, 1, 257}, 1, 1, false});
+    tcs.push_back({{2, 10, 128, 128}, 1, 1, false});
+    tcs.push_back({{5, 13, 17, 11}, 1, 1, false});
+    tcs.push_back({{256, 4, 8723}, 1, 1, false});
+    tcs.push_back({{1, 1, 1}, 1, 1, true});
+    tcs.push_back({{34, 4, 5}, 1, 1, true});
+    tcs.push_back({{4, 7, 5}, 1, 1, true});
+    tcs.push_back({{15, 4, 5}, 1, 1, true});
     return tcs;
 }
 
@@ -87,6 +102,8 @@ inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs()
     temp = SmoothL1LossUnreducedForwardContiguousTestConfigs();
     tcs.insert(tcs.end(), temp.begin(), temp.end());
     temp = SmoothL1LossUnreducedForwardTestConfigs();
+    tcs.insert(tcs.end(), temp.begin(), temp.end());
+    temp = SmoothL1LossReducedForwardTestConfigs();
     tcs.insert(tcs.end(), temp.begin(), temp.end());
     return tcs;
 }
@@ -112,32 +129,47 @@ protected:
     {
         auto&& handle        = get_handle();
         smooth_l1loss_config = GetParam();
-        auto gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
+        auto gen_value1 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
+        auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 101); };
 
-        reduction       = smooth_l1loss_config.reduction;
         beta            = smooth_l1loss_config.beta;
+        divisor         = smooth_l1loss_config.divisor;
         auto lengths    = smooth_l1loss_config.lengths;
         auto contiguous = smooth_l1loss_config.contiguous;
 
         auto in_strides = GetStrides(lengths, true);
-        input           = tensor<T>{lengths, in_strides}.generate(gen_value);
+        input           = tensor<T>{lengths, in_strides}.generate(gen_value1);
 
         auto tar_strides = GetStrides(lengths, contiguous);
-        target           = tensor<T>{lengths, tar_strides}.generate(gen_value);
+        target           = tensor<T>{lengths, tar_strides}.generate(gen_value2);
 
-        output = tensor<T>{lengths, in_strides};
+        auto out_lengths = std::isnan(divisor) ? lengths : std::vector<size_t>{1};
+        auto out_strides = GetStrides(out_lengths, true);
+
+        output = tensor<T>{out_lengths, out_strides};
         std::fill(output.begin(), output.end(), std::numeric_limits<T>::quiet_NaN());
 
-        ref_output = tensor<T>{lengths, in_strides};
+        ref_output = tensor<T>{out_lengths, out_strides};
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
         std::vector<size_t> workspace_lengths;
-        ws_sizeInBytes = miopen::GetSmoothL1LossWorkspaceSize(
-            handle, reduction, input.desc, target.desc, output.desc);
-        if(ws_sizeInBytes > 0)
+        ws_sizeInBytes = std::isnan(divisor) ? 0
+                                             : miopen::GetSmoothL1LossReducedWorkspaceSize(
+                                                   handle, input.desc, target.desc, output.desc);
+        if(ws_sizeInBytes == static_cast<size_t>(-1))
+            GTEST_SKIP();
+
+        if(ws_sizeInBytes != 0)
         {
-            workspace = tensor<T>{lengths};
-            std::fill(workspace.begin(), workspace.end(), std::numeric_limits<T>::quiet_NaN());
+            std::vector<size_t> workspace_dims;
+            workspace_dims.push_back(ws_sizeInBytes / sizeof(T));
+
+            workspace = tensor<T>{workspace_dims};
+            std::fill(workspace.begin(), workspace.end(), 0.0f);
+
+            ref_workspace = tensor<T>{workspace_dims};
+            std::fill(ref_workspace.begin(), ref_workspace.end(), 0.0f);
+
             workspace_dev = handle.Write(workspace.data);
         }
 
@@ -151,7 +183,7 @@ protected:
 
         miopenStatus_t status;
 
-        if(output.desc.GetElementSize() > 1) // unreduced cases
+        if(std::isnan(divisor)) // unreduced cases
         {
             cpu_smooth_l1loss_unreduced_forward<T>(input, target, ref_output, beta);
             status = miopen::SmoothL1LossUnreducedForward(handle,
@@ -165,18 +197,19 @@ protected:
         }
         else // reduced cases
         {
-            cpu_smooth_l1loss_reduced_forward<T>(input, target, ref_output, beta, 1);
-            status = miopen::SmoothL1LossForward(handle,
-                                                 reduction,
-                                                 nullptr,
-                                                 0,
-                                                 input.desc,
-                                                 input_dev.get(),
-                                                 target.desc,
-                                                 target_dev.get(),
-                                                 output.desc,
-                                                 output_dev.get(),
-                                                 beta);
+            cpu_smooth_l1loss_reduced_forward<T>(input, target, ref_output, ref_workspace, beta, 1);
+            status         = miopen::SmoothL1LossReducedForward(handle,
+                                                        workspace_dev.get(),
+                                                        ws_sizeInBytes,
+                                                        input.desc,
+                                                        input_dev.get(),
+                                                        target.desc,
+                                                        target_dev.get(),
+                                                        output.desc,
+                                                        output_dev.get(),
+                                                        beta,
+                                                        divisor);
+            workspace.data = handle.Read<T>(workspace_dev, workspace.data.size());
         }
 
         EXPECT_EQ(status, miopenStatusSuccess);
@@ -194,11 +227,16 @@ protected:
         if(std::is_same<T, bfloat16>::value)
             tolerance *= 8.0;
 
+        auto error_w = miopen::rms_range(ref_workspace, workspace);
+
+        EXPECT_TRUE(miopen::range_distance(ref_workspace) == miopen::range_distance(workspace));
+        EXPECT_TRUE(error_w < tolerance);
+
         auto error = miopen::rms_range(ref_output, output);
 
         EXPECT_TRUE(miopen::range_distance(ref_output) == miopen::range_distance(output));
         EXPECT_TRUE(error < tolerance)
-            << "Error output beyond tolerance Error:" << error << ",  Tolerance: " << tolerance;
+            << "Error output beyond tolerance Error: " << error << ",  Tolerance: " << tolerance;
     }
     SmoothL1LossTestCase smooth_l1loss_config;
 
@@ -207,6 +245,7 @@ protected:
     tensor<T> output;
     tensor<T> workspace;
 
+    tensor<T> ref_workspace;
     tensor<T> ref_output;
 
     miopen::Allocator::ManageDataPtr input_dev;
@@ -216,6 +255,6 @@ protected:
 
     size_t ws_sizeInBytes;
 
-    miopenLossReduction_t reduction;
     float beta;
+    float divisor;
 };
