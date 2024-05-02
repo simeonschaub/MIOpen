@@ -51,19 +51,6 @@ struct ReducedProblemDescription : ProblemDescriptionBase
     const TensorDescriptor& GetTDesc() const { return tDesc; }
     const TensorDescriptor& GetODesc() const { return oDesc; }
 
-    bool IsSameType() const
-    {
-        if(iDesc.GetType() != tDesc.GetType())
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");
-#else
-            return false;
-#endif
-        }
-        return true;
-    }
-
     bool IsRightLength() const
     {
         if(iDesc.GetSize() != tDesc.GetSize())
@@ -173,19 +160,6 @@ struct UnreducedProblemDescription : ProblemDescriptionBase
     const TensorDescriptor& GetIDesc() const { return iDesc; }
     const TensorDescriptor& GetTDesc() const { return tDesc; }
     const TensorDescriptor& GetODesc() const { return oDesc; }
-
-    bool IsSameType() const
-    {
-        if(iDesc.GetType() != tDesc.GetType())
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");
-#else
-            return false;
-#endif
-        }
-        return true;
-    }
 
     bool IsRightLength() const
     {

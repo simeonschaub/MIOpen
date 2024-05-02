@@ -46,8 +46,6 @@ bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
     const ExecutionContext& /*context*/,
     const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
 {
-    if(!problem.IsSameType())
-        return false;
     if(!problem.IsRightLength())
         return false;
     if(!problem.IsRightStride())
@@ -71,7 +69,7 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
-    auto dtype        = problem.GetIDesc().GetType();
+    auto dtype        = problem.GetODesc().GetType();
     auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetODesc().GetElementSize();
@@ -143,7 +141,7 @@ ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
-    auto dtype        = problem.GetIDesc().GetType();
+    auto dtype        = problem.GetODesc().GetType();
     auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetODesc().GetElementSize();
@@ -206,8 +204,6 @@ bool SmoothL1LossReducedForward5d::IsApplicable(
     const miopen::smoothl1loss::ReducedProblemDescription& problem) const
 {
     if(problem.GetIDesc().GetSize() > 5)
-        return false;
-    if(!problem.IsSameType())
         return false;
     if(!problem.IsRightLength())
         return false;
