@@ -199,35 +199,30 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetIDesc().GetElementSize();
 
+    auto build_params =
+        KernelBuildParameters{{"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
+                              {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
+                              {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
+                              {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+                              {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+                              {"TARGET_TYPE", target_dtype == "bfloat16" ? "ushort" : target_dtype},
+                              {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
+                              {"D_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
+                              {"REDUCE_SIZE", LOCAL_SIZE_REDUCE}};
+
     /* Phase 1: Calc loss for each element. */
-    result.construction_params.push_back(
-        make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS},
-                        {size},
-                        "MIOpenSmoothL1Loss.cpp",
-                        "SmoothL1LossReducedForward5d",
-                        {{"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
-                         {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
-                         {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
-                         {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-                         {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
-                         {"TARGET_TYPE", target_dtype == "bfloat16" ? "ushort" : target_dtype},
-                         {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype}}));
+    result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS},
+                                                         {size},
+                                                         "MIOpenSmoothL1Loss.cpp",
+                                                         "SmoothL1LossReducedForward5d",
+                                                         build_params));
 
     /* Phase 2: Reduce */
     auto _size = size;
     do
     {
-        result.construction_params.push_back(
-            make_hip_kernel({LOCAL_SIZE_REDUCE},
-                            {_size},
-                            "MIOpenSmoothL1Loss.cpp",
-                            "LossSum",
-                            {{"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
-                             {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
-                             {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
-                             {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-                             {"D_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
-                             {"REDUCE_SIZE", LOCAL_SIZE_REDUCE}}));
+        result.construction_params.push_back(make_hip_kernel(
+            {LOCAL_SIZE_REDUCE}, {_size}, "MIOpenSmoothL1Loss.cpp", "LossSum", build_params));
         _size = AlignUp(_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
     } while(_size > 1);
 
