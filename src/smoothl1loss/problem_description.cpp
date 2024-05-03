@@ -36,14 +36,16 @@ namespace smoothl1loss {
 NetworkConfig ReducedProblemDescription::MakeNetworkConfig() const
 {
     auto input_dtype  = iDesc.GetType();
+    auto target_dtype = tDesc.GetType();
     auto output_dtype = oDesc.GetType();
     auto size         = iDesc.GetElementSize();
 
     std::ostringstream ss;
 
     ss << "smoothl1loss_reduced_fwd";
-    ss << "input_dtype" << input_dtype;
-    ss << "output_dtype" << output_dtype;
+    ss << "i_dtype" << input_dtype;
+    ss << "t_dtype" << target_dtype;
+    ss << "o_dtype" << output_dtype;
     ss << "size" << size;
 
     return NetworkConfig{ss.str()};
@@ -53,6 +55,7 @@ NetworkConfig UnreducedProblemDescription::MakeNetworkConfig() const
 {
     auto contiguous   = IsAllContiguous();
     auto input_dtype  = iDesc.GetType();
+    auto target_dtype = tDesc.GetType();
     auto output_dtype = oDesc.GetType();
     auto size         = iDesc.GetElementSize();
 
@@ -60,8 +63,9 @@ NetworkConfig UnreducedProblemDescription::MakeNetworkConfig() const
 
     ss << "smoothl1loss_unreduced_fwd";
     ss << "contiguous" << contiguous;
-    ss << "input_dtype" << input_dtype;
-    ss << "output_dtype" << output_dtype;
+    ss << "i_dtype" << input_dtype;
+    ss << "t_dtype" << target_dtype;
+    ss << "o_dtype" << output_dtype;
     ss << "size" << size;
 
     return NetworkConfig{ss.str()};

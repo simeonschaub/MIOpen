@@ -87,6 +87,7 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
 
     auto dtype        = problem.GetODesc().GetType();
     auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
+    auto target_dtype = miopen::GetDataType(problem.GetTDesc().GetType());
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetODesc().GetElementSize();
 
@@ -101,6 +102,7 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
                             {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
                             {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
                             {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+                            {"TARGET_TYPE", target_dtype == "bfloat16" ? "ushort" : target_dtype},
                             {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
                         }));
 
@@ -137,6 +139,7 @@ ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
 
     auto dtype        = problem.GetODesc().GetType();
     auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
+    auto target_dtype = miopen::GetDataType(problem.GetTDesc().GetType());
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetODesc().GetElementSize();
 
@@ -151,6 +154,7 @@ ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
                             {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
                             {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
                             {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+                            {"TARGET_TYPE", target_dtype == "bfloat16" ? "ushort" : target_dtype},
                             {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
                         }));
 
@@ -191,6 +195,7 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
 
     auto dtype        = problem.GetODesc().GetType();
     auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
+    auto target_dtype = miopen::GetDataType(problem.GetTDesc().GetType());
     auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
     auto size         = problem.GetIDesc().GetElementSize();
 
@@ -205,6 +210,7 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
                          {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
                          {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
                          {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+                         {"TARGET_TYPE", target_dtype == "bfloat16" ? "ushort" : target_dtype},
                          {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype}}));
 
     /* Phase 2: Reduce */
@@ -220,7 +226,7 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
                              {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
                              {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
                              {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-                             {"D_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+                             {"D_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
                              {"REDUCE_SIZE", LOCAL_SIZE_REDUCE}}));
         _size = AlignUp(_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
     } while(_size > 1);
