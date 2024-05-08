@@ -169,4 +169,46 @@ miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
     return miopenStatusSuccess;
 }
 
+miopenStatus_t SmoothL1LossUnreducedBackward(Handle& handle,
+                                             const TensorDescriptor& iDesc,
+                                             ConstData_t i,
+                                             const TensorDescriptor& tDesc,
+                                             ConstData_t t,
+                                             const TensorDescriptor& doDesc,
+                                             ConstData_t dO,
+                                             const TensorDescriptor& diDesc,
+                                             Data_t dI,
+                                             const TensorDescriptor& dtDesc,
+                                             Data_t dT,
+                                             float beta)
+{
+    const auto problem =
+        smoothl1loss::UnreducedBackwardProblemDescription{iDesc, tDesc, doDesc, diDesc, dtDesc};
+
+    const auto invoke_params = [&]() {
+        auto tmp   = smoothl1loss::InvokeParams{};
+        tmp.type   = InvokeType::Run;
+        tmp.iDesc  = &iDesc;
+        tmp.tDesc  = &tDesc;
+        tmp.doDesc = &doDesc;
+        tmp.diDesc = &diDesc;
+        tmp.dtDesc = &dtDesc;
+        tmp.i      = i;
+        tmp.t      = t;
+        tmp.i_grad = dI;
+        tmp.t_grad = dT;
+        tmp.o_grad = dO;
+        tmp.beta   = beta;
+        return tmp;
+    }();
+
+    const auto algo = AlgorithmName{"SmoothL1LossUnreducedBackward"};
+    const auto solvers =
+        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedBackwardContiguous>{};
+
+    solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
+
+    return miopenStatusSuccess;
+}
+
 } // namespace miopen

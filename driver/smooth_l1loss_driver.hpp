@@ -133,6 +133,59 @@ int32_t mloSmoothL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDes
 }
 
 template <typename Tgpu, typename Tcheck>
+int32_t mloSmoothL1LossUnreducedBackwardRunHost(const miopenTensorDescriptor_t iDesc,
+                                                const miopenTensorDescriptor_t tDesc,
+                                                const miopenTensorDescriptor_t doDesc,
+                                                const miopenTensorDescriptor_t diDesc,
+                                                const miopenTensorDescriptor_t dtDesc,
+                                                const Tgpu* input,
+                                                const Tgpu* target,
+                                                const Tgpu* dO,
+                                                Tcheck* dI,
+                                                Tcheck* dT,
+                                                const float beta)
+{
+    // Treat contiguous tensors as non-contiguous tensors (for consistency)
+    auto I_tv  = get_inner_expanded_tv(miopen::deref(iDesc));
+    auto T_tv  = get_inner_expanded_tv(miopen::deref(tDesc));
+    auto dO_tv = get_inner_expanded_tv(miopen::deref(doDesc));
+    auto dI_tv = get_inner_expanded_tv(miopen::deref(diDesc));
+    auto dT_tv = get_inner_expanded_tv(miopen::deref(dtDesc));
+
+    auto size = miopen::deref(iDesc).GetElementSize();
+    par_ford(size)([&](size_t i) {
+        size_t n[5];
+        GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
+
+        if(n[0] >= I_tv.size[0])
+            return;
+
+        size_t Iidx  = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+        size_t Tidx  = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+        size_t dOidx = TV5D_IDX(dO_tv, n[0], n[1], n[2], n[3], n[4]);
+
+        float sub = input[Iidx] - target[Tidx];
+        float grad;
+        if(std::abs(sub) < beta)
+        {
+            grad = sub / beta * dO[dOidx];
+        }
+        else
+        {
+            grad = (sub >= 0 ? 1.0f : -1.0f) * dO[dOidx];
+        }
+
+        size_t dIidx = TV5D_IDX(dI_tv, n[0], n[1], n[2], n[3], n[4]);
+        size_t dTidx = TV5D_IDX(dT_tv, n[0], n[1], n[2], n[3], n[4]);
+
+        dI[dIidx] = grad;
+        dT[dTidx] = -grad;
+    });
+
+    return miopenStatusSuccess;
+}
+
+template <typename Tgpu, typename Tcheck>
 int32_t mloSmoothL1LossReducedBackwardRunHost(const miopenTensorDescriptor_t iDesc,
                                               const miopenTensorDescriptor_t tDesc,
                                               const miopenTensorDescriptor_t diDesc,
@@ -455,7 +508,9 @@ int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
         tar[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(0.01), static_cast<Tgpu>(0.21));
     }
 
-    dO[0] = static_cast<Tgpu>(0.5);
+    fill(out.begin(), out.end(), static_cast<Tgpu>(0));
+
+    fill(dO.begin(), dO.end(), static_cast<Tgpu>(0.5));
 
     if(in_dev->ToGPU(GetStream(), in.data()) != 0)
         std::cerr << "Error copying (in) to GPU, size: " << in_dev->GetSize() << std::endl;
@@ -465,6 +520,17 @@ int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 
     if(dO_dev->ToGPU(GetStream(), dO.data()) != 0)
         std::cerr << "Error copying (out grad) to GPU, size: " << dO_dev->GetSize() << std::endl;
+
+    if(std::isnan(divisor) && inflags.GetValueInt("Contiguous") == 0)
+    {
+        fill(dIhost.begin(), dIhost.end(), static_cast<Tgpu>(0));
+        fill(dThost.begin(), dThost.end(), static_cast<Tgpu>(0));
+        if(dI_dev->ToGPU(GetStream(), dIhost.data()) != 0)
+            std::cerr << "Error copying (in grad) to GPU, size: " << dI_dev->GetSize() << std::endl;
+        if(dT_dev->ToGPU(GetStream(), dThost.data()) != 0)
+            std::cerr << "Error copying (tar grad) to GPU, size: " << dT_dev->GetSize()
+                      << std::endl;
+    }
 
     return miopenStatusSuccess;
 }
@@ -537,8 +603,10 @@ template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::RunForwardCPU()
 {
     if(std::isnan(divisor))
+    {
         mloSmoothL1LossUnreducedForwardRunHost<Tgpu, Tref>(
             inputDesc, targetDesc, outputDesc, in.data(), tar.data(), outhost.data(), beta);
+    }
     else
     {
         mloSmoothL1LossReducedForwardRunHost<Tgpu, Tref>(inputDesc,
@@ -566,7 +634,24 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunBackwardGPU()
     for(int i = 0; i < inflags.GetValueInt("iter"); i++)
     {
         miopen::deref(GetHandle()).ResetKernelTime();
-        if(std::isnan(divisor)) {}
+        if(std::isnan(divisor))
+        {
+            if(inflags.GetValueInt("Contiguous") != 0)
+            {
+                miopenSmoothL1LossUnreducedBackward(GetHandle(),
+                                                    inputDesc,
+                                                    in_dev->GetMem(),
+                                                    targetDesc,
+                                                    tar_dev->GetMem(),
+                                                    doDesc,
+                                                    dO_dev->GetMem(),
+                                                    diDesc,
+                                                    dI_dev->GetMem(),
+                                                    dtDesc,
+                                                    dT_dev->GetMem(),
+                                                    beta);
+            }
+        }
         else
         {
             miopenSmoothL1LossReducedBackward(GetHandle(),
@@ -594,7 +679,7 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunBackwardGPU()
     if(inflags.GetValueInt("time") == 1)
     {
         STOP_TIME
-        if(std::isnan(divisor))
+        if(std::isnan(divisor) && inflags.GetValueInt("Contiguous") == 0)
         {
             std::cout << "-1\n";
         }
@@ -623,7 +708,23 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunBackwardGPU()
 template <typename Tgpu, typename Tref>
 int SmoothL1LossDriver<Tgpu, Tref>::RunBackwardCPU()
 {
-    if(std::isnan(divisor)) {}
+    if(std::isnan(divisor))
+    {
+        if(inflags.GetValueInt("Contiguous") != 0)
+        {
+            mloSmoothL1LossUnreducedBackwardRunHost<Tgpu, Tref>(inputDesc,
+                                                                targetDesc,
+                                                                doDesc,
+                                                                diDesc,
+                                                                dtDesc,
+                                                                in.data(),
+                                                                tar.data(),
+                                                                dO.data(),
+                                                                dIhost.data(),
+                                                                dThost.data(),
+                                                                beta);
+        }
+    }
     else
     {
         mloSmoothL1LossReducedBackwardRunHost<Tgpu, Tref>(inputDesc,

@@ -314,7 +314,21 @@ protected:
 
         if(std::isnan(divisor)) // unreduced cases
         {
-            GTEST_SKIP();
+            if(!GetParam().contiguous)
+                GTEST_SKIP();
+            cpu_smooth_l1loss_unreduced_backward(input, target, dO, ref_dI, ref_dT, beta);
+            status = miopen::SmoothL1LossUnreducedBackward(handle,
+                                                           input.desc,
+                                                           input_dev.get(),
+                                                           target.desc,
+                                                           target_dev.get(),
+                                                           dO.desc,
+                                                           dO_dev.get(),
+                                                           dI.desc,
+                                                           dI_dev.get(),
+                                                           dT.desc,
+                                                           dT_dev.get(),
+                                                           beta);
         }
         else // reduced cases
         {
@@ -342,9 +356,8 @@ protected:
 
     void Verify()
     {
-        if(std::isnan(divisor))
+        if(std::isnan(divisor) && !GetParam().contiguous)
             GTEST_SKIP();
-
         // Computation error of fp16 is ~2^13 (=8192) bigger than
         // the one of fp32 because mantissa is shorter by 13 bits.
         double tolerance = std::is_same<T, float>::value ? 1.5e-6 : 8.2e-3;

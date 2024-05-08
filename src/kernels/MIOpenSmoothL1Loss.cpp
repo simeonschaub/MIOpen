@@ -233,9 +233,9 @@ __device__ void SmoothL1LossReducedBackward5d(const TI* I,
         dT[TV5D_IDX(dT_tv, n[0], n[1], n[2], n[3], n[4])] = CVT_ACCUM2FLOAT(-grad);
 }
 
-extern "C" __global__ void SmoothL1LossReducedBackward5d(INPUT_TYPE* I,
-                                                         INPUT_TYPE* T,
-                                                         OUTPUT_TYPE* dO,
+extern "C" __global__ void SmoothL1LossReducedBackward5d(const INPUT_TYPE* I,
+                                                         const INPUT_TYPE* T,
+                                                         const OUTPUT_TYPE* dO,
                                                          INPUT_TYPE* dI,
                                                          INPUT_TYPE* dT,
                                                          float beta,
@@ -247,4 +247,42 @@ extern "C" __global__ void SmoothL1LossReducedBackward5d(INPUT_TYPE* I,
 {
     SmoothL1LossReducedBackward5d<INPUT_TYPE, OUTPUT_TYPE>(
         I, T, dO, dI, dT, beta, divisor, I_tv, T_tv, dI_tv, dT_tv);
+}
+
+template <typename TI, typename TO>
+__device__ void SmoothL1LossUnreducedBackwardContiguous(
+    const TI* I, const TI* T, const TO* dO, TI* dI, TI* dT, const float beta, const ulong n)
+{
+    const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+    if(gid >= n)
+        return;
+
+    FLOAT_ACCUM sub = CVT_FLOAT2ACCUM(I[gid]) - CVT_FLOAT2ACCUM(T[gid]);
+    FLOAT_ACCUM grad;
+
+    if(fabs(sub) < beta)
+    {
+        grad = sub / beta * CVT_FLOAT2ACCUM(dO[gid]);
+    }
+    else
+    {
+        grad = (sub >= 0 ? 1.0f : -1.0f) * CVT_FLOAT2ACCUM(dO[gid]);
+    }
+
+    if(dI)
+        dI[gid] = CVT_ACCUM2FLOAT(grad);
+    if(dT)
+        dT[gid] = CVT_ACCUM2FLOAT(-grad);
+}
+
+extern "C" __global__ void SmoothL1LossUnreducedBackwardContiguous(const INPUT_TYPE* I,
+                                                                   const INPUT_TYPE* T,
+                                                                   const OUTPUT_TYPE* dO,
+                                                                   INPUT_TYPE* dI,
+                                                                   INPUT_TYPE* dT,
+                                                                   const float beta,
+                                                                   const ulong n)
+{
+    // instantiate the kernel
+    SmoothL1LossUnreducedBackwardContiguous<INPUT_TYPE, OUTPUT_TYPE>(I, T, dO, dI, dT, beta, n);
 }

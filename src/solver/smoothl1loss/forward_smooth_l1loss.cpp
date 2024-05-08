@@ -32,9 +32,9 @@
 #include <miopen/target_properties.hpp>
 #include <miopen/tensor_view_5d.hpp>
 
-#define LOCAL_SIZE_CONTIGUOUS 256
-#define LOCAL_SIZE_NONCONTIGUOUS 256
-#define LOCAL_SIZE_REDUCE 256
+#define LOCAL_SIZE_CONTIGUOUS_FWD 256
+#define LOCAL_SIZE_NONCONTIGUOUS_FWD 256
+#define LOCAL_SIZE_REDUCE_FWD 256
 
 namespace miopen {
 
@@ -93,7 +93,7 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
     auto size         = problem.GetODesc().GetElementSize();
 
     result.construction_params.push_back(
-        make_hip_kernel({LOCAL_SIZE_CONTIGUOUS},
+        make_hip_kernel({LOCAL_SIZE_CONTIGUOUS_FWD},
                         {size},
                         "MIOpenSmoothL1Loss.cpp",
                         "SmoothL1LossUnreducedForwardContiguous",
@@ -143,7 +143,7 @@ ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
     auto size         = problem.GetODesc().GetElementSize();
 
     result.construction_params.push_back(
-        make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS},
+        make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS_FWD},
                         {size},
                         "MIOpenSmoothL1Loss.cpp",
                         "SmoothL1LossUnreducedForward5d",
@@ -204,10 +204,10 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
                               {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
                               {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
                               {"D_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
-                              {"REDUCE_SIZE", LOCAL_SIZE_REDUCE}};
+                              {"REDUCE_SIZE", LOCAL_SIZE_REDUCE_FWD}};
 
     /* Phase 1: Calc loss for each element. */
-    result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS},
+    result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS_FWD},
                                                          {size},
                                                          "MIOpenSmoothL1Loss.cpp",
                                                          "SmoothL1LossReducedForward5d",
@@ -218,8 +218,8 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
     do
     {
         result.construction_params.push_back(make_hip_kernel(
-            {LOCAL_SIZE_REDUCE}, {_size}, "MIOpenSmoothL1Loss.cpp", "LossSum", build_params));
-        _size = AlignUp(_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
+            {LOCAL_SIZE_REDUCE_FWD}, {_size}, "MIOpenSmoothL1Loss.cpp", "LossSum", build_params));
+        _size = AlignUp(_size, LOCAL_SIZE_REDUCE_FWD) / LOCAL_SIZE_REDUCE_FWD;
     } while(_size > 1);
 
     result.invoker_factory = [](const std::vector<Kernel>& kernels) {
@@ -256,7 +256,7 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
                 {
                     kernel(work_a, params.o, size);
                 }
-                size = AlignUp(size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
+                size = AlignUp(size, LOCAL_SIZE_REDUCE_FWD) / LOCAL_SIZE_REDUCE_FWD;
                 if(handle_.IsProfilingEnabled())
                     elapsed += handle_.GetKernelTime();
             }
@@ -276,7 +276,8 @@ std::size_t SmoothL1LossReducedForward5d::GetWorkspaceSize(
     const miopen::smoothl1loss::ReducedForwardProblemDescription& problem) const
 {
     return (problem.GetIDesc().GetElementSize() +
-            AlignUp(problem.GetIDesc().GetElementSize(), LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE) *
+            AlignUp(problem.GetIDesc().GetElementSize(), LOCAL_SIZE_REDUCE_FWD) /
+                LOCAL_SIZE_REDUCE_FWD) *
            get_data_size(problem.GetODesc().GetType());
 }
 

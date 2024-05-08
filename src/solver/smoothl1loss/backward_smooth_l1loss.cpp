@@ -33,6 +33,7 @@
 #include <miopen/tensor_view_5d.hpp>
 
 #define LOCAL_SIZE_NONCONTIGUOUS_BWD 256
+#define LOCAL_SIZE_CONTIGUOUS_BWD 256
 
 namespace miopen {
 
@@ -54,6 +55,70 @@ const auto make_hip_kernel = [](std::vector<size_t> localsize,
 };
 
 namespace smoothl1loss {
+
+bool SmoothL1LossUnreducedBackwardSolver::IsApplicable(
+    const ExecutionContext& /*context*/,
+    const miopen::smoothl1loss::UnreducedBackwardProblemDescription& problem) const
+{
+    if(!problem.IsSameType())
+        return false;
+    if(!problem.IsRightLength())
+        return false;
+    if(!problem.IsRightStride())
+        return false;
+    return true;
+}
+
+bool SmoothL1LossUnreducedBackwardContiguous::IsApplicable(
+    const ExecutionContext& context,
+    const miopen::smoothl1loss::UnreducedBackwardProblemDescription& problem) const
+{
+    if(!problem.IsSameStride() && !problem.IsAllContiguous())
+        return false;
+    if(!SmoothL1LossUnreducedBackwardSolver::IsApplicable(context, problem))
+        return false;
+    return true;
+}
+
+ConvSolution SmoothL1LossUnreducedBackwardContiguous::GetSolution(
+    const ExecutionContext& /*context*/,
+    const miopen::smoothl1loss::UnreducedBackwardProblemDescription& problem) const
+{
+    auto result = ConvSolution{miopenStatusSuccess};
+
+    auto dtype        = problem.GetDIDesc().GetType();
+    auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
+    auto output_dtype = miopen::GetDataType(problem.GetDODesc().GetType());
+    auto size         = problem.GetDIDesc().GetElementSize();
+
+    result.construction_params.push_back(
+        make_hip_kernel({LOCAL_SIZE_CONTIGUOUS_BWD},
+                        {size},
+                        "MIOpenSmoothL1Loss.cpp",
+                        "SmoothL1LossUnreducedBackwardContiguous",
+                        KernelBuildParameters{
+                            {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
+                            {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
+                            {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
+                            {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+                            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
+                            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
+                        }));
+
+    result.invoker_factory = [](const std::vector<Kernel>& kernels) {
+        return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
+            decltype(auto) kernel = handle_.Run(kernels.front());
+            decltype(auto) params = raw_params.CastTo<miopen::smoothl1loss::InvokeParams>();
+
+            auto size = params.iDesc->GetElementSize();
+
+            kernel(
+                params.i, params.t, params.o_grad, params.i_grad, params.t_grad, params.beta, size);
+        };
+    };
+
+    return result;
+}
 
 bool SmoothL1LossReducedBackward5d::IsApplicable(
     const ExecutionContext& /*context*/,

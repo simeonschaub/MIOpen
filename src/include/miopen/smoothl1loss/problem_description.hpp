@@ -119,14 +119,18 @@ struct UnreducedForwardProblemDescription : SmoothL1LossFwdProblemDescription
     {
         if(!SmoothL1LossFwdProblemDescription::IsRightLength())
             return false;
-        return checkSameLength(iDesc, oDesc);
+        if(!checkSameLength(iDesc, oDesc))
+            return false;
+        return true;
     }
 
     bool IsSameStride() const
     {
         if(!SmoothL1LossFwdProblemDescription::IsSameStride())
             return false;
-        return checkSameStride(iDesc, oDesc);
+        if(!checkSameStride(iDesc, oDesc))
+            return false;
+        return true;
     }
 
     NetworkConfig MakeNetworkConfig() const override;
@@ -167,6 +171,12 @@ struct SmoothL1LossBwdProblemDescription : ProblemDescriptionBase
                checkRightStride(diDesc) && checkRightStride(dtDesc);
     }
 
+    bool IsSameStride() const
+    {
+        return checkSameStride(iDesc, tDesc) && checkSameStride(iDesc, diDesc) &&
+               checkSameStride(tDesc, dtDesc);
+    }
+
     bool IsAllContiguous() const
     {
         return checkContiguous(iDesc) && checkContiguous(tDesc) && checkContiguous(doDesc) &&
@@ -205,6 +215,37 @@ struct ReducedBackwardProblemDescription : SmoothL1LossBwdProblemDescription
 #else
             return false;
 #endif
+        return true;
+    }
+
+    NetworkConfig MakeNetworkConfig() const override;
+};
+
+struct UnreducedBackwardProblemDescription : SmoothL1LossBwdProblemDescription
+{
+    UnreducedBackwardProblemDescription(const TensorDescriptor& iDesc_,
+                                        const TensorDescriptor& tDesc_,
+                                        const TensorDescriptor& doDesc_,
+                                        const TensorDescriptor& diDesc_,
+                                        const TensorDescriptor& dtDesc_)
+        : SmoothL1LossBwdProblemDescription(iDesc_, tDesc_, doDesc_, diDesc_, dtDesc_)
+    {
+    }
+
+    bool IsRightLength() const
+    {
+        if(!SmoothL1LossBwdProblemDescription::IsRightLength())
+            return false;
+        if(!checkSameLength(iDesc, doDesc))
+            return false;
+        return true;
+    }
+
+    bool IsSameStride() const
+    {
+        if(!checkSameStride(iDesc, tDesc) || !checkSameStride(iDesc, diDesc) ||
+           !checkSameStride(tDesc, dtDesc) || !checkSameStride(iDesc, doDesc))
+            return false;
         return true;
     }
 

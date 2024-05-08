@@ -108,6 +108,52 @@ void cpu_smooth_l1loss_reduced_forward(tensor<T> input,
 }
 
 template <class T>
+void cpu_smooth_l1loss_unreduced_backward(tensor<T> input,
+                                          tensor<T> target,
+                                          tensor<T> dO,
+                                          tensor<T>& ref_dI,
+                                          tensor<T>& ref_dT,
+                                          float beta)
+{
+    // Treat contiguous tensors as non-contiguous tensors (for consistency)
+    auto I_tv  = get_inner_expanded_tv(input.desc);
+    auto T_tv  = get_inner_expanded_tv(target.desc);
+    auto dO_tv = get_inner_expanded_tv(dO.desc);
+    auto dI_tv = get_inner_expanded_tv(ref_dI.desc);
+    auto dT_tv = get_inner_expanded_tv(ref_dT.desc);
+
+    auto size = input.desc.GetElementSize();
+    par_ford(size)([&](size_t i) {
+        size_t n[5];
+        GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
+
+        if(n[0] >= I_tv.size[0])
+            return;
+
+        size_t Iidx  = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+        size_t Tidx  = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+        size_t dOidx = TV5D_IDX(dO_tv, n[0], n[1], n[2], n[3], n[4]);
+
+        T sub = input[Iidx] - target[Tidx];
+        T grad;
+        if(std::abs(sub) < beta)
+        {
+            grad = sub / beta * dO[dOidx];
+        }
+        else
+        {
+            grad = (sub >= 0 ? 1.0f : -1.0f) * dO[dOidx];
+        }
+
+        size_t dIidx = TV5D_IDX(dI_tv, n[0], n[1], n[2], n[3], n[4]);
+        size_t dTidx = TV5D_IDX(dT_tv, n[0], n[1], n[2], n[3], n[4]);
+
+        ref_dI[dIidx] = grad;
+        ref_dT[dTidx] = -grad;
+    });
+}
+
+template <class T>
 void cpu_smooth_l1loss_reduced_backward(tensor<T> input,
                                         tensor<T> target,
                                         tensor<T> dO,

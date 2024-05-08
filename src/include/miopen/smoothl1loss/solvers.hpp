@@ -99,6 +99,33 @@ struct SmoothL1LossReducedForward5d final : SmoothL1LossReducedForwardSolverBase
     bool MayNeedWorkspace() const override { return true; }
 };
 
+using SmoothL1LossUnreducedBackwardSolverBase =
+    NonTunableSolverBase<ExecutionContext,
+                         miopen::smoothl1loss::UnreducedBackwardProblemDescription>;
+
+struct SmoothL1LossUnreducedBackwardSolver : SmoothL1LossUnreducedBackwardSolverBase
+{
+    bool IsApplicable(
+        const ExecutionContext& context,
+        const miopen::smoothl1loss::UnreducedBackwardProblemDescription& problem) const override;
+};
+
+struct SmoothL1LossUnreducedBackwardContiguous final : SmoothL1LossUnreducedBackwardSolver
+{
+    const std::string& SolverDbId() const override
+    {
+        return GetSolverDbId<SmoothL1LossUnreducedBackwardContiguous>();
+    }
+
+    bool IsApplicable(
+        const ExecutionContext& context,
+        const miopen::smoothl1loss::UnreducedBackwardProblemDescription& problem) const override;
+    ConvSolution GetSolution(
+        const ExecutionContext& context,
+        const miopen::smoothl1loss::UnreducedBackwardProblemDescription& problem) const override;
+    bool MayNeedWorkspace() const override { return false; }
+};
+
 using SmoothL1LossReducedBackwardSolverBase =
     NonTunableSolverBase<ExecutionContext, miopen::smoothl1loss::ReducedBackwardProblemDescription>;
 
