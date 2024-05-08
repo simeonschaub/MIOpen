@@ -432,13 +432,13 @@ int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     dT_dev        = std::unique_ptr<GPUMem>(new GPUMem(ctx, tar_sz, sizeof(Tgpu)));
     dO_dev        = std::unique_ptr<GPUMem>(new GPUMem(ctx, out_sz, sizeof(Tgpu)));
 
-    in            = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
-    tar           = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
-    out           = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
-    workspace     = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
-    dI            = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
-    dT            = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
-    dO            = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
+    in        = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
+    tar       = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
+    out       = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
+    workspace = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
+    dI        = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
+    dT        = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
+    dO        = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
 
     outhost       = std::vector<Tref>(out_sz, static_cast<Tref>(0));
     workspacehost = std::vector<Tref>(in_sz, static_cast<Tref>(0));
