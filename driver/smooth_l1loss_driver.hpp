@@ -511,7 +511,6 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunForwardGPU()
         kernel_total_time += time;
         if(i == 0)
             kernel_first_time = time;
-        // std::cerr << "Iter: " << i << ", duration: " << time << std::endl;
     }
 
     if(inflags.GetValueInt("time") == 1)
@@ -590,7 +589,6 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunBackwardGPU()
         kernel_total_time += time;
         if(i == 0)
             kernel_first_time = time;
-        std::cerr << "Iter: " << i << ", duration: " << time << std::endl;
     }
 
     if(inflags.GetValueInt("time") == 1)

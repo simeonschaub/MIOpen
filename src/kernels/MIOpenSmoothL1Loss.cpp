@@ -35,10 +35,6 @@
 #define INPUT_TYPE float
 #endif
 
-#ifndef TARGET_TYPE
-#define TARGET_TYPE float
-#endif
-
 #ifndef OUTPUT_TYPE
 #define OUTPUT_TYPE float
 #endif
@@ -51,9 +47,9 @@
 #define REDUCE_SIZE 256
 #endif
 
-template <typename TI, typename TT, typename TO>
+template <typename TI, typename TO>
 __device__ void smoothl1lossunreducedforwardcontiguous(
-    const TI* I, const TT* T, TO* O, const float beta, const ulong n)
+    const TI* I, const TI* T, TO* O, const float beta, const ulong n)
 {
     const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
     if(gid >= n)
@@ -64,18 +60,18 @@ __device__ void smoothl1lossunreducedforwardcontiguous(
 }
 
 extern "C" __global__ void SmoothL1LossUnreducedForwardContiguous(const INPUT_TYPE* __restrict__ I,
-                                                                  const TARGET_TYPE* __restrict__ T,
+                                                                  const INPUT_TYPE* __restrict__ T,
                                                                   OUTPUT_TYPE* __restrict__ O,
                                                                   const float beta,
                                                                   const ulong n)
 {
     // instantiate the kernel
-    smoothl1lossunreducedforwardcontiguous<INPUT_TYPE, TARGET_TYPE, OUTPUT_TYPE>(I, T, O, beta, n);
+    smoothl1lossunreducedforwardcontiguous<INPUT_TYPE, OUTPUT_TYPE>(I, T, O, beta, n);
 }
 
-template <typename TI, typename TT, typename TO>
+template <typename TI, typename TO>
 __device__ void smoothl1lossunreducedforward5d(const TI* I,
-                                               const TT* T,
+                                               const TI* T,
                                                TO* O,
                                                const float beta,
                                                tensor_view_5d_t I_tv,
@@ -98,7 +94,7 @@ __device__ void smoothl1lossunreducedforward5d(const TI* I,
 }
 
 extern "C" __global__ void SmoothL1LossUnreducedForward5d(const INPUT_TYPE* __restrict__ I,
-                                                          const TARGET_TYPE* __restrict__ T,
+                                                          const INPUT_TYPE* __restrict__ T,
                                                           OUTPUT_TYPE* __restrict__ O,
                                                           const float beta,
                                                           tensor_view_5d_t I_tv,
@@ -106,13 +102,12 @@ extern "C" __global__ void SmoothL1LossUnreducedForward5d(const INPUT_TYPE* __re
                                                           tensor_view_5d_t O_tv)
 {
     // instantiate the kernel
-    smoothl1lossunreducedforward5d<INPUT_TYPE, TARGET_TYPE, OUTPUT_TYPE>(
-        I, T, O, beta, I_tv, T_tv, O_tv);
+    smoothl1lossunreducedforward5d<INPUT_TYPE, OUTPUT_TYPE>(I, T, O, beta, I_tv, T_tv, O_tv);
 }
 
-template <typename TI, typename TT, typename TO>
+template <typename TI, typename TO>
 __device__ void smoothl1lossreducedforward5d(const TI* I,
-                                             const TT* T,
+                                             const TI* T,
                                              TO* lsum,
                                              const float beta,
                                              const float divisor,
@@ -135,7 +130,7 @@ __device__ void smoothl1lossreducedforward5d(const TI* I,
 }
 
 extern "C" __global__ void SmoothL1LossReducedForward5d(const INPUT_TYPE* __restrict__ I,
-                                                        const TARGET_TYPE* __restrict__ T,
+                                                        const INPUT_TYPE* __restrict__ T,
                                                         OUTPUT_TYPE* __restrict__ lsum,
                                                         const float beta,
                                                         const float divisor,
@@ -143,8 +138,7 @@ extern "C" __global__ void SmoothL1LossReducedForward5d(const INPUT_TYPE* __rest
                                                         tensor_view_5d_t T_tv)
 {
     // instantiate the kernel
-    smoothl1lossreducedforward5d<INPUT_TYPE, TARGET_TYPE, OUTPUT_TYPE>(
-        I, T, lsum, beta, divisor, I_tv, T_tv);
+    smoothl1lossreducedforward5d<INPUT_TYPE, OUTPUT_TYPE>(I, T, lsum, beta, divisor, I_tv, T_tv);
 }
 
 __device__ FLOAT_ACCUM warp_reduce_sum(FLOAT_ACCUM val)

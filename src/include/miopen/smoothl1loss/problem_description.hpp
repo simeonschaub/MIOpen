@@ -57,6 +57,8 @@ struct SmoothL1LossFwdProblemDescription : ProblemDescriptionBase
     const TensorDescriptor& GetTDesc() const { return tDesc; }
     const TensorDescriptor& GetODesc() const { return oDesc; }
 
+    bool IsSameType() const { return checkSameType(iDesc, tDesc); }
+
     bool IsRightLength() const { return checkSameLength(iDesc, tDesc); }
 
     bool IsRightStride() const
