@@ -122,7 +122,7 @@ inline std::vector<size_t> GetStrides(std::vector<size_t> lengths, bool contiguo
 }
 
 template <typename T = float>
-struct SmoothL1LossTest : public ::testing::TestWithParam<SmoothL1LossTestCase>
+struct SmoothL1LossTestForward : public ::testing::TestWithParam<SmoothL1LossTestCase>
 {
 protected:
     void SetUp() override
@@ -154,7 +154,7 @@ protected:
 
         std::vector<size_t> workspace_lengths;
         ws_sizeInBytes = std::isnan(divisor) ? 0
-                                             : miopen::GetSmoothL1LossReducedWorkspaceSize(
+                                             : miopen::GetSmoothL1LossReducedForwardWorkspaceSize(
                                                    handle, input.desc, target.desc, output.desc);
         if(ws_sizeInBytes == static_cast<size_t>(-1))
             GTEST_SKIP();
@@ -177,6 +177,7 @@ protected:
         target_dev = handle.Write(target.data);
         output_dev = handle.Write(output.data);
     }
+
     void RunTest()
     {
         auto&& handle = get_handle();
@@ -197,7 +198,8 @@ protected:
         }
         else // reduced cases
         {
-            cpu_smooth_l1loss_reduced_forward<T>(input, target, ref_output, ref_workspace, beta, 1);
+            cpu_smooth_l1loss_reduced_forward<T>(
+                input, target, ref_output, ref_workspace, beta, divisor);
             status         = miopen::SmoothL1LossReducedForward(handle,
                                                         workspace_dev.get(),
                                                         ws_sizeInBytes,
@@ -254,6 +256,128 @@ protected:
     miopen::Allocator::ManageDataPtr workspace_dev;
 
     size_t ws_sizeInBytes;
+
+    float beta;
+    float divisor;
+};
+
+template <typename T = float>
+struct SmoothL1LossTestBackward : public ::testing::TestWithParam<SmoothL1LossTestCase>
+{
+protected:
+    void SetUp() override
+    {
+        auto&& handle        = get_handle();
+        smooth_l1loss_config = GetParam();
+        auto gen_value1 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
+        auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 101); };
+
+        beta            = smooth_l1loss_config.beta;
+        divisor         = smooth_l1loss_config.divisor;
+        auto lengths    = smooth_l1loss_config.lengths;
+        auto contiguous = smooth_l1loss_config.contiguous;
+
+        auto in_strides = GetStrides(lengths, true);
+        input           = tensor<T>{lengths, in_strides}.generate(gen_value1);
+
+        auto tar_strides = GetStrides(lengths, contiguous);
+        target           = tensor<T>{lengths, tar_strides}.generate(gen_value2);
+
+        auto out_lengths = std::isnan(divisor) ? lengths : std::vector<size_t>{1};
+        auto out_strides = GetStrides(out_lengths, true);
+
+        dO = tensor<T>{out_lengths, out_strides};
+        std::fill(dO.begin(), dO.end(), 0.5);
+
+        dI = tensor<T>{lengths, in_strides};
+        std::fill(dI.begin(), dI.end(), std::numeric_limits<T>::quiet_NaN());
+        dT = tensor<T>{lengths, tar_strides};
+        std::fill(dT.begin(), dT.end(), std::numeric_limits<T>::quiet_NaN());
+
+        ref_dI = tensor<T>{lengths, in_strides};
+        std::fill(ref_dI.begin(), ref_dI.end(), std::numeric_limits<T>::quiet_NaN());
+        ref_dT = tensor<T>{lengths, tar_strides};
+        std::fill(ref_dT.begin(), ref_dT.end(), std::numeric_limits<T>::quiet_NaN());
+
+        input_dev  = handle.Write(input.data);
+        target_dev = handle.Write(target.data);
+        dO_dev     = handle.Write(dO.data);
+        dI_dev     = handle.Write(dI.data);
+        dT_dev     = handle.Write(dT.data);
+    }
+
+    void RunTest()
+    {
+        auto&& handle = get_handle();
+
+        miopenStatus_t status;
+
+        if(std::isnan(divisor)) // unreduced cases
+        {
+            GTEST_SKIP();
+        }
+        else // reduced cases
+        {
+            cpu_smooth_l1loss_reduced_backward<T>(input, target, dO, ref_dI, ref_dT, beta, divisor);
+            status = miopen::SmoothL1LossReducedBackward(handle,
+                                                         input.desc,
+                                                         input_dev.get(),
+                                                         target.desc,
+                                                         target_dev.get(),
+                                                         dO.desc,
+                                                         dO_dev.get(),
+                                                         dI.desc,
+                                                         dI_dev.get(),
+                                                         dT.desc,
+                                                         dT_dev.get(),
+                                                         beta,
+                                                         divisor);
+        }
+
+        EXPECT_EQ(status, miopenStatusSuccess);
+
+        dI.data = handle.Read<T>(dI_dev, dI.data.size());
+        dT.data = handle.Read<T>(dT_dev, dT.data.size());
+    }
+
+    void Verify()
+    {
+        if(std::isnan(divisor))
+            GTEST_SKIP();
+
+        // Computation error of fp16 is ~2^13 (=8192) bigger than
+        // the one of fp32 because mantissa is shorter by 13 bits.
+        double tolerance = std::is_same<T, float>::value ? 1.5e-6 : 8.2e-3;
+
+        // bf16 mantissa has 7 bits, by 3 bits shorter than fp16.
+        if(std::is_same<T, bfloat16>::value)
+            tolerance *= 8.0;
+
+        auto error_dI = miopen::rms_range(ref_dI, dI);
+        auto error_dT = miopen::rms_range(ref_dT, dT);
+
+        EXPECT_TRUE(miopen::range_distance(ref_dI) == miopen::range_distance(dI));
+        EXPECT_TRUE(miopen::range_distance(ref_dT) == miopen::range_distance(dT));
+        EXPECT_TRUE(error_dI < tolerance && error_dT < tolerance)
+            << "Error output beyond tolerance Error: {" << error_dI << "," << error_dT
+            << "},  Tolerance: " << tolerance;
+    }
+    SmoothL1LossTestCase smooth_l1loss_config;
+
+    tensor<T> input;
+    tensor<T> target;
+    tensor<T> dO;
+    tensor<T> dI;
+    tensor<T> dT;
+
+    tensor<T> ref_dI;
+    tensor<T> ref_dT;
+
+    miopen::Allocator::ManageDataPtr input_dev;
+    miopen::Allocator::ManageDataPtr target_dev;
+    miopen::Allocator::ManageDataPtr dO_dev;
+    miopen::Allocator::ManageDataPtr dI_dev;
+    miopen::Allocator::ManageDataPtr dT_dev;
 
     float beta;
     float divisor;

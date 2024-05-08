@@ -90,7 +90,7 @@ void cpu_smooth_l1loss_reduced_forward(tensor<T> input,
     {
         for(int i = 0; i < _size; i += local_size)
         {
-            float shared[local_size];
+            T shared[local_size];
             for(int j = 0; j < local_size; ++j)
                 shared[j] = i + j < _size ? ref_workspace[offset_a + i + j] : 0.0f;
             for(int offset = local_size / 2; offset > 0; offset >>= 1)
@@ -105,6 +105,43 @@ void cpu_smooth_l1loss_reduced_forward(tensor<T> input,
         std::swap(offset_a, offset_b);
         _size = (_size + local_size - 1) / local_size;
     } while(_size > 1);
+}
+
+template <class T>
+void cpu_smooth_l1loss_reduced_backward(tensor<T> input,
+                                        tensor<T> target,
+                                        tensor<T> dO,
+                                        tensor<T>& ref_dI,
+                                        tensor<T>& ref_dT,
+                                        float beta,
+                                        float divisor)
+{
+    // Treat contiguous tensors as non-contiguous tensors (for consistency)
+    auto I_tv  = get_inner_expanded_tv(input.desc);
+    auto T_tv  = get_inner_expanded_tv(target.desc);
+    auto dI_tv = get_inner_expanded_tv(ref_dI.desc);
+    auto dT_tv = get_inner_expanded_tv(ref_dT.desc);
+
+    auto size = input.desc.GetElementSize();
+
+    par_ford(size)([&](size_t i) {
+        uint64_t n[5];
+        GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
+
+        size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+        size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+
+        T sub  = input[Iidx] - target[Tidx];
+        T grad = static_cast<T>(0.0f);
+
+        if(fabs(sub) < beta)
+            grad = sub / beta * dO[0] / divisor;
+        else
+            grad = (sub >= 0 ? 1.0f : -1.0f) * dO[0] / divisor;
+
+        ref_dI[TV5D_IDX(dI_tv, n[0], n[1], n[2], n[3], n[4])] = grad;
+        ref_dT[TV5D_IDX(dT_tv, n[0], n[1], n[2], n[3], n[4])] = -grad;
+    });
 }
 
 #endif // GUARD_CPU_SMOOTH_L1LOSS_HPP

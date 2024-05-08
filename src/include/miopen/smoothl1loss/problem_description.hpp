@@ -38,11 +38,17 @@ struct NetworkConfig;
 
 namespace smoothl1loss {
 
-struct SmoothL1LossProblemDescription : ProblemDescriptionBase
+bool checkSameType(const TensorDescriptor& x, const TensorDescriptor& y);
+bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y);
+bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y);
+bool checkRightStride(const TensorDescriptor& x);
+bool checkContiguous(const TensorDescriptor& x);
+
+struct SmoothL1LossFwdProblemDescription : ProblemDescriptionBase
 {
-    SmoothL1LossProblemDescription(const TensorDescriptor& iDesc_,
-                                   const TensorDescriptor& tDesc_,
-                                   const TensorDescriptor& oDesc_)
+    SmoothL1LossFwdProblemDescription(const TensorDescriptor& iDesc_,
+                                      const TensorDescriptor& tDesc_,
+                                      const TensorDescriptor& oDesc_)
         : iDesc(iDesc_), tDesc(tDesc_), oDesc(oDesc_)
     {
     }
@@ -51,93 +57,18 @@ struct SmoothL1LossProblemDescription : ProblemDescriptionBase
     const TensorDescriptor& GetTDesc() const { return tDesc; }
     const TensorDescriptor& GetODesc() const { return oDesc; }
 
-    bool IsRightLength() const
-    {
-        if(iDesc.GetSize() != tDesc.GetSize())
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
-            return false;
-#endif
-        for(int32_t i = 0; i < iDesc.GetSize(); ++i)
-        {
-            if(iDesc.GetLengths()[i] != tDesc.GetLengths()[i])
-            {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-                MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
-                return false;
-#endif
-            }
-        }
-        return true;
-    }
+    bool IsRightLength() const { return checkSameLength(iDesc, tDesc); }
 
     bool IsRightStride() const
     {
-        auto isRightStride = [](TensorDescriptor td) {
-            auto strides = td.GetStrides();
-            auto lengths = td.GetLengths();
-            std::vector<std::pair<size_t, size_t>> p;
-            p.reserve(td.GetSize());
-            std::transform(strides.begin(),
-                           strides.end(),
-                           lengths.begin(),
-                           std::back_inserter(p),
-                           [](size_t a, size_t b) { return std::make_pair(a, b); });
-            std::sort(p.begin(), p.end());
-            for(int i = 1; i < p.size(); ++i)
-            {
-                if(p[i].first != p[i - 1].first * p[i - 1].second)
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-                    MIOPEN_THROW(miopenStatusBadParm,
-                                 "Smooth L1Loss: Tensor strides do not match.");
-#else
-                    return false;
-#endif
-            }
-            return true;
-        };
-        return isRightStride(iDesc) && isRightStride(tDesc) && isRightStride(oDesc);
+        return checkRightStride(iDesc) && checkRightStride(tDesc) && checkRightStride(oDesc);
     }
 
-    bool IsSameStride() const
-    {
-        if(iDesc.GetSize() != tDesc.GetSize())
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
-            return false;
-#endif
-        for(int32_t i = 0; i < iDesc.GetSize(); ++i)
-            if(iDesc.GetStrides()[i] != tDesc.GetStrides()[i])
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-                MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
-                return false;
-#endif
-        return true;
-    }
+    bool IsSameStride() const { return checkSameStride(iDesc, tDesc); }
 
     bool IsAllContiguous() const
     {
-        auto isContiguous = [](TensorDescriptor td) {
-            size_t s = 1;
-            for(int i = td.GetSize() - 1; i >= 0; --i)
-            {
-                if(s != td.GetStrides()[i])
-                {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-                    MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Non-contiguous Tensor.");
-#else
-                    return false;
-#endif
-                }
-                s *= td.GetLengths()[i];
-            }
-            return true;
-        };
-        return isContiguous(iDesc) && isContiguous(tDesc) && isContiguous(oDesc);
+        return checkContiguous(iDesc) && checkContiguous(tDesc) && checkContiguous(oDesc);
     }
 
 protected:
@@ -148,18 +79,18 @@ protected:
     NetworkConfig MakeForwardNetworkConfig() const;
 };
 
-struct ReducedProblemDescription final : SmoothL1LossProblemDescription
+struct ReducedForwardProblemDescription : SmoothL1LossFwdProblemDescription
 {
-    ReducedProblemDescription(const TensorDescriptor& iDesc_,
-                              const TensorDescriptor& tDesc_,
-                              const TensorDescriptor& oDesc_)
-        : SmoothL1LossProblemDescription(iDesc_, tDesc_, oDesc_)
+    ReducedForwardProblemDescription(const TensorDescriptor& iDesc_,
+                                     const TensorDescriptor& tDesc_,
+                                     const TensorDescriptor& oDesc_)
+        : SmoothL1LossFwdProblemDescription(iDesc_, tDesc_, oDesc_)
     {
     }
 
     bool IsRightLength() const
     {
-        if(!SmoothL1LossProblemDescription::IsRightLength())
+        if(!SmoothL1LossFwdProblemDescription::IsRightLength())
             return false;
         if(oDesc.GetSize() != 1 || oDesc.GetLengths()[0] != 1)
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
@@ -173,58 +104,105 @@ struct ReducedProblemDescription final : SmoothL1LossProblemDescription
     NetworkConfig MakeNetworkConfig() const override;
 };
 
-struct UnreducedProblemDescription : SmoothL1LossProblemDescription
+struct UnreducedForwardProblemDescription : SmoothL1LossFwdProblemDescription
 {
-    UnreducedProblemDescription(const TensorDescriptor& iDesc_,
-                                const TensorDescriptor& tDesc_,
-                                const TensorDescriptor& oDesc_)
-        : SmoothL1LossProblemDescription(iDesc_, tDesc_, oDesc_)
+    UnreducedForwardProblemDescription(const TensorDescriptor& iDesc_,
+                                       const TensorDescriptor& tDesc_,
+                                       const TensorDescriptor& oDesc_)
+        : SmoothL1LossFwdProblemDescription(iDesc_, tDesc_, oDesc_)
     {
     }
 
     bool IsRightLength() const
     {
-        if(!SmoothL1LossProblemDescription::IsRightLength())
+        if(!SmoothL1LossFwdProblemDescription::IsRightLength())
             return false;
-        if(iDesc.GetSize() != oDesc.GetSize())
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
-            return false;
-#endif
-        for(int32_t i = 0; i < iDesc.GetSize(); ++i)
-        {
-            if(iDesc.GetLengths()[i] != oDesc.GetLengths()[i])
-            {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-                MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
-                return false;
-#endif
-            }
-        }
-        return true;
+        return checkSameLength(iDesc, oDesc);
     }
 
     bool IsSameStride() const
     {
-        if(!SmoothL1LossProblemDescription::IsSameStride())
+        if(!SmoothL1LossFwdProblemDescription::IsSameStride())
             return false;
-        if(iDesc.GetSize() != oDesc.GetSize())
+        return checkSameStride(iDesc, oDesc);
+    }
+
+    NetworkConfig MakeNetworkConfig() const override;
+};
+
+struct SmoothL1LossBwdProblemDescription : ProblemDescriptionBase
+{
+    SmoothL1LossBwdProblemDescription(const TensorDescriptor& iDesc_,
+                                      const TensorDescriptor& tDesc_,
+                                      const TensorDescriptor& doDesc_,
+                                      const TensorDescriptor& diDesc_,
+                                      const TensorDescriptor& dtDesc_)
+        : iDesc(iDesc_), tDesc(tDesc_), doDesc(doDesc_), diDesc(diDesc_), dtDesc(dtDesc_)
+    {
+    }
+
+    const TensorDescriptor& GetIDesc() const { return iDesc; }
+    const TensorDescriptor& GetTDesc() const { return tDesc; }
+    const TensorDescriptor& GetDODesc() const { return doDesc; }
+    const TensorDescriptor& GetDIDesc() const { return diDesc; }
+    const TensorDescriptor& GetDTDesc() const { return dtDesc; }
+
+    bool IsSameType() const
+    {
+        return checkSameType(iDesc, tDesc) && checkSameType(iDesc, diDesc) &&
+               checkSameType(tDesc, dtDesc);
+    }
+
+    bool IsRightLength() const
+    {
+        return checkSameLength(iDesc, tDesc) && checkSameLength(iDesc, diDesc) &&
+               checkSameLength(tDesc, dtDesc);
+    }
+
+    bool IsRightStride() const
+    {
+        return checkRightStride(iDesc) && checkRightStride(tDesc) && checkRightStride(doDesc) &&
+               checkRightStride(diDesc) && checkRightStride(dtDesc);
+    }
+
+    bool IsAllContiguous() const
+    {
+        return checkContiguous(iDesc) && checkContiguous(tDesc) && checkContiguous(doDesc) &&
+               checkContiguous(diDesc) && checkContiguous(dtDesc);
+    }
+
+protected:
+    TensorDescriptor iDesc;
+    TensorDescriptor tDesc;
+    TensorDescriptor doDesc;
+    TensorDescriptor diDesc;
+    TensorDescriptor dtDesc;
+
+    NetworkConfig MakeBackwardNetworkConfig() const;
+};
+
+struct ReducedBackwardProblemDescription : SmoothL1LossBwdProblemDescription
+{
+    ReducedBackwardProblemDescription(const TensorDescriptor& iDesc_,
+                                      const TensorDescriptor& tDesc_,
+                                      const TensorDescriptor& doDesc_,
+                                      const TensorDescriptor& diDesc_,
+                                      const TensorDescriptor& dtDesc_)
+        : SmoothL1LossBwdProblemDescription(iDesc_, tDesc_, doDesc_, diDesc_, dtDesc_)
+    {
+    }
+
+    bool IsRightLength() const
+    {
+        if(!SmoothL1LossBwdProblemDescription::IsRightLength())
+            return false;
+        if(doDesc.GetSize() != 1 || doDesc.GetLengths()[0] != 1)
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
+            MIOPEN_THROW(miopenStatusBadParm,
+                         "Smooth L1Loss: Output Gradient Tensor size must be (1).");
 #else
             return false;
 #endif
-        for(int32_t i = 0; i < iDesc.GetSize(); ++i)
-        {
-            if(iDesc.GetStrides()[i] != oDesc.GetStrides()[i])
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-                MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
-                return false;
-#endif
-        }
         return true;
     }
 

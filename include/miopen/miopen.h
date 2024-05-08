@@ -6599,11 +6599,11 @@ MIOPEN_EXPORT miopenStatus_t miopenBackendInitialize(miopenBackendDescriptor_t d
  * @return                         miopenStatus_t
  */
 MIOPEN_EXPORT miopenStatus_t
-miopenGetSmoothL1LossReducedWorkspaceSize(miopenHandle_t handle,
-                                          miopenTensorDescriptor_t iDesc,
-                                          miopenTensorDescriptor_t tDesc,
-                                          miopenTensorDescriptor_t oDesc,
-                                          size_t* sizeInBytes);
+miopenGetSmoothL1LossReducedForwardWorkspaceSize(miopenHandle_t handle,
+                                                 miopenTensorDescriptor_t iDesc,
+                                                 miopenTensorDescriptor_t tDesc,
+                                                 miopenTensorDescriptor_t oDesc,
+                                                 size_t* sizeInBytes);
 
 /*! @brief Execute a Smooth L1Loss forward layer
  *
@@ -6652,6 +6652,37 @@ MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossUnreducedForward(miopenHandle_t h
                                                                 miopenTensorDescriptor_t oDesc,
                                                                 void* o,
                                                                 float beta);
+
+/*! @brief Execute the Backward Smooth L1Loss
+ *
+ * @param handle                   MIOpen handle (input)
+ * @param iDesc                    Tensor descriptor for input tensor (input)
+ * @param i                        Data tensor input (input)
+ * @param tDesc                    Tensor descriptor for target tensor (input)
+ * @param t                        Data tensor target (input)
+ * @param doDesc                   Tensor descriptor for output gradient (input)
+ * @param dO                   Gradient of output (input)
+ * @param diDesc                   Tensor descriptor for input gradient (input)
+ * @param dI                   Gradient of input (output)
+ * @param dtDesc                   Tensor descriptor for target gradient (input)
+ * @param dT                   Gradient of target (output)
+ * @param beta                     Beta (input)
+ * @param divisor                  Divisor (input)
+ * @return                         miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossReducedBackward(miopenHandle_t handle,
+                                                               miopenTensorDescriptor_t iDesc,
+                                                               const void* i,
+                                                               miopenTensorDescriptor_t tDesc,
+                                                               const void* t,
+                                                               miopenTensorDescriptor_t doDesc,
+                                                               const void* dO,
+                                                               miopenTensorDescriptor_t diDesc,
+                                                               void* dI,
+                                                               miopenTensorDescriptor_t dtDesc,
+                                                               void* dT,
+                                                               float beta,
+                                                               float divisor);
 
 /** @} */
 // CLOSEOUT LossFunction DOXYGEN GROUP

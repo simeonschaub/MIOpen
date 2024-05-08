@@ -35,13 +35,13 @@
 
 namespace miopen {
 
-size_t GetSmoothL1LossReducedWorkspaceSize(Handle& handle,
-                                           const TensorDescriptor& iDesc,
-                                           const TensorDescriptor& tDesc,
-                                           const TensorDescriptor& oDesc)
+size_t GetSmoothL1LossReducedForwardWorkspaceSize(Handle& handle,
+                                                  const TensorDescriptor& iDesc,
+                                                  const TensorDescriptor& tDesc,
+                                                  const TensorDescriptor& oDesc)
 {
     auto ctx           = ExecutionContext{&handle};
-    const auto problem = smoothl1loss::ReducedProblemDescription{iDesc, tDesc, oDesc};
+    const auto problem = smoothl1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
 
     const auto algo = AlgorithmName{"SmoothL1LossReducedForward"};
     const auto solvers =
@@ -64,7 +64,7 @@ miopenStatus_t SmoothL1LossReducedForward(Handle& handle,
                                           float beta,
                                           float divisor)
 {
-    const auto problem = smoothl1loss::ReducedProblemDescription{iDesc, tDesc, oDesc};
+    const auto problem = smoothl1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
 
     const auto invoke_params = [&]() {
         auto tmp           = smoothl1loss::InvokeParams{};
@@ -100,7 +100,7 @@ miopenStatus_t SmoothL1LossUnreducedForward(Handle& handle,
                                             Data_t o,
                                             float beta)
 {
-    const auto problem = smoothl1loss::UnreducedProblemDescription{iDesc, tDesc, oDesc};
+    const auto problem = smoothl1loss::UnreducedForwardProblemDescription{iDesc, tDesc, oDesc};
 
     const auto invoke_params = [&]() {
         auto tmp  = smoothl1loss::InvokeParams{};
@@ -119,6 +119,50 @@ miopenStatus_t SmoothL1LossUnreducedForward(Handle& handle,
     const auto solvers =
         solver::SolverContainer<solver::smoothl1loss::SmoothL1LossUnreducedForwardContiguous,
                                 solver::smoothl1loss::SmoothL1LossUnreducedForward5d>{};
+
+    solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
+
+    return miopenStatusSuccess;
+}
+
+miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
+                                           const TensorDescriptor& iDesc,
+                                           ConstData_t i,
+                                           const TensorDescriptor& tDesc,
+                                           ConstData_t t,
+                                           const TensorDescriptor& doDesc,
+                                           ConstData_t dO,
+                                           const TensorDescriptor& diDesc,
+                                           Data_t dI,
+                                           const TensorDescriptor& dtDesc,
+                                           Data_t dT,
+                                           float beta,
+                                           float divisor)
+{
+    const auto problem =
+        smoothl1loss::ReducedBackwardProblemDescription{iDesc, tDesc, doDesc, diDesc, dtDesc};
+
+    const auto invoke_params = [&]() {
+        auto tmp    = smoothl1loss::InvokeParams{};
+        tmp.type    = InvokeType::Run;
+        tmp.iDesc   = &iDesc;
+        tmp.tDesc   = &tDesc;
+        tmp.doDesc  = &doDesc;
+        tmp.diDesc  = &diDesc;
+        tmp.dtDesc  = &dtDesc;
+        tmp.i       = i;
+        tmp.t       = t;
+        tmp.i_grad  = dI;
+        tmp.t_grad  = dT;
+        tmp.o_grad  = dO;
+        tmp.beta    = beta;
+        tmp.divisor = divisor;
+        return tmp;
+    }();
+
+    const auto algo = AlgorithmName{"SmoothL1LossReducedBackward"};
+    const auto solvers =
+        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossReducedBackward5d>{};
 
     solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 

@@ -33,10 +33,10 @@ namespace miopen {
 struct Handle;
 struct TensorDescriptor;
 
-size_t GetSmoothL1LossReducedWorkspaceSize(Handle& handle,
-                                           const TensorDescriptor& iDesc,
-                                           const TensorDescriptor& tDesc,
-                                           const TensorDescriptor& oDesc);
+size_t GetSmoothL1LossReducedForwardWorkspaceSize(Handle& handle,
+                                                  const TensorDescriptor& iDesc,
+                                                  const TensorDescriptor& tDesc,
+                                                  const TensorDescriptor& oDesc);
 
 miopenStatus_t SmoothL1LossReducedForward(Handle& handle,
                                           Data_t workspace,
@@ -58,6 +58,20 @@ miopenStatus_t SmoothL1LossUnreducedForward(Handle& handle,
                                             const TensorDescriptor& oDesc,
                                             Data_t o,
                                             float beta);
+
+miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
+                                           const TensorDescriptor& iDesc,
+                                           ConstData_t i,
+                                           const TensorDescriptor& tDesc,
+                                           ConstData_t t,
+                                           const TensorDescriptor& doDesc,
+                                           ConstData_t dO,
+                                           const TensorDescriptor& diDesc,
+                                           Data_t dI,
+                                           const TensorDescriptor& dtDesc,
+                                           Data_t dT,
+                                           float beta,
+                                           float divisor);
 
 } // namespace miopen
 #endif // MIOPEN_SMOOTH_L1LOSS_HPP_

@@ -201,3 +201,56 @@ LossSum(const D_TYPE* __restrict__ input, D_TYPE* __restrict__ output, size_t N)
     // instantiate the kernel
     losssum<D_TYPE>(input, output, N);
 }
+
+template <typename TI, typename TO>
+__device__ void SmoothL1LossReducedBackward5d(const TI* I,
+                                              const TI* T,
+                                              const TO* dO,
+                                              TI* dI,
+                                              TI* dT,
+                                              float beta,
+                                              float divisor,
+                                              tensor_view_5d_t I_tv,
+                                              tensor_view_5d_t T_tv,
+                                              tensor_view_5d_t dI_tv,
+                                              tensor_view_5d_t dT_tv)
+{
+    size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t n[5];
+    GET_NCDHW(n[0], n[1], n[2], n[3], n[4], gid, I_tv);
+
+    if(n[0] >= I_tv.size[0])
+        return;
+
+    size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+    size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+
+    FLOAT_ACCUM sub  = CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx]);
+    FLOAT_ACCUM grad = 0.0;
+
+    if(fabs(sub) < beta)
+        grad = sub / beta * CVT_FLOAT2ACCUM(dO[0]) / divisor;
+    else
+        grad = (sub >= 0 ? 1.0f : -1.0f) * CVT_FLOAT2ACCUM(dO[0]) / divisor;
+
+    if(dI)
+        dI[TV5D_IDX(dI_tv, n[0], n[1], n[2], n[3], n[4])] = CVT_ACCUM2FLOAT(grad);
+    if(dT)
+        dT[TV5D_IDX(dT_tv, n[0], n[1], n[2], n[3], n[4])] = CVT_ACCUM2FLOAT(-grad);
+}
+
+extern "C" __global__ void SmoothL1LossReducedBackward5d(INPUT_TYPE* I,
+                                                         INPUT_TYPE* T,
+                                                         OUTPUT_TYPE* dO,
+                                                         INPUT_TYPE* dI,
+                                                         INPUT_TYPE* dT,
+                                                         float beta,
+                                                         float divisor,
+                                                         tensor_view_5d_t I_tv,
+                                                         tensor_view_5d_t T_tv,
+                                                         tensor_view_5d_t dI_tv,
+                                                         tensor_view_5d_t dT_tv)
+{
+    SmoothL1LossReducedBackward5d<INPUT_TYPE, OUTPUT_TYPE>(
+        I, T, dO, dI, dT, beta, divisor, I_tv, T_tv, dI_tv, dT_tv);
+}

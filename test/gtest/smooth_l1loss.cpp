@@ -43,22 +43,34 @@ std::string GetFloatArg()
     return tmp;
 }
 
-struct SmoothL1LossTestFloat : SmoothL1LossTest<float>
+struct SmoothL1LossTestForwardFloat : SmoothL1LossTestForward<float>
 {
 };
 
-struct SmoothL1LossTestHalf : SmoothL1LossTest<half>
+struct SmoothL1LossTestForwardHalf : SmoothL1LossTestForward<half>
 {
 };
 
-struct SmoothL1LossTestBfloat16 : SmoothL1LossTest<bfloat16>
+struct SmoothL1LossTestForwardBfloat16 : SmoothL1LossTestForward<bfloat16>
+{
+};
+
+struct SmoothL1LossTestBackwardFloat : SmoothL1LossTestBackward<float>
+{
+};
+
+struct SmoothL1LossTestBackwardHalf : SmoothL1LossTestBackward<half>
+{
+};
+
+struct SmoothL1LossTestBackwardBfloat16 : SmoothL1LossTestBackward<bfloat16>
 {
 };
 
 } // namespace smoothl1loss
 using namespace smoothl1loss;
 
-TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
+TEST_P(SmoothL1LossTestForwardFloat, SmoothL1LossTestFw)
 {
     if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--float"))
     {
@@ -71,7 +83,7 @@ TEST_P(SmoothL1LossTestFloat, SmoothL1LossTestFw)
     }
 };
 
-TEST_P(SmoothL1LossTestHalf, SmoothL1LossTestFw)
+TEST_P(SmoothL1LossTestForwardHalf, SmoothL1LossTestFw)
 {
     if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--half"))
     {
@@ -84,7 +96,46 @@ TEST_P(SmoothL1LossTestHalf, SmoothL1LossTestFw)
     }
 };
 
-TEST_P(SmoothL1LossTestBfloat16, SmoothL1LossTestFw)
+TEST_P(SmoothL1LossTestForwardBfloat16, SmoothL1LossTestFw)
+{
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--bfloat16"))
+    {
+        RunTest();
+        Verify();
+    }
+    else
+    {
+        GTEST_SKIP();
+    }
+};
+
+TEST_P(SmoothL1LossTestBackwardFloat, SmoothL1LossTestBw)
+{
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--float"))
+    {
+        RunTest();
+        Verify();
+    }
+    else
+    {
+        GTEST_SKIP();
+    }
+};
+
+TEST_P(SmoothL1LossTestBackwardHalf, SmoothL1LossTestBw)
+{
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--half"))
+    {
+        RunTest();
+        Verify();
+    }
+    else
+    {
+        GTEST_SKIP();
+    }
+};
+
+TEST_P(SmoothL1LossTestBackwardBfloat16, SmoothL1LossTestBw)
 {
     if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--bfloat16"))
     {
@@ -98,11 +149,20 @@ TEST_P(SmoothL1LossTestBfloat16, SmoothL1LossTestFw)
 };
 
 INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestFloat,
+                         SmoothL1LossTestForwardFloat,
                          testing::ValuesIn(SmoothL1LossTestConfigs()));
 INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestHalf,
+                         SmoothL1LossTestForwardHalf,
                          testing::ValuesIn(SmoothL1LossTestConfigs()));
 INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestBfloat16,
+                         SmoothL1LossTestForwardBfloat16,
+                         testing::ValuesIn(SmoothL1LossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
+                         SmoothL1LossTestBackwardFloat,
+                         testing::ValuesIn(SmoothL1LossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
+                         SmoothL1LossTestBackwardHalf,
+                         testing::ValuesIn(SmoothL1LossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
+                         SmoothL1LossTestBackwardBfloat16,
                          testing::ValuesIn(SmoothL1LossTestConfigs()));

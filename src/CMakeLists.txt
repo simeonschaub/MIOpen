@@ -274,6 +274,7 @@ set( MIOpen_Source
     solver/reduce/forward_argmax.cpp
     solver/reduce/forward_sum.cpp
     solver/smoothl1loss/forward_smooth_l1loss.cpp
+    solver/smoothl1loss/backward_smooth_l1loss.cpp
     solver/softmax/attn_softmax.cpp
     solver/softmax/softmax.cpp
     subbuffers.cpp

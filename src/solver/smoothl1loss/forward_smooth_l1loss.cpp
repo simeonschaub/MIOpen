@@ -40,26 +40,26 @@ namespace miopen {
 
 namespace solver {
 
-KernelInfo make_hip_kernel(std::vector<size_t> localsize,
-                           std::vector<size_t> gridsize,
-                           std::string kernel_file,
-                           std::string kernel_name,
-                           KernelBuildParameters build_params)
-{
+const auto make_hip_kernel = [](std::vector<size_t> localsize,
+                                std::vector<size_t> gridsize,
+                                std::string kernel_file,
+                                std::string kernel_name,
+                                KernelBuildParameters build_params) {
     while(localsize.size() < 3)
         localsize.push_back(1);
     while(gridsize.size() < 3)
         gridsize.push_back(1);
     for(int i = 0; i < localsize.size(); ++i)
         gridsize[i] = AlignUp(gridsize[i], localsize[i]);
-    return {build_params.GenerateFor(kbp::HIP{}), localsize, gridsize, kernel_file, kernel_name};
-}
+    return KernelInfo{
+        build_params.GenerateFor(kbp::HIP{}), localsize, gridsize, kernel_file, kernel_name};
+};
 
 namespace smoothl1loss {
 
 bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
+    const miopen::smoothl1loss::UnreducedForwardProblemDescription& problem) const
 {
     if(!problem.IsRightLength())
         return false;
@@ -70,7 +70,7 @@ bool SmoothL1LossUnreducedForwardSolver::IsApplicable(
 
 bool SmoothL1LossUnreducedForwardContiguous::IsApplicable(
     const ExecutionContext& context,
-    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
+    const miopen::smoothl1loss::UnreducedForwardProblemDescription& problem) const
 {
     if(!problem.IsSameStride() && !problem.IsAllContiguous())
         return false;
@@ -81,7 +81,7 @@ bool SmoothL1LossUnreducedForwardContiguous::IsApplicable(
 
 ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
+    const miopen::smoothl1loss::UnreducedForwardProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
@@ -122,7 +122,7 @@ ConvSolution SmoothL1LossUnreducedForwardContiguous::GetSolution(
 
 bool SmoothL1LossUnreducedForward5d::IsApplicable(
     const ExecutionContext& context,
-    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
+    const miopen::smoothl1loss::UnreducedForwardProblemDescription& problem) const
 {
     if(problem.GetIDesc().GetSize() > 5)
         return false;
@@ -133,7 +133,7 @@ bool SmoothL1LossUnreducedForward5d::IsApplicable(
 
 ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::UnreducedProblemDescription& problem) const
+    const miopen::smoothl1loss::UnreducedForwardProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
@@ -176,7 +176,7 @@ ConvSolution SmoothL1LossUnreducedForward5d::GetSolution(
 
 bool SmoothL1LossReducedForward5d::IsApplicable(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::ReducedProblemDescription& problem) const
+    const miopen::smoothl1loss::ReducedForwardProblemDescription& problem) const
 {
     if(problem.GetIDesc().GetSize() > 5)
         return false;
@@ -189,7 +189,7 @@ bool SmoothL1LossReducedForward5d::IsApplicable(
 
 ConvSolution SmoothL1LossReducedForward5d::GetSolution(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::ReducedProblemDescription& problem) const
+    const miopen::smoothl1loss::ReducedForwardProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
@@ -277,7 +277,7 @@ ConvSolution SmoothL1LossReducedForward5d::GetSolution(
 
 std::size_t SmoothL1LossReducedForward5d::GetWorkspaceSize(
     const ExecutionContext& /*context*/,
-    const miopen::smoothl1loss::ReducedProblemDescription& problem) const
+    const miopen::smoothl1loss::ReducedForwardProblemDescription& problem) const
 {
     return (problem.GetIDesc().GetElementSize() +
             AlignUp(problem.GetIDesc().GetElementSize(), LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE) *
