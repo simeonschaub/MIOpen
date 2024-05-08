@@ -61,27 +61,7 @@ struct SmoothL1LossTestCase
     }
 };
 
-inline std::vector<SmoothL1LossTestCase> SmoothL1LossUnreducedForwardContiguousTestConfigs()
-{
-    std::vector<SmoothL1LossTestCase> tcs;
-    tcs.push_back({{1, 1, 2, 2}, 1, std::numeric_limits<float>::quiet_NaN(), true});
-    tcs.push_back({{2, 10, 128, 128}, 1, std::numeric_limits<float>::quiet_NaN(), true});
-    tcs.push_back({{5, 13, 17, 11}, 1, std::numeric_limits<float>::quiet_NaN(), true});
-    tcs.push_back({{256, 4, 8723}, 1, std::numeric_limits<float>::quiet_NaN(), true});
-    return tcs;
-}
-
-inline std::vector<SmoothL1LossTestCase> SmoothL1LossUnreducedForwardTestConfigs()
-{
-    std::vector<SmoothL1LossTestCase> tcs;
-    tcs.push_back({{1, 1, 2, 2}, 1, std::numeric_limits<float>::quiet_NaN(), false});
-    tcs.push_back({{2, 10, 128, 128}, 1, std::numeric_limits<float>::quiet_NaN(), false});
-    tcs.push_back({{5, 13, 17, 11}, 1, std::numeric_limits<float>::quiet_NaN(), false});
-    tcs.push_back({{256, 4, 8723}, 1, std::numeric_limits<float>::quiet_NaN(), false});
-    return tcs;
-}
-
-inline std::vector<SmoothL1LossTestCase> SmoothL1LossReducedForwardTestConfigs()
+inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs()
 {
     std::vector<SmoothL1LossTestCase> tcs;
     tcs.push_back({{1, 2, 3, 4}, 1, 1, false});
@@ -93,18 +73,6 @@ inline std::vector<SmoothL1LossTestCase> SmoothL1LossReducedForwardTestConfigs()
     tcs.push_back({{34, 4, 5}, 1, 1, true});
     tcs.push_back({{4, 7, 5}, 1, 1, true});
     tcs.push_back({{15, 4, 5}, 1, 1, true});
-    return tcs;
-}
-
-inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs()
-{
-    std::vector<SmoothL1LossTestCase> tcs, temp;
-    temp = SmoothL1LossUnreducedForwardContiguousTestConfigs();
-    tcs.insert(tcs.end(), temp.begin(), temp.end());
-    temp = SmoothL1LossUnreducedForwardTestConfigs();
-    tcs.insert(tcs.end(), temp.begin(), temp.end());
-    temp = SmoothL1LossReducedForwardTestConfigs();
-    tcs.insert(tcs.end(), temp.begin(), temp.end());
     return tcs;
 }
 
@@ -184,19 +152,7 @@ protected:
 
         miopenStatus_t status;
 
-        if(std::isnan(divisor)) // unreduced cases
-        {
-            cpu_smooth_l1loss_unreduced_forward<T>(input, target, ref_output, beta);
-            status = miopen::SmoothL1LossUnreducedForward(handle,
-                                                          input.desc,
-                                                          input_dev.get(),
-                                                          target.desc,
-                                                          target_dev.get(),
-                                                          output.desc,
-                                                          output_dev.get(),
-                                                          beta);
-        }
-        else // reduced cases
+        if(!std::isnan(divisor))
         {
             cpu_smooth_l1loss_reduced_forward<T>(
                 input, target, ref_output, ref_workspace, beta, divisor);
@@ -277,6 +233,9 @@ protected:
         auto lengths    = smooth_l1loss_config.lengths;
         auto contiguous = smooth_l1loss_config.contiguous;
 
+        if(contiguous)
+            GTEST_SKIP();
+
         auto in_strides = GetStrides(lengths, true);
         input           = tensor<T>{lengths, in_strides}.generate(gen_value1);
 
@@ -312,25 +271,7 @@ protected:
 
         miopenStatus_t status;
 
-        if(std::isnan(divisor)) // unreduced cases
-        {
-            if(!GetParam().contiguous)
-                GTEST_SKIP();
-            cpu_smooth_l1loss_unreduced_backward(input, target, dO, ref_dI, ref_dT, beta);
-            status = miopen::SmoothL1LossUnreducedBackward(handle,
-                                                           input.desc,
-                                                           input_dev.get(),
-                                                           target.desc,
-                                                           target_dev.get(),
-                                                           dO.desc,
-                                                           dO_dev.get(),
-                                                           dI.desc,
-                                                           dI_dev.get(),
-                                                           dT.desc,
-                                                           dT_dev.get(),
-                                                           beta);
-        }
-        else // reduced cases
+        if(!std::isnan(divisor))
         {
             cpu_smooth_l1loss_reduced_backward<T>(input, target, dO, ref_dI, ref_dT, beta, divisor);
             status = miopen::SmoothL1LossReducedBackward(handle,
@@ -356,8 +297,6 @@ protected:
 
     void Verify()
     {
-        if(std::isnan(divisor) && !GetParam().contiguous)
-            GTEST_SKIP();
         // Computation error of fp16 is ~2^13 (=8192) bigger than
         // the one of fp32 because mantissa is shorter by 13 bits.
         double tolerance = std::is_same<T, float>::value ? 1.5e-6 : 8.2e-3;

@@ -50,15 +50,6 @@ miopenStatus_t SmoothL1LossReducedForward(Handle& handle,
                                           float beta,
                                           float divisor);
 
-miopenStatus_t SmoothL1LossUnreducedForward(Handle& handle,
-                                            const TensorDescriptor& iDesc,
-                                            ConstData_t i,
-                                            const TensorDescriptor& tDesc,
-                                            ConstData_t t,
-                                            const TensorDescriptor& oDesc,
-                                            Data_t o,
-                                            float beta);
-
 miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
                                            const TensorDescriptor& iDesc,
                                            ConstData_t i,
@@ -72,19 +63,6 @@ miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
                                            Data_t dT,
                                            float beta,
                                            float divisor);
-
-miopenStatus_t SmoothL1LossUnreducedBackward(Handle& handle,
-                                             const TensorDescriptor& iDesc,
-                                             ConstData_t i,
-                                             const TensorDescriptor& tDesc,
-                                             ConstData_t t,
-                                             const TensorDescriptor& doDesc,
-                                             ConstData_t dO,
-                                             const TensorDescriptor& diDesc,
-                                             Data_t dI,
-                                             const TensorDescriptor& dtDesc,
-                                             Data_t dT,
-                                             float beta);
 
 } // namespace miopen
 #endif // MIOPEN_SMOOTH_L1LOSS_HPP_

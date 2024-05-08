@@ -48,65 +48,7 @@
 #endif
 
 template <typename TI, typename TO>
-__device__ void smoothl1lossunreducedforwardcontiguous(
-    const TI* I, const TI* T, TO* O, const float beta, const ulong n)
-{
-    const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
-    if(gid >= n)
-        return;
-
-    FLOAT_ACCUM diff = fabs(CVT_FLOAT2ACCUM(I[gid]) - CVT_FLOAT2ACCUM(T[gid]));
-    O[gid] = CVT_ACCUM2FLOAT(diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta);
-}
-
-extern "C" __global__ void SmoothL1LossUnreducedForwardContiguous(const INPUT_TYPE* __restrict__ I,
-                                                                  const INPUT_TYPE* __restrict__ T,
-                                                                  OUTPUT_TYPE* __restrict__ O,
-                                                                  const float beta,
-                                                                  const ulong n)
-{
-    // instantiate the kernel
-    smoothl1lossunreducedforwardcontiguous<INPUT_TYPE, OUTPUT_TYPE>(I, T, O, beta, n);
-}
-
-template <typename TI, typename TO>
-__device__ void smoothl1lossunreducedforward5d(const TI* I,
-                                               const TI* T,
-                                               TO* O,
-                                               const float beta,
-                                               tensor_view_5d_t I_tv,
-                                               tensor_view_5d_t T_tv,
-                                               tensor_view_5d_t O_tv)
-{
-    const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
-    size_t n[5];
-    GET_NCDHW(n[0], n[1], n[2], n[3], n[4], gid, O_tv);
-
-    if(n[0] >= O_tv.size[0])
-        return;
-
-    size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
-    size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
-    size_t Oidx = TV5D_IDX(O_tv, n[0], n[1], n[2], n[3], n[4]);
-
-    FLOAT_ACCUM diff = fabs(CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx]));
-    O[Oidx]          = CVT_ACCUM2FLOAT(diff < beta ? 0.5 * diff * diff / beta : diff - 0.5 * beta);
-}
-
-extern "C" __global__ void SmoothL1LossUnreducedForward5d(const INPUT_TYPE* __restrict__ I,
-                                                          const INPUT_TYPE* __restrict__ T,
-                                                          OUTPUT_TYPE* __restrict__ O,
-                                                          const float beta,
-                                                          tensor_view_5d_t I_tv,
-                                                          tensor_view_5d_t T_tv,
-                                                          tensor_view_5d_t O_tv)
-{
-    // instantiate the kernel
-    smoothl1lossunreducedforward5d<INPUT_TYPE, OUTPUT_TYPE>(I, T, O, beta, I_tv, T_tv, O_tv);
-}
-
-template <typename TI, typename TO>
-__device__ void smoothl1lossreducedforward5d(const TI* I,
+__device__ void SmoothL1LossReducedForward5d(const TI* I,
                                              const TI* T,
                                              TO* lsum,
                                              const float beta,
@@ -138,7 +80,7 @@ extern "C" __global__ void SmoothL1LossReducedForward5d(const INPUT_TYPE* __rest
                                                         tensor_view_5d_t T_tv)
 {
     // instantiate the kernel
-    smoothl1lossreducedforward5d<INPUT_TYPE, OUTPUT_TYPE>(I, T, lsum, beta, divisor, I_tv, T_tv);
+    SmoothL1LossReducedForward5d<INPUT_TYPE, OUTPUT_TYPE>(I, T, lsum, beta, divisor, I_tv, T_tv);
 }
 
 __device__ FLOAT_ACCUM warp_reduce_sum(FLOAT_ACCUM val)
@@ -247,42 +189,4 @@ extern "C" __global__ void SmoothL1LossReducedBackward5d(const INPUT_TYPE* I,
 {
     SmoothL1LossReducedBackward5d<INPUT_TYPE, OUTPUT_TYPE>(
         I, T, dO, dI, dT, beta, divisor, I_tv, T_tv, dI_tv, dT_tv);
-}
-
-template <typename TI, typename TO>
-__device__ void SmoothL1LossUnreducedBackwardContiguous(
-    const TI* I, const TI* T, const TO* dO, TI* dI, TI* dT, const float beta, const ulong n)
-{
-    const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
-    if(gid >= n)
-        return;
-
-    FLOAT_ACCUM sub = CVT_FLOAT2ACCUM(I[gid]) - CVT_FLOAT2ACCUM(T[gid]);
-    FLOAT_ACCUM grad;
-
-    if(fabs(sub) < beta)
-    {
-        grad = sub / beta * CVT_FLOAT2ACCUM(dO[gid]);
-    }
-    else
-    {
-        grad = (sub >= 0 ? 1.0f : -1.0f) * CVT_FLOAT2ACCUM(dO[gid]);
-    }
-
-    if(dI)
-        dI[gid] = CVT_ACCUM2FLOAT(grad);
-    if(dT)
-        dT[gid] = CVT_ACCUM2FLOAT(-grad);
-}
-
-extern "C" __global__ void SmoothL1LossUnreducedBackwardContiguous(const INPUT_TYPE* I,
-                                                                   const INPUT_TYPE* T,
-                                                                   const OUTPUT_TYPE* dO,
-                                                                   INPUT_TYPE* dI,
-                                                                   INPUT_TYPE* dT,
-                                                                   const float beta,
-                                                                   const ulong n)
-{
-    // instantiate the kernel
-    SmoothL1LossUnreducedBackwardContiguous<INPUT_TYPE, OUTPUT_TYPE>(I, T, dO, dI, dT, beta, n);
 }

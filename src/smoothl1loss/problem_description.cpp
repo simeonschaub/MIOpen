@@ -144,24 +144,6 @@ NetworkConfig ReducedForwardProblemDescription::MakeNetworkConfig() const
     return NetworkConfig{ss.str()};
 }
 
-NetworkConfig UnreducedForwardProblemDescription::MakeNetworkConfig() const
-{
-    auto contiguous   = IsAllContiguous();
-    auto input_dtype  = iDesc.GetType();
-    auto output_dtype = oDesc.GetType();
-    auto size         = iDesc.GetElementSize();
-
-    std::ostringstream ss;
-
-    ss << "smoothl1loss_unreduced_fwd";
-    ss << "contiguous" << contiguous;
-    ss << "i_dtype" << input_dtype;
-    ss << "o_dtype" << output_dtype;
-    ss << "size" << size;
-
-    return NetworkConfig{ss.str()};
-}
-
 NetworkConfig ReducedBackwardProblemDescription::MakeNetworkConfig() const
 {
     auto input_dtype  = iDesc.GetType();
@@ -171,24 +153,6 @@ NetworkConfig ReducedBackwardProblemDescription::MakeNetworkConfig() const
     std::ostringstream ss;
 
     ss << "smoothl1loss_reduced_bwd";
-    ss << "i_dtype" << input_dtype;
-    ss << "o_dtype" << output_dtype;
-    ss << "size" << size;
-
-    return NetworkConfig{ss.str()};
-}
-
-NetworkConfig UnreducedBackwardProblemDescription::MakeNetworkConfig() const
-{
-    auto contiguous   = IsAllContiguous();
-    auto input_dtype  = iDesc.GetType();
-    auto output_dtype = doDesc.GetType();
-    auto size         = iDesc.GetElementSize();
-
-    std::ostringstream ss;
-
-    ss << "smoothl1loss_unreduced_bwd";
-    ss << "contiguous" << contiguous;
     ss << "i_dtype" << input_dtype;
     ss << "o_dtype" << output_dtype;
     ss << "size" << size;

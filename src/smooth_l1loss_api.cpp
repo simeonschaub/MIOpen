@@ -127,30 +127,6 @@ extern "C" miopenStatus_t miopenSmoothL1LossReducedForward(miopenHandle_t handle
     });
 }
 
-extern "C" miopenStatus_t miopenSmoothL1LossUnreducedForward(miopenHandle_t handle,
-                                                             const miopenTensorDescriptor_t iDesc,
-                                                             const void* i,
-                                                             const miopenTensorDescriptor_t tDesc,
-                                                             const void* t,
-                                                             const miopenTensorDescriptor_t oDesc,
-                                                             void* o,
-                                                             const float beta)
-{
-    MIOPEN_LOG_FUNCTION(handle, iDesc, i, tDesc, t, oDesc, o, beta);
-
-    LogCmdSmoothL1Loss(iDesc, tDesc, beta, std::numeric_limits<float>::quiet_NaN(), true);
-    return miopen::try_([&] {
-        miopen::SmoothL1LossUnreducedForward(miopen::deref(handle),
-                                             miopen::deref(iDesc),
-                                             DataCast(i),
-                                             miopen::deref(tDesc),
-                                             DataCast(t),
-                                             miopen::deref(oDesc),
-                                             DataCast(o),
-                                             beta);
-    });
-}
-
 extern "C" miopenStatus_t miopenSmoothL1LossReducedBackward(miopenHandle_t handle,
                                                             const miopenTensorDescriptor_t iDesc,
                                                             const void* i,
@@ -183,37 +159,5 @@ extern "C" miopenStatus_t miopenSmoothL1LossReducedBackward(miopenHandle_t handl
                                             DataCast(dT),
                                             beta,
                                             divisor);
-    });
-}
-
-extern "C" miopenStatus_t miopenSmoothL1LossUnreducedBackward(miopenHandle_t handle,
-                                                              const miopenTensorDescriptor_t iDesc,
-                                                              const void* i,
-                                                              const miopenTensorDescriptor_t tDesc,
-                                                              const void* t,
-                                                              const miopenTensorDescriptor_t doDesc,
-                                                              const void* dO,
-                                                              const miopenTensorDescriptor_t diDesc,
-                                                              void* dI,
-                                                              const miopenTensorDescriptor_t dtDesc,
-                                                              void* dT,
-                                                              const float beta)
-{
-    MIOPEN_LOG_FUNCTION(handle, iDesc, i, tDesc, t, doDesc, dO, diDesc, dI, dtDesc, dT, beta);
-
-    LogCmdSmoothL1Loss(iDesc, tDesc, beta, std::numeric_limits<float>::quiet_NaN(), false);
-    return miopen::try_([&] {
-        miopen::SmoothL1LossUnreducedBackward(miopen::deref(handle),
-                                              miopen::deref(iDesc),
-                                              DataCast(i),
-                                              miopen::deref(tDesc),
-                                              DataCast(t),
-                                              miopen::deref(doDesc),
-                                              DataCast(dO),
-                                              miopen::deref(diDesc),
-                                              DataCast(dI),
-                                              miopen::deref(dtDesc),
-                                              DataCast(dT),
-                                              beta);
     });
 }

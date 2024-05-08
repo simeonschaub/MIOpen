@@ -106,36 +106,6 @@ struct ReducedForwardProblemDescription : SmoothL1LossFwdProblemDescription
     NetworkConfig MakeNetworkConfig() const override;
 };
 
-struct UnreducedForwardProblemDescription : SmoothL1LossFwdProblemDescription
-{
-    UnreducedForwardProblemDescription(const TensorDescriptor& iDesc_,
-                                       const TensorDescriptor& tDesc_,
-                                       const TensorDescriptor& oDesc_)
-        : SmoothL1LossFwdProblemDescription(iDesc_, tDesc_, oDesc_)
-    {
-    }
-
-    bool IsRightLength() const
-    {
-        if(!SmoothL1LossFwdProblemDescription::IsRightLength())
-            return false;
-        if(!checkSameLength(iDesc, oDesc))
-            return false;
-        return true;
-    }
-
-    bool IsSameStride() const
-    {
-        if(!SmoothL1LossFwdProblemDescription::IsSameStride())
-            return false;
-        if(!checkSameStride(iDesc, oDesc))
-            return false;
-        return true;
-    }
-
-    NetworkConfig MakeNetworkConfig() const override;
-};
-
 struct SmoothL1LossBwdProblemDescription : ProblemDescriptionBase
 {
     SmoothL1LossBwdProblemDescription(const TensorDescriptor& iDesc_,
@@ -215,37 +185,6 @@ struct ReducedBackwardProblemDescription : SmoothL1LossBwdProblemDescription
 #else
             return false;
 #endif
-        return true;
-    }
-
-    NetworkConfig MakeNetworkConfig() const override;
-};
-
-struct UnreducedBackwardProblemDescription : SmoothL1LossBwdProblemDescription
-{
-    UnreducedBackwardProblemDescription(const TensorDescriptor& iDesc_,
-                                        const TensorDescriptor& tDesc_,
-                                        const TensorDescriptor& doDesc_,
-                                        const TensorDescriptor& diDesc_,
-                                        const TensorDescriptor& dtDesc_)
-        : SmoothL1LossBwdProblemDescription(iDesc_, tDesc_, doDesc_, diDesc_, dtDesc_)
-    {
-    }
-
-    bool IsRightLength() const
-    {
-        if(!SmoothL1LossBwdProblemDescription::IsRightLength())
-            return false;
-        if(!checkSameLength(iDesc, doDesc))
-            return false;
-        return true;
-    }
-
-    bool IsSameStride() const
-    {
-        if(!checkSameStride(iDesc, tDesc) || !checkSameStride(iDesc, diDesc) ||
-           !checkSameStride(tDesc, dtDesc) || !checkSameStride(iDesc, doDesc))
-            return false;
         return true;
     }
 
