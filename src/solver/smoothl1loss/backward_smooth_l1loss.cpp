@@ -57,7 +57,11 @@ namespace smoothl1loss {
 
 bool IsImprovementOverROCm(const miopen::smoothl1loss::ReducedBackwardProblemDescription& problem)
 {
-    if(problem.IsAllContiguous())
+    if(miopen::smoothl1loss::checkContiguous(problem.GetIDesc()) &&
+       miopen::smoothl1loss::checkContiguous(problem.GetTDesc()) &&
+       miopen::smoothl1loss::checkContiguous(problem.GetDODesc()) &&
+       miopen::smoothl1loss::checkContiguous(problem.GetDIDesc()) &&
+       miopen::smoothl1loss::checkContiguous(problem.GetDTDesc()))
         return false;
     return true;
 }

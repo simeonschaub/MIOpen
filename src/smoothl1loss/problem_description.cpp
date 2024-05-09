@@ -36,34 +36,18 @@ namespace smoothl1loss {
 bool checkSameType(const TensorDescriptor& x, const TensorDescriptor& y)
 {
     if(x.GetType() != y.GetType())
-    {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-        MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");
-#else
         return false;
-#endif
-    }
     return true;
 }
 
 bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
 {
     if(x.GetSize() != y.GetSize())
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-        MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
         return false;
-#endif
     for(int32_t i = 0; i < x.GetSize(); ++i)
     {
         if(x.GetLengths()[i] != y.GetLengths()[i])
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
             return false;
-#endif
-        }
     }
     return true;
 }
@@ -71,18 +55,12 @@ bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
 bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y)
 {
     if(x.GetSize() != y.GetSize())
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-        MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
         return false;
-#endif
     for(int32_t i = 0; i < x.GetSize(); ++i)
+    {
         if(x.GetStrides()[i] != y.GetStrides()[i])
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
             return false;
-#endif
+    }
     return true;
 }
 
@@ -101,11 +79,7 @@ bool checkRightStride(const TensorDescriptor& x)
     for(int i = 1; i < p.size(); ++i)
     {
         if(p[i].first != p[i - 1].first * p[i - 1].second)
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
             return false;
-#endif
     }
     return true;
 }
@@ -116,13 +90,7 @@ bool checkContiguous(const TensorDescriptor& x)
     for(int i = x.GetSize() - 1; i >= 0; --i)
     {
         if(s != x.GetStrides()[i])
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Non-contiguous Tensor.");
-#else
             return false;
-#endif
-        }
         s *= x.GetLengths()[i];
     }
     return true;

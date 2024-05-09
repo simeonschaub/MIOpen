@@ -57,20 +57,56 @@ struct SmoothL1LossFwdProblemDescription : ProblemDescriptionBase
     const TensorDescriptor& GetTDesc() const { return tDesc; }
     const TensorDescriptor& GetODesc() const { return oDesc; }
 
-    bool IsSameType() const { return checkSameType(iDesc, tDesc); }
+    bool IsSameType() const
+    {
+        if(!checkSameType(iDesc, tDesc))
+        {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+            MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");
+#else
+            return false;
+#endif
+        }
+        return true;
+    }
 
-    bool IsRightLength() const { return checkSameLength(iDesc, tDesc); }
+    bool IsRightLength() const
+    {
+        if(!checkSameLength(iDesc, tDesc))
+        {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
+#else
+            return false;
+#endif
+        }
+        return true;
+    }
 
     bool IsRightStride() const
     {
-        return checkRightStride(iDesc) && checkRightStride(tDesc) && checkRightStride(oDesc);
+        if(!checkRightStride(iDesc) || !checkRightStride(tDesc) || !checkRightStride(oDesc))
+        {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
+#else
+            return false;
+#endif
+        }
+        return true;
     }
 
-    bool IsSameStride() const { return checkSameStride(iDesc, tDesc); }
-
-    bool IsAllContiguous() const
+    bool IsSameStride() const
     {
-        return checkContiguous(iDesc) && checkContiguous(tDesc) && checkContiguous(oDesc);
+        if(!checkSameStride(iDesc, tDesc))
+        {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
+#else
+            return false;
+#endif
+        }
+        return true;
     }
 
 protected:
@@ -95,11 +131,13 @@ struct ReducedForwardProblemDescription : SmoothL1LossFwdProblemDescription
         if(!SmoothL1LossFwdProblemDescription::IsRightLength())
             return false;
         if(oDesc.GetSize() != 1 || oDesc.GetLengths()[0] != 1)
+        {
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
             MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Output Tensor size must be (1).");
 #else
             return false;
 #endif
+        }
         return true;
     }
 
@@ -125,32 +163,58 @@ struct SmoothL1LossBwdProblemDescription : ProblemDescriptionBase
 
     bool IsSameType() const
     {
-        return checkSameType(iDesc, tDesc) && checkSameType(iDesc, diDesc) &&
-               checkSameType(tDesc, dtDesc);
+        if(!checkSameType(iDesc, tDesc) || !checkSameType(iDesc, diDesc) ||
+           !checkSameType(tDesc, dtDesc))
+        {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+            MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");
+#else
+            return false;
+#endif
+        }
+        return true;
     }
 
     bool IsRightLength() const
     {
-        return checkSameLength(iDesc, tDesc) && checkSameLength(iDesc, diDesc) &&
-               checkSameLength(tDesc, dtDesc);
+        if(!checkSameLength(iDesc, tDesc) || !checkSameLength(iDesc, diDesc) ||
+           !checkSameLength(tDesc, dtDesc))
+        {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
+#else
+            return false;
+#endif
+        }
+        return true;
     }
 
     bool IsRightStride() const
     {
-        return checkRightStride(iDesc) && checkRightStride(tDesc) && checkRightStride(doDesc) &&
-               checkRightStride(diDesc) && checkRightStride(dtDesc);
+        if(!checkRightStride(iDesc) || !checkRightStride(tDesc) || !checkRightStride(doDesc) ||
+           !checkRightStride(diDesc) || !checkRightStride(dtDesc))
+        {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
+#else
+            return false;
+#endif
+        }
+        return true;
     }
 
     bool IsSameStride() const
     {
-        return checkSameStride(iDesc, tDesc) && checkSameStride(iDesc, diDesc) &&
-               checkSameStride(tDesc, dtDesc);
-    }
-
-    bool IsAllContiguous() const
-    {
-        return checkContiguous(iDesc) && checkContiguous(tDesc) && checkContiguous(doDesc) &&
-               checkContiguous(diDesc) && checkContiguous(dtDesc);
+        if(!checkSameStride(iDesc, tDesc) || !checkSameStride(iDesc, diDesc) ||
+           !checkSameStride(tDesc, dtDesc))
+        {
+#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
+            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
+#else
+            return false;
+#endif
+        }
+        return true;
     }
 
 protected:
@@ -179,12 +243,14 @@ struct ReducedBackwardProblemDescription : SmoothL1LossBwdProblemDescription
         if(!SmoothL1LossBwdProblemDescription::IsRightLength())
             return false;
         if(doDesc.GetSize() != 1 || doDesc.GetLengths()[0] != 1)
+        {
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
             MIOPEN_THROW(miopenStatusBadParm,
                          "Smooth L1Loss: Output Gradient Tensor size must be (1).");
 #else
             return false;
 #endif
+        }
         return true;
     }
 
