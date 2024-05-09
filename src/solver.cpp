@@ -34,6 +34,7 @@
 #include <miopen/pooling/solvers.hpp>
 #include <miopen/reduce/solvers.hpp>
 #include <miopen/mha/solvers.hpp>
+#include <miopen/smoothl1loss/solvers.hpp>
 #include <miopen/softmax/solvers.hpp>
 
 #include <miopen/conv_algo_name.hpp>
@@ -610,6 +611,12 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     Register(registry, ++id, Primitive::Batchnorm, batchnorm::BnCKFwdInference{}.SolverDbId());
     Register(registry, ++id, Primitive::Batchnorm, batchnorm::BnCKBwdBackward{}.SolverDbId());
     Register(registry, ++id, Primitive::Batchnorm, batchnorm::BnCKFwdTraining{}.SolverDbId());
+    Register(
+        registry, ++id, Primitive::Loss, smoothl1loss::SmoothL1LossReducedForward5d{}.SolverDbId());
+    Register(registry,
+             ++id,
+             Primitive::Loss,
+             smoothl1loss::SmoothL1LossReducedBackward5d{}.SolverDbId());
     Register(
         registry, ++id, Primitive::Normalization, layernorm::Layernorm2DCKForward{}.SolverDbId());
     Register(
