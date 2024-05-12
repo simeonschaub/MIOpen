@@ -69,9 +69,8 @@ void cpu_smooth_l1loss_reduced_forward(tensor<T> input,
             for(int j = 0; j < local_size; ++j)
                 shared[j] = i + j < _size ? ref_workspace[offset_a + i + j] : 0.0f;
             for(int offset = local_size / 2; offset > 0; offset >>= 1)
-                for(int j = 0; j < local_size; ++j)
-                    if(j < offset)
-                        shared[j] += shared[j + offset];
+                for(int j = 0; j < offset; ++j)
+                    shared[j] += shared[j + offset];
             if(_size <= local_size)
                 ref_output[0] = shared[0];
             else

@@ -97,8 +97,8 @@ protected:
     {
         auto&& handle        = get_handle();
         smooth_l1loss_config = GetParam();
-        auto gen_value1 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
-        auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 101); };
+        auto gen_value1      = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 1); };
+        auto gen_value2      = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 2); };
 
         beta            = smooth_l1loss_config.beta;
         divisor         = smooth_l1loss_config.divisor;
