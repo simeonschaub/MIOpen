@@ -390,6 +390,7 @@ int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     }
     else
         ws_sizeInBytes = 0;
+    size_t ws_sz = ws_sizeInBytes / sizeof(Tgpu);
 
     uint32_t ctx = 0;
 
@@ -404,13 +405,13 @@ int SmoothL1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     in        = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
     tar       = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
     out       = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
-    workspace = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
+    workspace = std::vector<Tgpu>(ws_sz, static_cast<Tgpu>(0));
     dI        = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
     dT        = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
     dO        = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
 
     outhost       = std::vector<Tref>(out_sz, static_cast<Tref>(0));
-    workspacehost = std::vector<Tref>(in_sz, static_cast<Tref>(0));
+    workspacehost = std::vector<Tref>(ws_sz, static_cast<Tref>(0));
     dIhost        = std::vector<Tref>(in_sz, static_cast<Tref>(0));
     dThost        = std::vector<Tref>(tar_sz, static_cast<Tref>(0));
 
