@@ -64,8 +64,6 @@ bool SmoothL1LossReducedForward5d::IsApplicable(
         return false;
     if(!problem.IsRightLength())
         return false;
-    if(!problem.IsRightStride())
-        return false;
     return true;
 }
 

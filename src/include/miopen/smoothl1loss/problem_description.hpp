@@ -83,32 +83,6 @@ struct SmoothL1LossFwdProblemDescription : ProblemDescriptionBase
         return true;
     }
 
-    bool IsRightStride() const
-    {
-        if(!checkRightStride(iDesc) || !checkRightStride(tDesc) || !checkRightStride(oDesc))
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
-            return false;
-#endif
-        }
-        return true;
-    }
-
-    bool IsSameStride() const
-    {
-        if(!checkSameStride(iDesc, tDesc))
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
-            return false;
-#endif
-        }
-        return true;
-    }
-
 protected:
     TensorDescriptor iDesc;
     TensorDescriptor tDesc;
@@ -182,34 +156,6 @@ struct SmoothL1LossBwdProblemDescription : ProblemDescriptionBase
         {
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
             MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
-            return false;
-#endif
-        }
-        return true;
-    }
-
-    bool IsRightStride() const
-    {
-        if(!checkRightStride(iDesc) || !checkRightStride(tDesc) || !checkRightStride(doDesc) ||
-           !checkRightStride(diDesc) || !checkRightStride(dtDesc))
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
-            return false;
-#endif
-        }
-        return true;
-    }
-
-    bool IsSameStride() const
-    {
-        if(!checkSameStride(iDesc, tDesc) || !checkSameStride(iDesc, diDesc) ||
-           !checkSameStride(tDesc, dtDesc))
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
 #else
             return false;
 #endif
