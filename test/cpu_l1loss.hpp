@@ -41,26 +41,22 @@ void cpu_l1loss_reduced_forward(tensor<T> input,
     auto inputSize = input.desc.GetElementSize();
 
     /* Phase 1: Calc loss for each element (unreduced) */
-    par_ford(inputSize)([&](size_t i) {
-        ref_workspace[i] = abs(input[i] - target[i]);
-    });
+    par_ford(inputSize)([&](size_t i) { ref_workspace[i] = abs(input[i] - target[i]); });
 
     /* Phase 2: Reduce */
     T res = 0.0f;
-    par_ford(inputSize)([&](size_t o) {
-        res += ref_workspace[o];
-    });
-    
+    par_ford(inputSize)([&](size_t o) { res += ref_workspace[o]; });
+
     ref_output[0] = res / divisor;
 }
 
 template <class T>
 void cpu_l1loss_reduced_backward(tensor<T> input,
-                                tensor<T> target,
-                                tensor<T> dO,
-                                tensor<T>& ref_dI,
-                                tensor<T>& ref_dT,
-                                float divisor)
+                                 tensor<T> target,
+                                 tensor<T> dO,
+                                 tensor<T>& ref_dI,
+                                 tensor<T>& ref_dT,
+                                 float divisor)
 {
     // Treat contiguous tensors as non-contiguous tensors (for consistency)
     auto I_tv  = get_inner_expanded_tv(input.desc);

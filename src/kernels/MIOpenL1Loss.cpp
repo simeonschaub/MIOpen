@@ -41,8 +41,8 @@
 #define OUTPUT_TYPE float
 #endif
 
-#ifndef D_TYPE
-#define D_TYPE float
+#ifndef DTYPE
+#define DTYPE float
 #endif
 
 #ifndef REDUCE_SIZE
@@ -85,8 +85,8 @@ __device__ FLOAT_ACCUM block_reduce_sum(FLOAT_ACCUM val)
     return val;
 }
 
-template <typename DTYPE>
-__device__ void losssum(const DTYPE* input, DTYPE* output, size_t N)
+template <typename D_TYPE>
+__device__ void LossSum_kernel(const D_TYPE* input, D_TYPE* output, size_t N)
 {
     auto gid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -97,33 +97,39 @@ __device__ void losssum(const DTYPE* input, DTYPE* output, size_t N)
         output[blockIdx.x] = CVT_ACCUM2FLOAT(val);
 }
 
-template<typename TI, typename TO>
+extern "C" __global__ void
+LossSum(const DTYPE* input, DTYPE* output, size_t N) {
+    LossSum_kernel<DTYPE>(input, output, N);
+}
+
+template <typename TI, typename TO>
 __device__ void L1LossReducedForward5d_kernel(const TI* I,
-                                        const TI* T,
-                                        TO* lsum,
-                                        const float divisor,
-                                        tensor_view_5d_t I_tv,
-                                        tensor_view_5d_t T_tv)
+                                              const TI* T,
+                                              TO* lsum,
+                                              const float divisor,
+                                              tensor_view_5d_t I_tv,
+                                              tensor_view_5d_t T_tv)
 {
     const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
     size_t n[5];
     GET_NCDHW(n[0], n[1], n[2], n[3], n[4], gid, I_tv);
 
-    if (n[0] >= I_tv.size[0]) return;
+    if(n[0] >= I_tv.size[0])
+        return;
 
     size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
     size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
 
     FLOAT_ACCUM diff = abs(CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx]));
-    lsum[gid] = CVT_ACCUM2FLOAT(diff / divisor);
+    lsum[gid]        = CVT_ACCUM2FLOAT(diff / divisor);
 }
 
 extern "C" __global__ void L1LossReducedForward5d(const INPUT_TYPE* I,
-                                                    const INPUT_TYPE* T,
-                                                    OUTPUT_TYPE* lsum,
-                                                    const float divisor,
-                                                    tensor_view_5d_t I_tv,
-                                                    tensor_view_5d_t T_tv)
+                                                  const INPUT_TYPE* T,
+                                                  OUTPUT_TYPE* lsum,
+                                                  const float divisor,
+                                                  tensor_view_5d_t I_tv,
+                                                  tensor_view_5d_t T_tv)
 {
     L1LossReducedForward5d_kernel<INPUT_TYPE, OUTPUT_TYPE>(I, T, lsum, divisor, I_tv, T_tv);
 }

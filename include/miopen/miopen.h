@@ -6582,6 +6582,100 @@ MIOPEN_EXPORT miopenStatus_t miopenBackendInitialize(miopenBackendDescriptor_t d
 // CLOSEOUT BackendAPI DOXYGEN GROUP
 #endif // MIOPEN_BETA_API
 
+#ifdef MIOPEN_BETA_API
+
+/*! @ingroup LossFunction
+ * @enum miopenL1LossReduction_t
+ * Reduction modes for L1Loss
+ */
+typedef enum
+{
+    MIOPEN_L1LOSS_NONE_REDUCTION = 0, /*!< no reduction will be applied */
+    MIOPEN_L1LOSS_SUM_REDUCTION  = 1, /*!< the output will be summed */
+    MIOPEN_L1LOSS_MEAN_REDUCTION =
+        2 /*!< the sum of the output will be divided by the number of elements in the output */
+} miopenL1LossReduction_t;
+
+// L1Loss APIs
+/** @addtogroup LossFunction
+ *
+ *  @{
+ */
+
+/*! @brief Helper function to query the minimum workspace size required by the L1Loss call
+ *
+ * @param handle                   MIOpen Handle (input)
+ * @param iDesc                    Tensor descriptor for input tensor (input)
+ * @param tDesc                    Tensor descriptor for target tensor (input)
+ * @param oDesc                    Tensor descriptor for output tensor (input)
+ * @param sizeInBytes              Pointer to data to return the minimum workspace size
+ * @return                         miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t
+miopenGetL1LossReducedForwardWorkspaceSize(miopenHandle_t handle,
+                                           miopenTensorDescriptor_t iDesc,
+                                           miopenTensorDescriptor_t tDesc,
+                                           miopenTensorDescriptor_t oDesc,
+                                           size_t* sizeInBytes);
+
+/*! @brief Execute a L1Loss forward layer
+ *
+ * @param handle                   MIOpen handle (input)
+ * @param reduction                Reduction mode (input)
+ * @param workspace                Address of the allocated workspace data (input)
+ * @param workspaceSizeInBytes     Size in bytes of the allocated workspace data (input)
+ * @param iDesc                    Tensor descriptor for input tensor (input)
+ * @param i                        Data tensor input (input)
+ * @param tDesc                    Tensor descriptor for target tensor (input)
+ * @param t                        Data tensor target (input)
+ * @param oDesc                    Tensor descriptor for output tensor (input)
+ * @param o                        Data tensor output (output)
+ * @return                         miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t miopenL1LossReducedForward(miopenHandle_t handle,
+                                                        miopenL1LossReduction_t reduction,
+                                                        void* workspace,
+                                                        size_t workspaceSizeInBytes,
+                                                        miopenTensorDescriptor_t iDesc,
+                                                        const void* i,
+                                                        miopenTensorDescriptor_t tDesc,
+                                                        const void* t,
+                                                        miopenTensorDescriptor_t oDesc,
+                                                        void* o);
+
+/*! @brief Execute the Backward Smooth L1Loss
+ *
+ * @param handle                   MIOpen handle (input)
+ * @param iDesc                    Tensor descriptor for input tensor (input)
+ * @param i                        Data tensor input (input)
+ * @param tDesc                    Tensor descriptor for target tensor (input)
+ * @param t                        Data tensor target (input)
+ * @param doDesc                   Tensor descriptor for output gradient (input)
+ * @param dO                       Gradient of output (input)
+ * @param diDesc                   Tensor descriptor for input gradient (input)
+ * @param dI                       Gradient of input (output)
+ * @param dtDesc                   Tensor descriptor for target gradient (input)
+ * @param dT                       Gradient of target (output)
+ * @param divisor                  Divisor (input)
+ * @return                         miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t miopenL1LossReducedBackward(miopenHandle_t handle,
+                                                         miopenTensorDescriptor_t iDesc,
+                                                         const void* i,
+                                                         miopenTensorDescriptor_t tDesc,
+                                                         const void* t,
+                                                         miopenTensorDescriptor_t doDesc,
+                                                         const void* dO,
+                                                         miopenTensorDescriptor_t diDesc,
+                                                         void* dI,
+                                                         miopenTensorDescriptor_t dtDesc,
+                                                         void* dT,
+                                                         float divisor);
+
+/** @} */
+// CLOSEOUT LossFunction DOXYGEN GROUP
+#endif // MIOPEN_BETA_API
+
 #ifdef __cplusplus
 }
 #endif

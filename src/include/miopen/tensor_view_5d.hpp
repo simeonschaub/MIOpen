@@ -72,7 +72,6 @@ using tensor_view_5d_t = struct
         c          = nc % tv.size[1];     \
     }
 
-
 inline tensor_view_5d_t get_inner_expanded_tv(const miopen::TensorDescriptor Desc)
 {
     auto dims    = Desc.GetLengths();
