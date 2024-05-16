@@ -104,7 +104,8 @@ NetworkConfig L1LossFwdProblemDescription::MakeNetworkConfig() const
 
     std::ostringstream ss;
 
-    ss << "smoothl1loss_reduced_fwd";
+    ss << "smoothl1loss_fwd";
+    ss << "reduction" << reduction;
     ss << "i_dtype" << input_dtype;
     ss << "o_dtype" << output_dtype;
     ss << "size" << size;
@@ -112,6 +113,7 @@ NetworkConfig L1LossFwdProblemDescription::MakeNetworkConfig() const
     return NetworkConfig{ss.str()};
 }
 
+/*
 NetworkConfig L1LossBwdProblemDescription::MakeNetworkConfig() const
 {
     auto input_dtype  = iDesc.GetType();
@@ -127,6 +129,7 @@ NetworkConfig L1LossBwdProblemDescription::MakeNetworkConfig() const
 
     return NetworkConfig{ss.str()};
 }
+*/
 
 } // namespace l1loss
 

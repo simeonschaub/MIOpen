@@ -48,18 +48,48 @@ bool checkContiguous(const TensorDescriptor& x);
 struct L1LossFwdProblemDescription : ProblemDescriptionBase
 {
     L1LossFwdProblemDescription(const TensorDescriptor& iDesc_,
-                                      const TensorDescriptor& tDesc_,
-                                      const TensorDescriptor& oDesc_,
-                                      miopenL1LossReduction_t reduction_)
+                                const TensorDescriptor& tDesc_,
+                                const TensorDescriptor& oDesc_,
+                                miopenL1LossReduction_t reduction_)
         : iDesc(iDesc_), tDesc(tDesc_), oDesc(oDesc_), reduction(reduction_)
     {
+        if(iDesc.GetLengths().size() != tDesc.GetLengths().size())
+        {
+            MIOPEN_THROW(miopenStatusBadParm,
+                         "L1Loss::ProblemDescription: Number of tensor dimension do not match.");
+        }
+
+        if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
+        {
+            if(iDesc.GetLengths().size() != oDesc.GetLengths().size()) {
+                MIOPEN_THROW(miopenStatusBadParm,
+                         "L1Loss::ProblemDescription: Number of tensor dimension do not match.");
+            }
+        } else {
+            if(oDesc.GetLengths().size() != 1)
+            {
+                MIOPEN_THROW(miopenStatusBadParm,
+                             "L1Loss::ProblemDescription: Number of output tensor's dimension do not equal 1 in case of reduction.");   
+            }
+        }
     }
 
     L1LossFwdProblemDescription(const TensorDescriptor& iDesc_,
-                                      const TensorDescriptor& tDesc_,
-                                      const TensorDescriptor& oDesc_)
+                                const TensorDescriptor& tDesc_,
+                                const TensorDescriptor& oDesc_)
         : iDesc(iDesc_), tDesc(tDesc_), oDesc(oDesc_)
     {
+        if(iDesc.GetLengths().size() != tDesc.GetLengths().size())
+        {
+            MIOPEN_THROW(miopenStatusBadParm,
+                         "L1Loss::ProblemDescription: Number of tensor dimension do not match.");
+        }
+
+        if(oDesc.GetLengths().size() != 1)
+        {
+            MIOPEN_THROW(miopenStatusBadParm,
+                         "L1Loss::ProblemDescription: Number of output tensor's dimension do not equal 1 in case of reduction.");   
+        }
     }
 
     miopenL1LossReduction_t GetReduction_() const { return reduction; }
@@ -130,13 +160,14 @@ protected:
     NetworkConfig MakeForwardNetworkConfig() const;
 };
 
+/*
 struct L1LossBwdProblemDescription : ProblemDescriptionBase
 {
     L1LossBwdProblemDescription(const TensorDescriptor& iDesc_,
-                                      const TensorDescriptor& tDesc_,
-                                      const TensorDescriptor& doDesc_,
-                                      const TensorDescriptor& diDesc_,
-                                      const TensorDescriptor& dtDesc_)
+                                const TensorDescriptor& tDesc_,
+                                const TensorDescriptor& doDesc_,
+                                const TensorDescriptor& diDesc_,
+                                const TensorDescriptor& dtDesc_)
         : iDesc(iDesc_), tDesc(tDesc_), doDesc(doDesc_), diDesc(diDesc_), dtDesc(dtDesc_)
     {
     }
@@ -214,6 +245,7 @@ protected:
 
     NetworkConfig MakeBackwardNetworkConfig() const;
 };
+*/
 
 } // namespace l1loss
 

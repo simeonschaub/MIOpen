@@ -36,29 +36,28 @@ namespace solver {
 
 namespace l1loss {
 
-using L1LossReducedForwardSolverBase =
+using L1LossForwardSolverBase =
     NonTunableSolverBase<ExecutionContext, miopen::l1loss::L1LossFwdProblemDescription>;
 
-struct L1LossReducedForward5d final : L1LossReducedForwardSolverBase
+struct L1LossForward5d final : L1LossForwardSolverBase
 {
     const std::string& SolverDbId() const override
     {
-        return GetSolverDbId<L1LossReducedForward5d>();
+        return GetSolverDbId<L1LossForward5d>();
     }
 
-    bool IsApplicable(
-        const ExecutionContext& context,
-        const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
-    ConvSolution GetSolution(
-        const ExecutionContext& context,
-        const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
-    std::size_t GetWorkspaceSize(
-        const ExecutionContext& context,
-        const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
-    bool MayNeedWorkspace() const override { return true; }
+    bool IsApplicable(const ExecutionContext& context,
+                      const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
+    ConvSolution
+    GetSolution(const ExecutionContext& context,
+                const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
+    std::size_t
+    GetWorkspaceSize(const ExecutionContext& context,
+                     const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
 };
 
-using L1LossReducedBackwardSolverBase =
+/*
+using L1LossBackwardSolverBase =
     NonTunableSolverBase<ExecutionContext, miopen::l1loss::L1LossBwdProblemDescription>;
 
 struct L1LossReducedBackward5d final : L1LossReducedBackwardSolverBase
@@ -68,14 +67,14 @@ struct L1LossReducedBackward5d final : L1LossReducedBackwardSolverBase
         return GetSolverDbId<L1LossReducedBackward5d>();
     }
 
-    bool IsApplicable(
-        const ExecutionContext& context,
-        const miopen::l1loss::L1LossBwdProblemDescription& problem) const override;
-    ConvSolution GetSolution(
-        const ExecutionContext& context,
-        const miopen::l1loss::L1LossBwdProblemDescription& problem) const override;
+    bool IsApplicable(const ExecutionContext& context,
+                      const miopen::l1loss::L1LossBwdProblemDescription& problem) const override;
+    ConvSolution
+    GetSolution(const ExecutionContext& context,
+                const miopen::l1loss::L1LossBwdProblemDescription& problem) const override;
     bool MayNeedWorkspace() const override { return false; }
 };
+*/
 
 } // namespace l1loss
 

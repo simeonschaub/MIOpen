@@ -24,21 +24,22 @@
  *
  *******************************************************************************/
 
+#include "miopen/miopen.h"
 #include <miopen/datatype.hpp>
 #include <miopen/find_solution.hpp>
 #include <miopen/float_equal.hpp>
 #include <miopen/kernel_cache.hpp>
-#include <miopen/smoothl1loss/invoke_params.hpp>
-#include <miopen/smoothl1loss/solvers.hpp>
-#include <miopen/smooth_l1loss.hpp>
+#include <miopen/l1loss/invoke_params.hpp>
+#include <miopen/l1loss/solvers.hpp>
+#include <miopen/l1loss.hpp>
 #include <miopen/tensor.hpp>
 
 namespace miopen {
 
-size_t GetSmoothL1LossReducedForwardWorkspaceSize(Handle& handle,
-                                                  const TensorDescriptor& iDesc,
-                                                  const TensorDescriptor& tDesc,
-                                                  const TensorDescriptor& oDesc)
+size_t GetL1LossForwardWorkspaceSize(Handle& handle,
+                                    const TensorDescriptor& iDesc,
+                                    const TensorDescriptor& tDesc,
+                                    const TensorDescriptor& oDesc)
 {
     auto ctx           = ExecutionContext{&handle};
     const auto problem = smoothl1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
@@ -52,19 +53,18 @@ size_t GetSmoothL1LossReducedForwardWorkspaceSize(Handle& handle,
     return pair_size_vector.empty() ? static_cast<size_t>(-1) : pair_size_vector.front().second;
 }
 
-miopenStatus_t SmoothL1LossReducedForward(Handle& handle,
-                                          Data_t workspace,
-                                          size_t workspaceSizeInBytes,
-                                          const TensorDescriptor& iDesc,
-                                          ConstData_t i,
-                                          const TensorDescriptor& tDesc,
-                                          ConstData_t t,
-                                          const TensorDescriptor& oDesc,
-                                          Data_t o,
-                                          float beta,
-                                          float divisor)
+miopenStatus_t SmoothL1LossForward(Handle& handle,
+                                    miopenL1LossReduction_t reduction,
+                                    Data_t workspace,
+                                    size_t workspaceSizeInBytes,
+                                    const TensorDescriptor& iDesc,
+                                    ConstData_t i,
+                                    const TensorDescriptor& tDesc,
+                                    ConstData_t t,
+                                    const TensorDescriptor& oDesc,
+                                    Data_t o)
 {
-    const auto problem = smoothl1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
+    const auto problem = l1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
 
     const auto invoke_params = [&]() {
         auto tmp           = smoothl1loss::InvokeParams{};
@@ -77,8 +77,6 @@ miopenStatus_t SmoothL1LossReducedForward(Handle& handle,
         tmp.o              = o;
         tmp.workspace      = workspace;
         tmp.workspace_size = workspaceSizeInBytes;
-        tmp.beta           = beta;
-        tmp.divisor        = divisor;
         return tmp;
     }();
 
@@ -91,6 +89,7 @@ miopenStatus_t SmoothL1LossReducedForward(Handle& handle,
     return miopenStatusSuccess;
 }
 
+/*
 miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
                                            const TensorDescriptor& iDesc,
                                            ConstData_t i,
@@ -134,5 +133,6 @@ miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
 
     return miopenStatusSuccess;
 }
+*/
 
 } // namespace miopen

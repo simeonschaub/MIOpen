@@ -97,8 +97,8 @@ __device__ void LossSum_kernel(const D_TYPE* input, D_TYPE* output, size_t N)
         output[blockIdx.x] = CVT_ACCUM2FLOAT(val);
 }
 
-extern "C" __global__ void
-LossSum(const DTYPE* input, DTYPE* output, size_t N) {
+extern "C" __global__ void LossSum(const DTYPE* input, DTYPE* output, size_t N)
+{
     LossSum_kernel<DTYPE>(input, output, N);
 }
 

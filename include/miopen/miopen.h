@@ -6605,6 +6605,7 @@ typedef enum
 /*! @brief Helper function to query the minimum workspace size required by the L1Loss call
  *
  * @param handle                   MIOpen Handle (input)
+ * @param reduction                Reduction mode (input)
  * @param iDesc                    Tensor descriptor for input tensor (input)
  * @param tDesc                    Tensor descriptor for target tensor (input)
  * @param oDesc                    Tensor descriptor for output tensor (input)
@@ -6612,11 +6613,12 @@ typedef enum
  * @return                         miopenStatus_t
  */
 MIOPEN_EXPORT miopenStatus_t
-miopenGetL1LossReducedForwardWorkspaceSize(miopenHandle_t handle,
-                                           miopenTensorDescriptor_t iDesc,
-                                           miopenTensorDescriptor_t tDesc,
-                                           miopenTensorDescriptor_t oDesc,
-                                           size_t* sizeInBytes);
+miopenGetL1LossForwardWorkspaceSize(miopenHandle_t handle,
+                                    miopenL1LossReduction_t reduction,
+                                    miopenTensorDescriptor_t iDesc,
+                                    miopenTensorDescriptor_t tDesc,
+                                    miopenTensorDescriptor_t oDesc,
+                                    size_t* sizeInBytes);
 
 /*! @brief Execute a L1Loss forward layer
  *
@@ -6632,16 +6634,16 @@ miopenGetL1LossReducedForwardWorkspaceSize(miopenHandle_t handle,
  * @param o                        Data tensor output (output)
  * @return                         miopenStatus_t
  */
-MIOPEN_EXPORT miopenStatus_t miopenL1LossReducedForward(miopenHandle_t handle,
-                                                        miopenL1LossReduction_t reduction,
-                                                        void* workspace,
-                                                        size_t workspaceSizeInBytes,
-                                                        miopenTensorDescriptor_t iDesc,
-                                                        const void* i,
-                                                        miopenTensorDescriptor_t tDesc,
-                                                        const void* t,
-                                                        miopenTensorDescriptor_t oDesc,
-                                                        void* o);
+MIOPEN_EXPORT miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
+                                                miopenL1LossReduction_t reduction,
+                                                void* workspace,
+                                                size_t workspaceSizeInBytes,
+                                                miopenTensorDescriptor_t iDesc,
+                                                const void* i,
+                                                miopenTensorDescriptor_t tDesc,
+                                                const void* t,
+                                                miopenTensorDescriptor_t oDesc,
+                                                void* o);
 
 /*! @brief Execute the Backward Smooth L1Loss
  *
@@ -6659,18 +6661,18 @@ MIOPEN_EXPORT miopenStatus_t miopenL1LossReducedForward(miopenHandle_t handle,
  * @param divisor                  Divisor (input)
  * @return                         miopenStatus_t
  */
-MIOPEN_EXPORT miopenStatus_t miopenL1LossReducedBackward(miopenHandle_t handle,
-                                                         miopenTensorDescriptor_t iDesc,
-                                                         const void* i,
-                                                         miopenTensorDescriptor_t tDesc,
-                                                         const void* t,
-                                                         miopenTensorDescriptor_t doDesc,
-                                                         const void* dO,
-                                                         miopenTensorDescriptor_t diDesc,
-                                                         void* dI,
-                                                         miopenTensorDescriptor_t dtDesc,
-                                                         void* dT,
-                                                         float divisor);
+MIOPEN_EXPORT miopenStatus_t miopenL1LossBackward(miopenHandle_t handle,
+                                                miopenTensorDescriptor_t iDesc,
+                                                const void* i,
+                                                miopenTensorDescriptor_t tDesc,
+                                                const void* t,
+                                                miopenTensorDescriptor_t doDesc,
+                                                const void* dO,
+                                                miopenTensorDescriptor_t diDesc,
+                                                void* dI,
+                                                miopenTensorDescriptor_t dtDesc,
+                                                void* dT,
+                                                float divisor);
 
 /** @} */
 // CLOSEOUT LossFunction DOXYGEN GROUP

@@ -26,6 +26,7 @@
 #ifndef MIOPEN_L1LOSS_HPP_
 #define MIOPEN_L1LOSS_HPP_
 
+#include "miopen/miopen.h"
 #include <miopen/common.hpp>
 
 namespace miopen {
@@ -33,21 +34,22 @@ namespace miopen {
 struct Handle;
 struct TensorDescriptor;
 
-size_t GetL1LossReducedForwardWorkspaceSize(Handle& handle,
-                                            const TensorDescriptor& iDesc,
-                                            const TensorDescriptor& tDesc,
-                                            const TensorDescriptor& oDesc);
-
-miopenStatus_t L1LossReducedForward(Handle& handle,
+size_t GetL1LossForwardWorkspaceSize(Handle& handle,
                                     miopenL1LossReduction_t reduction,
-                                    Data_t workspace,
-                                    size_t workspaceSizeInBytes,
                                     const TensorDescriptor& iDesc,
-                                    ConstData_t i,
                                     const TensorDescriptor& tDesc,
-                                    ConstData_t t,
-                                    const TensorDescriptor& oDesc,
-                                    Data_t o);
+                                    const TensorDescriptor& oDesc);
+
+miopenStatus_t L1LossForward(Handle& handle,
+                            miopenL1LossReduction_t reduction,
+                            Data_t workspace,
+                            size_t workspaceSizeInBytes,
+                            const TensorDescriptor& iDesc,
+                            ConstData_t i,
+                            const TensorDescriptor& tDesc,
+                            ConstData_t t,
+                            const TensorDescriptor& oDesc,
+                            Data_t o);
 
 miopenStatus_t L1LossReducedBackward(Handle& handle,
                                      const TensorDescriptor& iDesc,
