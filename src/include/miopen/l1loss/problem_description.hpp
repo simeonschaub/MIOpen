@@ -61,15 +61,20 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
 
         if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
         {
-            if(iDesc.GetLengths().size() != oDesc.GetLengths().size()) {
-                MIOPEN_THROW(miopenStatusBadParm,
-                         "L1Loss::ProblemDescription: Number of tensor dimension do not match.");
+            if(iDesc.GetLengths().size() != oDesc.GetLengths().size())
+            {
+                MIOPEN_THROW(
+                    miopenStatusBadParm,
+                    "L1Loss::ProblemDescription: Number of tensor dimension do not match.");
             }
-        } else {
+        }
+        else
+        {
             if(oDesc.GetLengths().size() != 1)
             {
                 MIOPEN_THROW(miopenStatusBadParm,
-                             "L1Loss::ProblemDescription: Number of output tensor's dimension do not equal 1 in case of reduction.");   
+                             "L1Loss::ProblemDescription: Number of output tensor's dimension do "
+                             "not equal 1 in case of reduction.");
             }
         }
     }
@@ -88,7 +93,8 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         if(oDesc.GetLengths().size() != 1)
         {
             MIOPEN_THROW(miopenStatusBadParm,
-                         "L1Loss::ProblemDescription: Number of output tensor's dimension do not equal 1 in case of reduction.");   
+                         "L1Loss::ProblemDescription: Number of output tensor's dimension do not "
+                         "equal 1 in case of reduction.");
         }
     }
 

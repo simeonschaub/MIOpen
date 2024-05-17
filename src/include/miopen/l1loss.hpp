@@ -35,21 +35,21 @@ struct Handle;
 struct TensorDescriptor;
 
 size_t GetL1LossForwardWorkspaceSize(Handle& handle,
-                                    miopenL1LossReduction_t reduction,
-                                    const TensorDescriptor& iDesc,
-                                    const TensorDescriptor& tDesc,
-                                    const TensorDescriptor& oDesc);
+                                     miopenL1LossReduction_t reduction,
+                                     const TensorDescriptor& iDesc,
+                                     const TensorDescriptor& tDesc,
+                                     const TensorDescriptor& oDesc);
 
 miopenStatus_t L1LossForward(Handle& handle,
-                            miopenL1LossReduction_t reduction,
-                            Data_t workspace,
-                            size_t workspaceSizeInBytes,
-                            const TensorDescriptor& iDesc,
-                            ConstData_t i,
-                            const TensorDescriptor& tDesc,
-                            ConstData_t t,
-                            const TensorDescriptor& oDesc,
-                            Data_t o);
+                             miopenL1LossReduction_t reduction,
+                             Data_t workspace,
+                             size_t workspaceSizeInBytes,
+                             const TensorDescriptor& iDesc,
+                             ConstData_t i,
+                             const TensorDescriptor& tDesc,
+                             ConstData_t t,
+                             const TensorDescriptor& oDesc,
+                             Data_t o);
 
 miopenStatus_t L1LossReducedBackward(Handle& handle,
                                      const TensorDescriptor& iDesc,

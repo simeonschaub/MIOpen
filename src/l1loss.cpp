@@ -37,9 +37,9 @@
 namespace miopen {
 
 size_t GetL1LossForwardWorkspaceSize(Handle& handle,
-                                    const TensorDescriptor& iDesc,
-                                    const TensorDescriptor& tDesc,
-                                    const TensorDescriptor& oDesc)
+                                     const TensorDescriptor& iDesc,
+                                     const TensorDescriptor& tDesc,
+                                     const TensorDescriptor& oDesc)
 {
     auto ctx           = ExecutionContext{&handle};
     const auto problem = smoothl1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
@@ -54,15 +54,15 @@ size_t GetL1LossForwardWorkspaceSize(Handle& handle,
 }
 
 miopenStatus_t SmoothL1LossForward(Handle& handle,
-                                    miopenL1LossReduction_t reduction,
-                                    Data_t workspace,
-                                    size_t workspaceSizeInBytes,
-                                    const TensorDescriptor& iDesc,
-                                    ConstData_t i,
-                                    const TensorDescriptor& tDesc,
-                                    ConstData_t t,
-                                    const TensorDescriptor& oDesc,
-                                    Data_t o)
+                                   miopenL1LossReduction_t reduction,
+                                   Data_t workspace,
+                                   size_t workspaceSizeInBytes,
+                                   const TensorDescriptor& iDesc,
+                                   ConstData_t i,
+                                   const TensorDescriptor& tDesc,
+                                   ConstData_t t,
+                                   const TensorDescriptor& oDesc,
+                                   Data_t o)
 {
     const auto problem = l1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
 

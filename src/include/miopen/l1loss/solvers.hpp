@@ -41,10 +41,7 @@ using L1LossForwardSolverBase =
 
 struct L1LossForward5d final : L1LossForwardSolverBase
 {
-    const std::string& SolverDbId() const override
-    {
-        return GetSolverDbId<L1LossForward5d>();
-    }
+    const std::string& SolverDbId() const override { return GetSolverDbId<L1LossForward5d>(); }
 
     bool IsApplicable(const ExecutionContext& context,
                       const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;

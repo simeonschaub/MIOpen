@@ -31,51 +31,50 @@
 #include <miopen/logger.hpp>
 #include <miopen/tensor_ops.hpp>
 
-extern "C" miopenStatus_t
-miopenGetL1LossForwardWorkspaceSize(miopenHandle_t handle,
-                                    miopenL1LossReduction_t reduction,
-                                    const miopenTensorDescriptor_t iDesc,
-                                    const miopenTensorDescriptor_t tDesc,
-                                    const miopenTensorDescriptor_t oDesc,
-                                    size_t* sizeInBytes)
+extern "C" miopenStatus_t miopenGetL1LossForwardWorkspaceSize(miopenHandle_t handle,
+                                                              miopenL1LossReduction_t reduction,
+                                                              const miopenTensorDescriptor_t iDesc,
+                                                              const miopenTensorDescriptor_t tDesc,
+                                                              const miopenTensorDescriptor_t oDesc,
+                                                              size_t* sizeInBytes)
 {
 
     MIOPEN_LOG_FUNCTION(handle, reduction, iDesc, tDesc, oDesc, sizeInBytes);
 
     return miopen::try_([&] {
-        miopen::deref(sizeInBytes) =
-            miopen::GetL1LossForwardWorkspaceSize(miopen::deref(handle),
-                                                        reduction,
-                                                         miopen::deref(iDesc),
-                                                         miopen::deref(tDesc),
-                                                         miopen::deref(oDesc));
+        miopen::deref(sizeInBytes) = miopen::GetL1LossForwardWorkspaceSize(miopen::deref(handle),
+                                                                           reduction,
+                                                                           miopen::deref(iDesc),
+                                                                           miopen::deref(tDesc),
+                                                                           miopen::deref(oDesc));
     });
 }
 
 extern "C" miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
-                                            miopenL1LossReduction_t reduction,
-                                            void* workspace,
-                                            size_t workspaceSizeInBytes,
-                                            const miopenTensorDescriptor_t iDesc,
-                                            const void* i,
-                                            const miopenTensorDescriptor_t tDesc,
-                                            const void* t,
-                                            const miopenTensorDescriptor_t oDesc,
-                                            void* o)
+                                              miopenL1LossReduction_t reduction,
+                                              void* workspace,
+                                              size_t workspaceSizeInBytes,
+                                              const miopenTensorDescriptor_t iDesc,
+                                              const void* i,
+                                              const miopenTensorDescriptor_t tDesc,
+                                              const void* t,
+                                              const miopenTensorDescriptor_t oDesc,
+                                              void* o)
 {
-    MIOPEN_LOG_FUNCTION(handle, reduction, workspace, workspaceSizeInBytes, iDesc, i, tDesc, t, oDesc, o);
+    MIOPEN_LOG_FUNCTION(
+        handle, reduction, workspace, workspaceSizeInBytes, iDesc, i, tDesc, t, oDesc, o);
 
     return miopen::try_([&] {
         miopen::L1LossForward(miopen::deref(handle),
-                                reduction,
-                                DataCast(workspace),
-                                workspaceSizeInBytes,
-                                miopen::deref(iDesc),
-                                DataCast(i),
-                                miopen::deref(tDesc),
-                                DataCast(t),
-                                miopen::deref(oDesc),
-                                DataCast(o));
+                              reduction,
+                              DataCast(workspace),
+                              workspaceSizeInBytes,
+                              miopen::deref(iDesc),
+                              DataCast(i),
+                              miopen::deref(tDesc),
+                              DataCast(t),
+                              miopen::deref(oDesc),
+                              DataCast(o));
     });
 }
 
