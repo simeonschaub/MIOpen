@@ -98,7 +98,7 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         }
     }
 
-    miopenL1LossReduction_t GetReduction_() const { return reduction; }
+    miopenL1LossReduction_t GetReduction() const { return reduction; }
     const TensorDescriptor& GetIDesc() const { return iDesc; }
     const TensorDescriptor& GetTDesc() const { return tDesc; }
     const TensorDescriptor& GetODesc() const { return oDesc; }

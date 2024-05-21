@@ -51,6 +51,7 @@ struct L1LossForward5d final : L1LossForwardSolverBase
     std::size_t
     GetWorkspaceSize(const ExecutionContext& context,
                      const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
+    bool MayNeedWorkspace() const override { return true; }
 };
 
 /*

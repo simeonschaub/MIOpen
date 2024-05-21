@@ -24,7 +24,11 @@
  *
  *******************************************************************************/
 
+#include "miopen/kernel_info.hpp"
 #include "miopen/l1loss/problem_description.hpp"
+#include "miopen/miopen.h"
+#include "miopen/mlo_internal.hpp"
+#include <cstdint>
 #include <miopen/datatype.hpp>
 #include <miopen/kernel_build_params.hpp>
 #include <miopen/l1loss/invoke_params.hpp>
@@ -42,20 +46,39 @@ namespace solver {
 
 namespace l1loss {
 
-bool L1LossReducedForward5d::IsApplicable(
+const auto make_hip_kernel = [](std::vector<size_t> localsize,
+                                std::vector<size_t> gridsize,
+                                std::string kernel_file,
+                                std::string kernel_name,
+                                KernelBuildParameters build_params) {
+    while(localsize.size() < 3)
+        localsize.push_back(1);
+    while(gridsize.size() < 3)
+        gridsize.push_back(1);
+    for(int i = 0; i < localsize.size(); ++i)
+        gridsize[i] = AlignUp(gridsize[i], localsize[i]);
+    return KernelInfo{
+        build_params.GenerateFor(kbp::HIP{}), localsize, gridsize, kernel_file, kernel_name};
+};
+
+bool L1LossForward5d::IsApplicable(
     const ExecutionContext& /*context*/,
     const miopen::l1loss::L1LossFwdProblemDescription& problem) const
 {
-    if(problem.GetIDesc().GetSize() > 5)
+    if(!problem.IsSameType())
         return false;
     if(!problem.IsRightLength())
         return false;
     if(!problem.IsRightStride())
         return false;
+    if(!problem.IsSameStride())
+        return false;
+    if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
+        return false;
     return true;
 }
 
-ConvSolution L1LossReducedForward5d::GetSolution(
+ConvSolution L1LossForward5d::GetSolution(
     const ExecutionContext& /*context*/,
     const miopen::l1loss::L1LossFwdProblemDescription& problem) const
 {
@@ -73,22 +96,17 @@ ConvSolution L1LossReducedForward5d::GetSolution(
                               {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
                               {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
                               {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
-                              {"D_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
                               {"REDUCE_SIZE", LOCAL_SIZE_REDUCE_FWD}};
 
     /* Phase 1: Calc loss for each element. */
-    result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_FWD},
-                                                         {size},
-                                                         "MIOpenSmoothL1Loss.cpp",
-                                                         "SmoothL1LossReducedForward5d",
-                                                         build_params));
+    result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_FWD}, {size}, "MIOpenL1Loss.cpp", "L1LossReducedForward5d", build_params));
 
     /* Phase 2: Reduce */
     auto _size = size;
     do
     {
         result.construction_params.push_back(make_hip_kernel(
-            {LOCAL_SIZE_REDUCE_FWD}, {_size}, "MIOpenSmoothL1Loss.cpp", "LossSum", build_params));
+            {LOCAL_SIZE_REDUCE_FWD}, {_size}, "MIOpenL1Loss.cpp", "LossSum", build_params));
         _size = AlignUp(_size, LOCAL_SIZE_REDUCE_FWD) / LOCAL_SIZE_REDUCE_FWD;
     } while(_size > 1);
 
@@ -102,8 +120,11 @@ ConvSolution L1LossReducedForward5d::GetSolution(
                 decltype(auto) kernel = handle_.Run(kernels.front());
                 auto I_tv             = get_inner_expanded_tv(deref(params.iDesc));
                 auto T_tv             = get_inner_expanded_tv(deref(params.tDesc));
+                auto size = params.iDesc->GetElementSize();
+                size_t divisor = (params.reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : size;
+
                 kernel(
-                    params.i, params.t, params.workspace, params.beta, params.divisor, I_tv, T_tv);
+                    params.i, params.t, params.workspace, divisor, I_tv, T_tv);
             }
             if(handle_.IsProfilingEnabled())
                 elapsed = handle_.GetKernelTime();
@@ -141,11 +162,18 @@ ConvSolution L1LossReducedForward5d::GetSolution(
     return result;
 }
 
-std::size_t L1LossReducedForward5d::GetWorkspaceSize(
+std::size_t L1LossForward5d::GetWorkspaceSize(
     const ExecutionContext& /*context*/,
     const miopen::l1loss::L1LossFwdProblemDescription& problem) const
 {
-    return problem.GetIDesc().GetElementSize() * get_data_size(problem.GetODesc().GetType());
+    if (problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION) {
+        return 0;
+    }
+
+    return (problem.GetIDesc().GetElementSize() +
+            AlignUp(problem.GetIDesc().GetElementSize(), LOCAL_SIZE_REDUCE_FWD) /
+                LOCAL_SIZE_REDUCE_FWD) *
+           get_data_size(problem.GetODesc().GetType());
 }
 
 } // namespace l1loss

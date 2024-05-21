@@ -31,6 +31,59 @@
 #include <miopen/logger.hpp>
 #include <miopen/tensor_ops.hpp>
 
+static void LogCmdL1Loss(const miopenTensorDescriptor_t iDesc,
+                      const miopenL1LossReduction_t reduction,
+                      bool is_fwd)
+{
+    if(miopen::IsLoggingCmd())
+    {
+        std::stringstream ss;
+        auto dtype = miopen::deref(iDesc).GetType();
+        if(dtype == miopenHalf)
+        {
+            ss << "sumfp16";
+        }
+        else if(dtype == miopenFloat)
+        {
+            ss << "sumfp32";
+        }
+        else if(dtype == miopenBFloat16)
+        {
+            ss << "sumbfp16";
+        }
+
+        int32_t size = {0};
+        miopenGetTensorDescriptorSize(iDesc, &size);
+        ss << " -n " << miopen::deref(iDesc).GetLengths()[0];
+        if(size == 5)
+        {
+            ss << " -c " << miopen::deref(iDesc).GetLengths()[1] << " -D "
+               << miopen::deref(iDesc).GetLengths()[2] << " -H "
+               << miopen::deref(iDesc).GetLengths()[3] << " -W "
+               << miopen::deref(iDesc).GetLengths()[4];
+        }
+        else if(size == 4)
+        {
+            ss << " -c " << miopen::deref(iDesc).GetLengths()[1] << " -H "
+               << miopen::deref(iDesc).GetLengths()[2] << " -W "
+               << miopen::deref(iDesc).GetLengths()[3];
+        }
+        else if(size == 3)
+        {
+            ss << " -c " << miopen::deref(iDesc).GetLengths()[1] << " -W "
+               << miopen::deref(iDesc).GetLengths()[2];
+        }
+        else if(size == 2)
+        {
+            ss << " -c " << miopen::deref(iDesc).GetLengths()[1];
+        }
+
+        ss << " -F " << ((is_fwd) ? "1" : "2") << " -r " << reduction;
+
+        MIOPEN_LOG_DRIVER_CMD(ss.str());
+    }
+}
+
 extern "C" miopenStatus_t miopenGetL1LossForwardWorkspaceSize(miopenHandle_t handle,
                                                               miopenL1LossReduction_t reduction,
                                                               const miopenTensorDescriptor_t iDesc,
@@ -64,6 +117,7 @@ extern "C" miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
     MIOPEN_LOG_FUNCTION(
         handle, reduction, workspace, workspaceSizeInBytes, iDesc, i, tDesc, t, oDesc, o);
 
+    LogCmdL1Loss(iDesc, reduction, true);
     return miopen::try_([&] {
         miopen::L1LossForward(miopen::deref(handle),
                               reduction,

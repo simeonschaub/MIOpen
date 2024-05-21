@@ -29,11 +29,11 @@
 
 static Driver* makeDriver(const std::string& base_arg)
 {
-    if(base_arg == "smoothl1loss")
+    if(base_arg == "l1loss")
         return new L1LossDriver<float, float>();
-    if(base_arg == "smoothl1lossfp16")
+    if(base_arg == "l1lossfp16")
         return new L1LossDriver<float16, float>();
-    if(base_arg == "smoothl1lossbfp16")
+    if(base_arg == "l1lossbfp16")
         return new L1LossDriver<bfloat16, float>();
     return nullptr;
 }

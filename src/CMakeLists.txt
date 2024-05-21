@@ -134,6 +134,9 @@ set( MIOpen_Source
     invoker_cache.cpp
     kernel_build_params.cpp
     kernel_warnings.cpp
+    l1loss.cpp
+    l1loss_api.cpp
+    l1loss/problem_description.cpp
     layernorm_api.cpp
     layernorm/problem_description.cpp
     load_file.cpp
@@ -260,6 +263,7 @@ set( MIOpen_Source
     solver/gemm_bwd.cpp
     solver/gemm_wrw.cpp
     solver/groupnorm/forward_groupnorm.cpp
+    solver/l1loss/forward_l1loss.cpp
     solver/layernorm/forward_layernorm.cpp
     solver/layernorm/forward_layernorm2d_ck.cpp
     solver/layernorm/forward_layernorm4d_ck.cpp
@@ -421,6 +425,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/neuron.inc
         kernels/rocm_version.inc
         kernels/stride_array.hpp
+        kernels/tensor_view_5d.hpp
         kernels/utilities.inc
         kernels/workaround_issue_1431.hpp
         kernels/xform_bidirect_winograd_code.inc
@@ -455,6 +460,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/MIOpenConvDirBatchNormActiv.cl
         kernels/MIOpenConvDirGenFwd.cl
         kernels/MIOpenGroupNorm.cpp
+        kernels/MIOpenL1Loss.cpp
         kernels/MIOpenLayerNorm.cpp
         kernels/MIOpenLRNBwd.cl
         kernels/MIOpenLRNFwd.cl

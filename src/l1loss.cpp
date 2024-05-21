@@ -24,6 +24,7 @@
  *
  *******************************************************************************/
 
+#include "miopen/l1loss/problem_description.hpp"
 #include "miopen/miopen.h"
 #include <miopen/datatype.hpp>
 #include <miopen/find_solution.hpp>
@@ -37,23 +38,24 @@
 namespace miopen {
 
 size_t GetL1LossForwardWorkspaceSize(Handle& handle,
+                                    miopenL1LossReduction_t reduction,
                                      const TensorDescriptor& iDesc,
                                      const TensorDescriptor& tDesc,
                                      const TensorDescriptor& oDesc)
 {
     auto ctx           = ExecutionContext{&handle};
-    const auto problem = smoothl1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
+    const auto problem = l1loss::L1LossFwdProblemDescription{iDesc, tDesc, oDesc, reduction};
 
-    const auto algo = AlgorithmName{"SmoothL1LossReducedForward"};
+    const auto algo = AlgorithmName{"L1LossForward"};
     const auto solvers =
-        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossReducedForward5d>{};
+        solver::SolverContainer<solver::l1loss::L1LossForward5d>{};
 
     auto pair_size_vector = solvers.GetWorkspaceSizes(ctx, problem);
 
     return pair_size_vector.empty() ? static_cast<size_t>(-1) : pair_size_vector.front().second;
 }
 
-miopenStatus_t SmoothL1LossForward(Handle& handle,
+miopenStatus_t L1LossForward(Handle& handle,
                                    miopenL1LossReduction_t reduction,
                                    Data_t workspace,
                                    size_t workspaceSizeInBytes,
@@ -64,10 +66,10 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
                                    const TensorDescriptor& oDesc,
                                    Data_t o)
 {
-    const auto problem = l1loss::ReducedForwardProblemDescription{iDesc, tDesc, oDesc};
+    const auto problem = l1loss::L1LossFwdProblemDescription{iDesc, tDesc, oDesc, reduction};
 
     const auto invoke_params = [&]() {
-        auto tmp           = smoothl1loss::InvokeParams{};
+        auto tmp           = l1loss::InvokeParams{};
         tmp.type           = InvokeType::Run;
         tmp.iDesc          = &iDesc;
         tmp.tDesc          = &tDesc;
@@ -80,9 +82,9 @@ miopenStatus_t SmoothL1LossForward(Handle& handle,
         return tmp;
     }();
 
-    const auto algo = AlgorithmName{"SmoothL1LossReducedForward"};
+    const auto algo = AlgorithmName{"L1LossForward"};
     const auto solvers =
-        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossReducedForward5d>{};
+        solver::SolverContainer<solver::l1loss::L1LossForward5d>{};
 
     solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 
