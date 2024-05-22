@@ -28,6 +28,7 @@
 #include "miopen/l1loss/problem_description.hpp"
 #include "miopen/miopen.h"
 #include "miopen/mlo_internal.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <miopen/datatype.hpp>
 #include <miopen/kernel_build_params.hpp>
@@ -61,9 +62,8 @@ const auto make_hip_kernel = [](std::vector<size_t> localsize,
         build_params.GenerateFor(kbp::HIP{}), localsize, gridsize, kernel_file, kernel_name};
 };
 
-bool L1LossForward5d::IsApplicable(
-    const ExecutionContext& /*context*/,
-    const miopen::l1loss::L1LossFwdProblemDescription& problem) const
+bool L1LossForward5d::IsApplicable(const ExecutionContext& /*context*/,
+                                   const miopen::l1loss::L1LossFwdProblemDescription& problem) const
 {
     if(!problem.IsSameType())
         return false;
@@ -78,9 +78,9 @@ bool L1LossForward5d::IsApplicable(
     return true;
 }
 
-ConvSolution L1LossForward5d::GetSolution(
-    const ExecutionContext& /*context*/,
-    const miopen::l1loss::L1LossFwdProblemDescription& problem) const
+ConvSolution
+L1LossForward5d::GetSolution(const ExecutionContext& /*context*/,
+                             const miopen::l1loss::L1LossFwdProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
@@ -98,10 +98,11 @@ ConvSolution L1LossForward5d::GetSolution(
                               {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
                               {"REDUCE_SIZE", LOCAL_SIZE_REDUCE_FWD}};
 
-    /* Phase 1: Calc loss for each element. */
-    result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_FWD}, {size}, "MIOpenL1Loss.cpp", "L1LossReducedForward5d", build_params));
+    // Phase 1: Calc loss for each element
+    result.construction_params.push_back(make_hip_kernel(
+        {LOCAL_SIZE_FWD}, {size}, "MIOpenL1Loss.cpp", "L1LossReducedForward5d", build_params));
 
-    /* Phase 2: Reduce */
+    // Phase 2: Reduce
     auto _size = size;
     do
     {
@@ -115,21 +116,20 @@ ConvSolution L1LossForward5d::GetSolution(
             decltype(auto) params = raw_params.CastTo<miopen::l1loss::InvokeParams>();
             auto elapsed          = 0.f;
 
-            /* Phase 1: Calc loss for each element. */
+            // Phase 1: Calc loss for each element
             {
                 decltype(auto) kernel = handle_.Run(kernels.front());
                 auto I_tv             = get_inner_expanded_tv(deref(params.iDesc));
                 auto T_tv             = get_inner_expanded_tv(deref(params.tDesc));
-                auto size = params.iDesc->GetElementSize();
+                auto size             = params.iDesc->GetElementSize();
                 size_t divisor = (params.reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : size;
 
-                kernel(
-                    params.i, params.t, params.workspace, divisor, I_tv, T_tv);
+                kernel(params.i, params.t, params.workspace, divisor, I_tv, T_tv);
             }
             if(handle_.IsProfilingEnabled())
                 elapsed = handle_.GetKernelTime();
 
-            /* Phase 2: Reduce */
+            // Phase 2: Reduce
             auto work_a = params.workspace;
             auto work_b = static_cast<Data_t>(static_cast<char*>(params.workspace) +
                                               deref(params.iDesc).GetElementSize() *
@@ -162,11 +162,12 @@ ConvSolution L1LossForward5d::GetSolution(
     return result;
 }
 
-std::size_t L1LossForward5d::GetWorkspaceSize(
-    const ExecutionContext& /*context*/,
-    const miopen::l1loss::L1LossFwdProblemDescription& problem) const
+std::size_t
+L1LossForward5d::GetWorkspaceSize(const ExecutionContext& /*context*/,
+                                  const miopen::l1loss::L1LossFwdProblemDescription& problem) const
 {
-    if (problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION) {
+    if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
+    {
         return 0;
     }
 

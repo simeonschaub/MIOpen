@@ -32,8 +32,8 @@
 #include <miopen/tensor_ops.hpp>
 
 static void LogCmdL1Loss(const miopenTensorDescriptor_t iDesc,
-                      const miopenL1LossReduction_t reduction,
-                      bool is_fwd)
+                         const miopenL1LossReduction_t reduction,
+                         bool is_fwd)
 {
     if(miopen::IsLoggingCmd())
     {
@@ -41,15 +41,15 @@ static void LogCmdL1Loss(const miopenTensorDescriptor_t iDesc,
         auto dtype = miopen::deref(iDesc).GetType();
         if(dtype == miopenHalf)
         {
-            ss << "sumfp16";
+            ss << "l1lossfp16";
         }
         else if(dtype == miopenFloat)
         {
-            ss << "sumfp32";
+            ss << "l1lossfp32";
         }
         else if(dtype == miopenBFloat16)
         {
-            ss << "sumbfp16";
+            ss << "l1lossbfp16";
         }
 
         int32_t size = {0};

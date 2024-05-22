@@ -38,7 +38,7 @@
 namespace miopen {
 
 size_t GetL1LossForwardWorkspaceSize(Handle& handle,
-                                    miopenL1LossReduction_t reduction,
+                                     miopenL1LossReduction_t reduction,
                                      const TensorDescriptor& iDesc,
                                      const TensorDescriptor& tDesc,
                                      const TensorDescriptor& oDesc)
@@ -46,9 +46,8 @@ size_t GetL1LossForwardWorkspaceSize(Handle& handle,
     auto ctx           = ExecutionContext{&handle};
     const auto problem = l1loss::L1LossFwdProblemDescription{iDesc, tDesc, oDesc, reduction};
 
-    const auto algo = AlgorithmName{"L1LossForward"};
-    const auto solvers =
-        solver::SolverContainer<solver::l1loss::L1LossForward5d>{};
+    const auto algo    = AlgorithmName{"L1LossForward"};
+    const auto solvers = solver::SolverContainer<solver::l1loss::L1LossForward5d>{};
 
     auto pair_size_vector = solvers.GetWorkspaceSizes(ctx, problem);
 
@@ -56,35 +55,36 @@ size_t GetL1LossForwardWorkspaceSize(Handle& handle,
 }
 
 miopenStatus_t L1LossForward(Handle& handle,
-                                   miopenL1LossReduction_t reduction,
-                                   Data_t workspace,
-                                   size_t workspaceSizeInBytes,
-                                   const TensorDescriptor& iDesc,
-                                   ConstData_t i,
-                                   const TensorDescriptor& tDesc,
-                                   ConstData_t t,
-                                   const TensorDescriptor& oDesc,
-                                   Data_t o)
+                             miopenL1LossReduction_t reduction,
+                             Data_t workspace,
+                             size_t workspaceSizeInBytes,
+                             const TensorDescriptor& iDesc,
+                             ConstData_t i,
+                             const TensorDescriptor& tDesc,
+                             ConstData_t t,
+                             const TensorDescriptor& oDesc,
+                             Data_t o)
 {
     const auto problem = l1loss::L1LossFwdProblemDescription{iDesc, tDesc, oDesc, reduction};
 
     const auto invoke_params = [&]() {
         auto tmp           = l1loss::InvokeParams{};
         tmp.type           = InvokeType::Run;
+        tmp.reduction      = reduction;
         tmp.iDesc          = &iDesc;
         tmp.tDesc          = &tDesc;
         tmp.oDesc          = &oDesc;
         tmp.i              = i;
         tmp.t              = t;
         tmp.o              = o;
+        tmp.divisor        = 1;
         tmp.workspace      = workspace;
         tmp.workspace_size = workspaceSizeInBytes;
         return tmp;
     }();
 
-    const auto algo = AlgorithmName{"L1LossForward"};
-    const auto solvers =
-        solver::SolverContainer<solver::l1loss::L1LossForward5d>{};
+    const auto algo    = AlgorithmName{"L1LossForward"};
+    const auto solvers = solver::SolverContainer<solver::l1loss::L1LossForward5d>{};
 
     solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 
