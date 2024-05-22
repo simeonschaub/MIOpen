@@ -200,7 +200,7 @@ int L1LossDriver<Tgpu, Tref>::GetandSetData()
 {
     reduction = static_cast<miopenL1LossReduction_t>(inflags.GetValueInt("Reduction"));
 
-    auto length = GetTensorLengthsFromCmdLine();
+    auto length      = GetTensorLengthsFromCmdLine();
     auto in_strides  = GetStrides(length, 1);
     auto tar_strides = GetStrides(length, inflags.GetValueInt("Contiguous"));
 
@@ -409,7 +409,8 @@ int L1LossDriver<Tgpu, Tref>::RunForwardGPU()
         std::cerr << "Error copying (out_dev) from GPU, size: " << out_dev->GetSize() << std::endl;
 
     if(workspace_dev->FromGPU(GetStream(), workspace.data()) != 0)
-        std::cerr << "Error copying (workspace_dev) from GPU, size: " << workspace_dev->GetSize() << std::endl;
+        std::cerr << "Error copying (workspace_dev) from GPU, size: " << workspace_dev->GetSize()
+                  << std::endl;
 
     return miopenStatusSuccess;
 }

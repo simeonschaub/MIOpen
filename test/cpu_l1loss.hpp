@@ -27,6 +27,7 @@
 #define GUARD_CPU_L1LOSS_HPP
 
 #include "ford.hpp"
+#include "miopen/miopen.h"
 #include "tensor_holder.hpp"
 #include <cstddef>
 #include <miopen/tensor_view_5d.hpp>
@@ -36,20 +37,22 @@ void cpu_l1loss_reduced_forward(tensor<T> input,
                                 tensor<T> target,
                                 tensor<T>& ref_output,
                                 tensor<T>& ref_workspace,
-                                float divisor)
+                                miopenL1LossReduction_t reduction)
 {
     auto inputSize = input.desc.GetElementSize();
+    size_t divisor = (reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : inputSize;
 
     /* Phase 1: Calc loss for each element (unreduced) */
     par_ford(inputSize)([&](size_t i) { ref_workspace[i] = abs(input[i] - target[i]); });
 
     /* Phase 2: Reduce */
-    T res = 0.0f;
+    T res = static_cast<T>(0);
     par_ford(inputSize)([&](size_t o) { res += ref_workspace[o]; });
 
     ref_output[0] = res / divisor;
 }
 
+/*
 template <class T>
 void cpu_l1loss_reduced_backward(tensor<T> input,
                                  tensor<T> target,
@@ -85,5 +88,6 @@ void cpu_l1loss_reduced_backward(tensor<T> input,
         ref_dT[TV5D_IDX(dT_tv, n[0], n[1], n[2], n[3], n[4])] = -grad;
     });
 }
+*/
 
 #endif // GUARD_CPU_L1LOSS_HPP
