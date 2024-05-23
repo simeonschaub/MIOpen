@@ -38,8 +38,7 @@ namespace miopen {
 struct NetworkConfig;
 
 namespace l1loss {
-
-bool checkSameType(const TensorDescriptor& x, const TensorDescriptor& y);
+    
 bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y);
 bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y);
 bool checkRightStride(const TensorDescriptor& x);
@@ -105,7 +104,7 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
 
     bool IsSameType() const
     {
-        if(!checkSameType(iDesc, tDesc))
+        if(iDesc.GetType() != tDesc.GetType() || iDesc.GetType() != oDesc.GetType()) 
         {
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
             MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");
@@ -134,7 +133,7 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         if(!checkRightStride(iDesc) || !checkRightStride(tDesc) || !checkRightStride(oDesc))
         {
 #if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
+            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not valid.");
 #else
             return false;
 #endif

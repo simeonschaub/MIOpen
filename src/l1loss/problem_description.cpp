@@ -33,13 +33,6 @@ namespace miopen {
 
 namespace l1loss {
 
-bool checkSameType(const TensorDescriptor& x, const TensorDescriptor& y)
-{
-    if(x.GetType() != y.GetType())
-        return false;
-    return true;
-}
-
 bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
 {
     if(x.GetSize() != y.GetSize())

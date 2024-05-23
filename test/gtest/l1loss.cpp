@@ -25,8 +25,8 @@
  *******************************************************************************/
 
 #include "l1loss.hpp"
-#include "miopen/bfloat16.hpp"
 #include <miopen/env.hpp>
+using float16 = half_float::half;
 
 MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
@@ -47,7 +47,7 @@ struct L1LossFwdTestFloat : L1LossFwdTest<float>
 {
 };
 
-struct L1LossFwdTestHalf : L1LossFwdTest<half>
+struct L1LossFwdTestFP16 : L1LossFwdTest<float16>
 {
 };
 
@@ -60,7 +60,8 @@ using namespace l1loss;
 
 TEST_P(L1LossFwdTestFloat, L1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--float" || GetFloatArg() == "--all"))
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
+       (GetFloatArg() == "--float" || GetFloatArg() == "--all"))
     {
         RunTest();
         Verify();
@@ -71,9 +72,10 @@ TEST_P(L1LossFwdTestFloat, L1LossTestFw)
     }
 };
 
-TEST_P(L1LossFwdTestHalf, L1LossTestFw)
+TEST_P(L1LossFwdTestFP16, L1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--half" || GetFloatArg() == "--all"))
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
+       (GetFloatArg() == "--fp16" || GetFloatArg() == "--all"))
     {
         RunTest();
         Verify();
@@ -86,7 +88,8 @@ TEST_P(L1LossFwdTestHalf, L1LossTestFw)
 
 TEST_P(L1LossFwdTestBfloat16, L1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) && (GetFloatArg() == "--bfloat16" || GetFloatArg() == "--all"))
+    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
+       (GetFloatArg() == "--bfloat16" || GetFloatArg() == "--all"))
     {
         RunTest();
         Verify();
@@ -97,12 +100,8 @@ TEST_P(L1LossFwdTestBfloat16, L1LossTestFw)
     }
 };
 
-INSTANTIATE_TEST_SUITE_P(L1LossTestSet,
-                         L1LossFwdTestFloat,
-                         testing::ValuesIn(L1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(L1LossTestSet,
-                         L1LossFwdTestHalf,
-                         testing::ValuesIn(L1LossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(L1LossTestSet, L1LossFwdTestFloat, testing::ValuesIn(L1LossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(L1LossTestSet, L1LossFwdTestFP16, testing::ValuesIn(L1LossTestConfigs()));
 INSTANTIATE_TEST_SUITE_P(L1LossTestSet,
                          L1LossFwdTestBfloat16,
                          testing::ValuesIn(L1LossTestConfigs()));

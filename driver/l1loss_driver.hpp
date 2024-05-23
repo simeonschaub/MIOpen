@@ -66,11 +66,11 @@ int32_t mloL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
     // Phase 1: Calc loss for each element
     for(size_t i = 0; i < size; i++)
     {
-        uint64_t n[5];
-        GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
-        uint64_t Iidx       = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
-        uint64_t Tidx       = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
-        workspacehost[Iidx] = abs(input[Iidx] - target[Tidx]) / divisor;
+        //uint64_t n[5];
+        //GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
+        //uint64_t Iidx       = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
+        //uint64_t Tidx       = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+        workspacehost[i] = abs(input[i] - target[i]) / divisor;
     }
 
     // Phase 2: Reduce
@@ -201,7 +201,7 @@ int L1LossDriver<Tgpu, Tref>::GetandSetData()
     reduction = static_cast<miopenL1LossReduction_t>(inflags.GetValueInt("Reduction"));
 
     auto length      = GetTensorLengthsFromCmdLine();
-    auto in_strides  = GetStrides(length, 1);
+    auto in_strides  = GetStrides(length, inflags.GetValueInt("Contiguous"));
     auto tar_strides = GetStrides(length, inflags.GetValueInt("Contiguous"));
 
     SetTensorNd(inputDesc, length, in_strides, data_type);
