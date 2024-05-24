@@ -133,34 +133,33 @@ extern "C" miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
 }
 
 extern "C" miopenStatus_t miopenL1LossBackward(miopenHandle_t handle,
-                                                            const miopenTensorDescriptor_t iDesc,
-                                                            const void* i,
-                                                            const miopenTensorDescriptor_t tDesc,
-                                                            const void* t,
-                                                            const miopenTensorDescriptor_t doDesc,
-                                                            const void* dO,
-                                                            const miopenTensorDescriptor_t diDesc,
-                                                            void* dI,
-                                                            const miopenTensorDescriptor_t dtDesc,
-                                                            void* dT,
-                                                            miopenL1LossReduction_t reduction)
+                                               const miopenTensorDescriptor_t iDesc,
+                                               const void* i,
+                                               const miopenTensorDescriptor_t tDesc,
+                                               const void* t,
+                                               const miopenTensorDescriptor_t doDesc,
+                                               const void* dO,
+                                               const miopenTensorDescriptor_t diDesc,
+                                               void* dI,
+                                               const miopenTensorDescriptor_t dtDesc,
+                                               void* dT,
+                                               miopenL1LossReduction_t reduction)
 {
-    MIOPEN_LOG_FUNCTION(
-        handle, iDesc, i, tDesc, t, doDesc, dO, diDesc, dI, dtDesc, dT, reduction);
+    MIOPEN_LOG_FUNCTION(handle, iDesc, i, tDesc, t, doDesc, dO, diDesc, dI, dtDesc, dT, reduction);
 
     LogCmdL1Loss(iDesc, reduction, false);
     return miopen::try_([&] {
         miopen::L1LossBackward(miopen::deref(handle),
-                                            miopen::deref(iDesc),
-                                            DataCast(i),
-                                            miopen::deref(tDesc),
-                                            DataCast(t),
-                                            miopen::deref(doDesc),
-                                            DataCast(dO),
-                                            miopen::deref(diDesc),
-                                            DataCast(dI),
-                                            miopen::deref(dtDesc),
-                                            DataCast(dT),
-                                            reduction);
+                               miopen::deref(iDesc),
+                               DataCast(i),
+                               miopen::deref(tDesc),
+                               DataCast(t),
+                               miopen::deref(doDesc),
+                               DataCast(dO),
+                               miopen::deref(diDesc),
+                               DataCast(dI),
+                               miopen::deref(dtDesc),
+                               DataCast(dT),
+                               reduction);
     });
 }

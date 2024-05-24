@@ -6644,8 +6644,6 @@ MIOPEN_EXPORT miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
                                                  miopenTensorDescriptor_t oDesc,
                                                  void* o);
 
-
-
 /*! @brief Execute the Backward L1Loss
  *
  * @param handle                   MIOpen handle (input)

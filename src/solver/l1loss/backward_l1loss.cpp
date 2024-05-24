@@ -72,8 +72,8 @@ bool L1LossBackward5d::IsApplicable(
     const ExecutionContext& /*context*/,
     const miopen::l1loss::L1LossBwdProblemDescription& problem) const
 {
-    if(!IsImprovementOverROCm(problem))
-        return false;
+    //if(!IsImprovementOverROCm(problem))
+    //    return false;
     if(problem.GetIDesc().GetSize() > 5)
         return false;
     if(!problem.IsSameType())
@@ -83,9 +83,9 @@ bool L1LossBackward5d::IsApplicable(
     return true;
 }
 
-ConvSolution L1LossBackward5d::GetSolution(
-    const ExecutionContext& /*context*/,
-    const miopen::l1loss::L1LossBwdProblemDescription& problem) const
+ConvSolution
+L1LossBackward5d::GetSolution(const ExecutionContext& /*context*/,
+                              const miopen::l1loss::L1LossBwdProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
@@ -113,12 +113,12 @@ ConvSolution L1LossBackward5d::GetSolution(
             decltype(auto) kernel = handle_.Run(kernels.front());
             decltype(auto) params = raw_params.CastTo<miopen::l1loss::InvokeParams>();
 
-            auto I_tv  = get_inner_expanded_tv(deref(params.iDesc));
-            auto T_tv  = get_inner_expanded_tv(deref(params.tDesc));
-            auto dI_tv = get_inner_expanded_tv(deref(params.iDesc));
-            auto dT_tv = get_inner_expanded_tv(deref(params.tDesc));
+            auto I_tv        = get_inner_expanded_tv(deref(params.iDesc));
+            auto T_tv        = get_inner_expanded_tv(deref(params.tDesc));
+            auto dI_tv       = get_inner_expanded_tv(deref(params.iDesc));
+            auto dT_tv       = get_inner_expanded_tv(deref(params.tDesc));
             size_t inputSize = deref(params.iDesc).GetElementSize();
-            size_t divisor = (params.reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : inputSize;
+            size_t divisor   = (params.reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : inputSize;
 
             handle_.ResetKernelTime();
             kernel(params.i,

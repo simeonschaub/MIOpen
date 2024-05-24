@@ -169,7 +169,12 @@ struct L1LossBwdProblemDescription : ProblemDescriptionBase
                                 const TensorDescriptor& diDesc_,
                                 const TensorDescriptor& dtDesc_,
                                 const miopenL1LossReduction_t reduction_)
-        : iDesc(iDesc_), tDesc(tDesc_), doDesc(doDesc_), diDesc(diDesc_), dtDesc(dtDesc_), reduction(reduction_)
+        : iDesc(iDesc_),
+          tDesc(tDesc_),
+          doDesc(doDesc_),
+          diDesc(diDesc_),
+          dtDesc(dtDesc_),
+          reduction(reduction_)
     {
     }
 
@@ -182,7 +187,9 @@ struct L1LossBwdProblemDescription : ProblemDescriptionBase
 
     bool IsSameType() const
     {
-        if (iDesc.GetType() != tDesc.GetType() || iDesc.GetType() != diDesc.GetType() || tDesc.GetType() != dtDesc.GetType()) {
+        if(iDesc.GetType() != tDesc.GetType() || iDesc.GetType() != diDesc.GetType() ||
+           tDesc.GetType() != dtDesc.GetType())
+        {
             return false;
         }
         return true;
