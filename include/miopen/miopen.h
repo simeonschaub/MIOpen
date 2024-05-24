@@ -6644,7 +6644,9 @@ MIOPEN_EXPORT miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
                                                  miopenTensorDescriptor_t oDesc,
                                                  void* o);
 
-/*! @brief Execute the Backward Smooth L1Loss
+
+
+/*! @brief Execute the Backward L1Loss
  *
  * @param handle                   MIOpen handle (input)
  * @param iDesc                    Tensor descriptor for input tensor (input)
@@ -6657,7 +6659,7 @@ MIOPEN_EXPORT miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
  * @param dI                       Gradient of input (output)
  * @param dtDesc                   Tensor descriptor for target gradient (input)
  * @param dT                       Gradient of target (output)
- * @param divisor                  Divisor (input)
+ * @param reduction                Reduction mode (input)
  * @return                         miopenStatus_t
  */
 MIOPEN_EXPORT miopenStatus_t miopenL1LossBackward(miopenHandle_t handle,
@@ -6671,7 +6673,7 @@ MIOPEN_EXPORT miopenStatus_t miopenL1LossBackward(miopenHandle_t handle,
                                                   void* dI,
                                                   miopenTensorDescriptor_t dtDesc,
                                                   void* dT,
-                                                  float divisor);
+                                                  miopenL1LossReduction_t reduction);
 
 /** @} */
 // CLOSEOUT LossFunction DOXYGEN GROUP

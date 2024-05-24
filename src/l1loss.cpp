@@ -77,7 +77,6 @@ miopenStatus_t L1LossForward(Handle& handle,
         tmp.i              = i;
         tmp.t              = t;
         tmp.o              = o;
-        tmp.divisor        = 1;
         tmp.workspace      = workspace;
         tmp.workspace_size = workspaceSizeInBytes;
         return tmp;
@@ -91,26 +90,24 @@ miopenStatus_t L1LossForward(Handle& handle,
     return miopenStatusSuccess;
 }
 
-/*
-miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
-                                           const TensorDescriptor& iDesc,
-                                           ConstData_t i,
-                                           const TensorDescriptor& tDesc,
-                                           ConstData_t t,
-                                           const TensorDescriptor& doDesc,
-                                           ConstData_t dO,
-                                           const TensorDescriptor& diDesc,
-                                           Data_t dI,
-                                           const TensorDescriptor& dtDesc,
-                                           Data_t dT,
-                                           float beta,
-                                           float divisor)
+miopenStatus_t L1LossBackward(Handle& handle,
+                                const TensorDescriptor& iDesc,
+                                ConstData_t i,
+                                const TensorDescriptor& tDesc,
+                                ConstData_t t,
+                                const TensorDescriptor& doDesc,
+                                ConstData_t dO,
+                                const TensorDescriptor& diDesc,
+                                Data_t dI,
+                                const TensorDescriptor& dtDesc,
+                                Data_t dT,
+                                miopenL1LossReduction_t reduction)
 {
     const auto problem =
-        smoothl1loss::ReducedBackwardProblemDescription{iDesc, tDesc, doDesc, diDesc, dtDesc};
+        l1loss::L1LossBwdProblemDescription{iDesc, tDesc, doDesc, diDesc, dtDesc, reduction};
 
     const auto invoke_params = [&]() {
-        auto tmp    = smoothl1loss::InvokeParams{};
+        auto tmp    = l1loss::InvokeParams{};
         tmp.type    = InvokeType::Run;
         tmp.iDesc   = &iDesc;
         tmp.tDesc   = &tDesc;
@@ -122,19 +119,17 @@ miopenStatus_t SmoothL1LossReducedBackward(Handle& handle,
         tmp.i_grad  = dI;
         tmp.t_grad  = dT;
         tmp.o_grad  = dO;
-        tmp.beta    = beta;
-        tmp.divisor = divisor;
+        tmp.reduction = reduction;
         return tmp;
     }();
 
-    const auto algo = AlgorithmName{"SmoothL1LossReducedBackward"};
+    const auto algo = AlgorithmName{"L1LossBackward"};
     const auto solvers =
-        solver::SolverContainer<solver::smoothl1loss::SmoothL1LossReducedBackward5d>{};
+        solver::SolverContainer<solver::l1loss::L1LossBackward5d>{};
 
     solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 
     return miopenStatusSuccess;
 }
-*/
 
 } // namespace miopen

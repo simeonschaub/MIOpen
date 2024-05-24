@@ -45,9 +45,7 @@ void cpu_l1loss_reduced_forward(tensor<T> input,
     size_t divisor = (reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : inputSize;
 
     // Phase 1: Calc loss for each element (unreduced)
-    par_ford(inputSize)([&](size_t i) {
-        ref_workspace[i] = abs(input[i] - target[i]) / divisor; 
-    });
+    par_ford(inputSize)([&](size_t i) { ref_workspace[i] = abs(input[i] - target[i]) / divisor; });
 
     /* Phase 2: Reduce */
     const int local_size = 256;
@@ -75,13 +73,13 @@ void cpu_l1loss_reduced_forward(tensor<T> input,
 
     std::cout << "find finite " << std::endl;
     par_ford(inputSize)([&](size_t i) {
-        if (!std::isfinite(ref_workspace[i])) {
+        if(!std::isfinite(ref_workspace[i]))
+        {
             std::cout << "index = " << i << std::endl;
         }
     });
 
-
-    //ref_output[0] = static_cast<T>(res);
+    // ref_output[0] = static_cast<T>(res);
     std::cout << ref_workspace[0] << std::endl;
     std::cout << ref_workspace[inputSize / 2] << std::endl;
     std::cout << "divisor = " << divisor << std::endl;

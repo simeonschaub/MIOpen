@@ -51,17 +51,18 @@ miopenStatus_t L1LossForward(Handle& handle,
                              const TensorDescriptor& oDesc,
                              Data_t o);
 
-miopenStatus_t L1LossReducedBackward(Handle& handle,
-                                     const TensorDescriptor& iDesc,
-                                     ConstData_t i,
-                                     const TensorDescriptor& tDesc,
-                                     ConstData_t t,
-                                     const TensorDescriptor& doDesc,
-                                     ConstData_t dO,
-                                     const TensorDescriptor& diDesc,
-                                     Data_t dI,
-                                     const TensorDescriptor& dtDesc,
-                                     Data_t dT);
+miopenStatus_t L1LossBackward(Handle& handle,
+                                const TensorDescriptor& iDesc,
+                                ConstData_t i,
+                                const TensorDescriptor& tDesc,
+                                ConstData_t t,
+                                const TensorDescriptor& doDesc,
+                                ConstData_t dO,
+                                const TensorDescriptor& diDesc,
+                                Data_t dI,
+                                const TensorDescriptor& dtDesc,
+                                Data_t dT,
+                                miopenL1LossReduction_t reduction);
 
 } // namespace miopen
 #endif // MIOPEN_L1LOSS_HPP

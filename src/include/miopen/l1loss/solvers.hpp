@@ -54,15 +54,14 @@ struct L1LossForward5d final : L1LossForwardSolverBase
     bool MayNeedWorkspace() const override { return true; }
 };
 
-/*
 using L1LossBackwardSolverBase =
     NonTunableSolverBase<ExecutionContext, miopen::l1loss::L1LossBwdProblemDescription>;
 
-struct L1LossReducedBackward5d final : L1LossReducedBackwardSolverBase
+struct L1LossBackward5d final : L1LossBackwardSolverBase
 {
     const std::string& SolverDbId() const override
     {
-        return GetSolverDbId<L1LossReducedBackward5d>();
+        return GetSolverDbId<L1LossBackward5d>();
     }
 
     bool IsApplicable(const ExecutionContext& context,
@@ -72,7 +71,6 @@ struct L1LossReducedBackward5d final : L1LossReducedBackwardSolverBase
                 const miopen::l1loss::L1LossBwdProblemDescription& problem) const override;
     bool MayNeedWorkspace() const override { return false; }
 };
-*/
 
 } // namespace l1loss
 

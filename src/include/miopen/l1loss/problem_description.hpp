@@ -38,7 +38,7 @@ namespace miopen {
 struct NetworkConfig;
 
 namespace l1loss {
-    
+
 bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y);
 bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y);
 bool checkRightStride(const TensorDescriptor& x);
@@ -104,13 +104,9 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
 
     bool IsSameType() const
     {
-        if(iDesc.GetType() != tDesc.GetType() || iDesc.GetType() != oDesc.GetType()) 
+        if(iDesc.GetType() != tDesc.GetType() || iDesc.GetType() != oDesc.GetType())
         {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");
-#else
             return false;
-#endif
         }
         return true;
     }
@@ -165,15 +161,15 @@ protected:
     NetworkConfig MakeForwardNetworkConfig() const;
 };
 
-/*
 struct L1LossBwdProblemDescription : ProblemDescriptionBase
 {
     L1LossBwdProblemDescription(const TensorDescriptor& iDesc_,
                                 const TensorDescriptor& tDesc_,
                                 const TensorDescriptor& doDesc_,
                                 const TensorDescriptor& diDesc_,
-                                const TensorDescriptor& dtDesc_)
-        : iDesc(iDesc_), tDesc(tDesc_), doDesc(doDesc_), diDesc(diDesc_), dtDesc(dtDesc_)
+                                const TensorDescriptor& dtDesc_,
+                                const miopenL1LossReduction_t reduction_)
+        : iDesc(iDesc_), tDesc(tDesc_), doDesc(doDesc_), diDesc(diDesc_), dtDesc(dtDesc_), reduction(reduction_)
     {
     }
 
@@ -182,17 +178,12 @@ struct L1LossBwdProblemDescription : ProblemDescriptionBase
     const TensorDescriptor& GetDODesc() const { return doDesc; }
     const TensorDescriptor& GetDIDesc() const { return diDesc; }
     const TensorDescriptor& GetDTDesc() const { return dtDesc; }
+    const miopenL1LossReduction_t& GetReduction() const { return reduction; }
 
     bool IsSameType() const
     {
-        if(!checkSameType(iDesc, tDesc) || !checkSameType(iDesc, diDesc) ||
-           !checkSameType(tDesc, dtDesc))
-        {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Reduce: Tensor types do not match.");
-#else
+        if (iDesc.GetType() != tDesc.GetType() || iDesc.GetType() != diDesc.GetType() || tDesc.GetType() != dtDesc.GetType()) {
             return false;
-#endif
         }
         return true;
     }
@@ -247,10 +238,10 @@ protected:
     TensorDescriptor doDesc;
     TensorDescriptor diDesc;
     TensorDescriptor dtDesc;
+    miopenL1LossReduction_t reduction;
 
     NetworkConfig MakeBackwardNetworkConfig() const;
 };
-*/
 
 } // namespace l1loss
 

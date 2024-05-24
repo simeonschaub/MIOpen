@@ -48,7 +48,8 @@ struct L1LossTestCase
     friend std::ostream& operator<<(std::ostream& os, const L1LossTestCase& tc)
     {
         return os << " N:" << tc.N << " C:" << tc.C << " D:" << tc.D << " H:" << tc.H
-                  << " W:" << tc.W << " reducion mode:" << tc.reduction << " contiguous:" << tc.contiguous;
+                  << " W:" << tc.W << " reducion mode:" << tc.reduction
+                  << " contiguous:" << tc.contiguous;
     }
 
     std::vector<size_t> GetInput()
@@ -214,18 +215,18 @@ protected:
     {
         double threshold = GetTolerance();
 
-        //auto error_w = miopen::rms_range(ref_workspace, workspace);
-//
-        //EXPECT_TRUE(miopen::range_distance(ref_workspace) == miopen::range_distance(workspace));
-        //EXPECT_TRUE(error_w < tolerance) << "Error workspace beyond tolerance Error: " << error_w
-        //                                 << ",  Tolerance: " << tolerance;  
+        // auto error_w = miopen::rms_range(ref_workspace, workspace);
+        //
+        // EXPECT_TRUE(miopen::range_distance(ref_workspace) == miopen::range_distance(workspace));
+        // EXPECT_TRUE(error_w < tolerance) << "Error workspace beyond tolerance Error: " << error_w
+        //                                 << ",  Tolerance: " << tolerance;
 
         auto error = miopen::rms_range(ref_output, output);
         std::cout << "ref output = " << ref_output[0] << " output = " << output[0] << std::endl;
 
         EXPECT_TRUE(miopen::range_distance(ref_output) == miopen::range_distance(output));
-        EXPECT_TRUE(error < threshold * 10)
-            << "Error output beyond tolerance Error: " << error << ",  Tolerance: " << threshold * 10;
+        EXPECT_TRUE(error < threshold * 10) << "Error output beyond tolerance Error: " << error
+                                            << ",  Tolerance: " << threshold * 10;
     }
 
     L1LossTestCase l1loss_config;

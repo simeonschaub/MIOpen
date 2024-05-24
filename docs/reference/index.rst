@@ -32,4 +32,4 @@ The MIOpen API library is structured as follows:
   * :doc:`GroupNorm <../doxygen/html/group__groupnorm>` (experimental)
   * :doc:`Cat <../doxygen/html/group__cat>` (experimental)
   * :doc:`Argmax<./argmax>` (experimental)
-  * :doc:`L1Loss<../doxygen/html/group__l1loss>` (experimental)
+  * :doc:`L1Loss <../doxygen/html/group__l1loss>` (experimental)

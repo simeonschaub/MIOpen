@@ -132,8 +132,7 @@ extern "C" miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
     });
 }
 
-/*
-extern "C" miopenStatus_t miopenL1LossReducedBackward(miopenHandle_t handle,
+extern "C" miopenStatus_t miopenL1LossBackward(miopenHandle_t handle,
                                                             const miopenTensorDescriptor_t iDesc,
                                                             const void* i,
                                                             const miopenTensorDescriptor_t tDesc,
@@ -143,14 +142,15 @@ extern "C" miopenStatus_t miopenL1LossReducedBackward(miopenHandle_t handle,
                                                             const miopenTensorDescriptor_t diDesc,
                                                             void* dI,
                                                             const miopenTensorDescriptor_t dtDesc,
-                                                            void* dT)
+                                                            void* dT,
+                                                            miopenL1LossReduction_t reduction)
 {
     MIOPEN_LOG_FUNCTION(
-        handle, iDesc, i, tDesc, t, doDesc, dO, diDesc, dI, dtDesc, dT, beta, divisor);
+        handle, iDesc, i, tDesc, t, doDesc, dO, diDesc, dI, dtDesc, dT, reduction);
 
-    LogCmdL1Loss(iDesc, tDesc, reduction, false);
+    LogCmdL1Loss(iDesc, reduction, false);
     return miopen::try_([&] {
-        miopen::L1LossReducedBackward(miopen::deref(handle),
+        miopen::L1LossBackward(miopen::deref(handle),
                                             miopen::deref(iDesc),
                                             DataCast(i),
                                             miopen::deref(tDesc),
@@ -161,8 +161,6 @@ extern "C" miopenStatus_t miopenL1LossReducedBackward(miopenHandle_t handle,
                                             DataCast(dI),
                                             miopen::deref(dtDesc),
                                             DataCast(dT),
-                                            beta,
-                                            divisor);
+                                            reduction);
     });
 }
-*/
