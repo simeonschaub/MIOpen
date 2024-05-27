@@ -39,7 +39,7 @@ struct NetworkConfig;
 
 namespace l1loss {
 
-bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y);
+bool checkSameLength (const TensorDescriptor& x, const TensorDescriptor& y);
 bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y);
 bool checkRightStride(const TensorDescriptor& x);
 bool checkContiguous(const TensorDescriptor& x);
@@ -55,7 +55,7 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         if(iDesc.GetLengths().size() != tDesc.GetLengths().size())
         {
             MIOPEN_THROW(miopenStatusBadParm,
-                         "L1Loss::ProblemDescription: Number of tensor dimension do not match.");
+                         "L1Loss::ProblemDescription: Number of dimensions between input tensor and target tensor do not match.");
         }
 
         if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
@@ -64,7 +64,7 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
             {
                 MIOPEN_THROW(
                     miopenStatusBadParm,
-                    "L1Loss::ProblemDescription: Number of tensor dimension do not match.");
+                    "L1Loss::ProblemDescription: Number of dimensions between input tensor and output tensor do not match.");
             }
         }
         else
@@ -86,7 +86,7 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         if(iDesc.GetLengths().size() != tDesc.GetLengths().size())
         {
             MIOPEN_THROW(miopenStatusBadParm,
-                         "L1Loss::ProblemDescription: Number of tensor dimension do not match.");
+                         "L1Loss::ProblemDescription: Number of dimensions between input tensor and target tensor do not match.");
         }
 
         if(oDesc.GetLengths().size() != 1)
@@ -115,12 +115,13 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
     {
         if(!checkSameLength(iDesc, tDesc))
         {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
             return false;
-#endif
         }
+
+        if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION && !checkSameLength(iDesc, oDesc)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -128,11 +129,7 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
     {
         if(!checkRightStride(iDesc) || !checkRightStride(tDesc) || !checkRightStride(oDesc))
         {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not valid.");
-#else
             return false;
-#endif
         }
         return true;
     }
@@ -141,12 +138,23 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
     {
         if(!checkSameStride(iDesc, tDesc))
         {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
             return false;
-#endif
         }
+
+        if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION && !checkSameStride(iDesc, oDesc)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool IsAllPacked() const
+    {
+        if(!(iDesc.IsPacked() && tDesc.IsPacked() && oDesc.IsPacked()))
+        {
+            return false;
+        }
+
         return true;
     }
 
@@ -200,11 +208,7 @@ struct L1LossBwdProblemDescription : ProblemDescriptionBase
         if(!checkSameLength(iDesc, tDesc) || !checkSameLength(iDesc, diDesc) ||
            !checkSameLength(tDesc, dtDesc))
         {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor sizes do not match.");
-#else
             return false;
-#endif
         }
         return true;
     }
@@ -214,11 +218,7 @@ struct L1LossBwdProblemDescription : ProblemDescriptionBase
         if(!checkRightStride(iDesc) || !checkRightStride(tDesc) || !checkRightStride(doDesc) ||
            !checkRightStride(diDesc) || !checkRightStride(dtDesc))
         {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
             return false;
-#endif
         }
         return true;
     }
@@ -228,12 +228,18 @@ struct L1LossBwdProblemDescription : ProblemDescriptionBase
         if(!checkSameStride(iDesc, tDesc) || !checkSameStride(iDesc, diDesc) ||
            !checkSameStride(tDesc, dtDesc))
         {
-#if MIOPEN_BUILD_DEV || !MIOPEN_NDEBUG
-            MIOPEN_THROW(miopenStatusBadParm, "Smooth L1Loss: Tensor strides do not match.");
-#else
             return false;
-#endif
         }
+        return true;
+    }
+
+    bool IsAllPacked() const
+    {
+        if(!(iDesc.IsPacked() && tDesc.IsPacked() && doDesc.IsPacked() && dtDesc.IsPacked() && diDesc.IsPacked()))
+        {
+            return false;
+        }
+
         return true;
     }
 

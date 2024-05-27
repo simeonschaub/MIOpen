@@ -72,7 +72,7 @@ bool L1LossBackward5d::IsApplicable(
     const ExecutionContext& /*context*/,
     const miopen::l1loss::L1LossBwdProblemDescription& problem) const
 {
-    //if(!IsImprovementOverROCm(problem))
+    // if(!IsImprovementOverROCm(problem))
     //    return false;
     if(problem.GetIDesc().GetSize() > 5)
         return false;

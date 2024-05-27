@@ -137,7 +137,7 @@ protected:
 
         auto out_lengths =
             (reduction == MIOPEN_L1LOSS_NONE_REDUCTION) ? in_dims : std::vector<size_t>{1};
-        auto out_strides = GetStrides(out_lengths, true);
+        auto out_strides = GetStrides(out_lengths, contiguous);
 
         output = tensor<T>{out_lengths, out_strides};
         std::fill(output.begin(), output.end(), std::numeric_limits<T>::quiet_NaN());
@@ -248,46 +248,44 @@ protected:
     size_t ws_sizeInBytes;
 };
 
-/*
 template <typename T = float>
-struct L1LossTestBackward : public ::testing::TestWithParam<L1LossTestCase>
+struct L1LossBwdTest : public ::testing::TestWithParam<L1LossTestCase>
 {
 protected:
     void SetUp() override
     {
         auto&& handle        = get_handle();
-        smooth_l1loss_config = GetParam();
+        l1loss_config = GetParam();
         auto gen_value1 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
         auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 101); };
 
-        beta            = smooth_l1loss_config.beta;
-        divisor         = smooth_l1loss_config.divisor;
-        auto lengths    = smooth_l1loss_config.lengths;
-        auto contiguous = smooth_l1loss_config.contiguous;
+        reduction         = l1loss_config.reduction;
+        auto in_dims    = l1loss_config.GetInput();
+        auto contiguous = l1loss_config.contiguous;
 
-        if(contiguous)
-            GTEST_SKIP();
+        //if(contiguous)
+        //    GTEST_SKIP();
 
-        auto in_strides = GetStrides(lengths, true);
-        input           = tensor<T>{lengths, in_strides}.generate(gen_value1);
+        auto in_strides = GetStrides(in_dims, contiguous);
+        input           = tensor<T>{in_dims, in_strides}.generate(gen_value1);
 
-        auto tar_strides = GetStrides(lengths, contiguous);
-        target           = tensor<T>{lengths, tar_strides}.generate(gen_value2);
+        auto tar_strides = GetStrides(in_dims, contiguous);
+        target           = tensor<T>{in_dims, tar_strides}.generate(gen_value2);
 
-        auto out_lengths = std::isnan(divisor) ? lengths : std::vector<size_t>{1};
-        auto out_strides = GetStrides(out_lengths, true);
+        auto out_lengths = (reduction == MIOPEN_L1LOSS_NONE_REDUCTION) ? in_dims : std::vector<size_t>{1};
+        auto out_strides = GetStrides(out_lengths, contiguous);
 
         dO = tensor<T>{out_lengths, out_strides};
         std::fill(dO.begin(), dO.end(), 0.5);
 
-        dI = tensor<T>{lengths, in_strides};
+        dI = tensor<T>{in_dims, in_strides};
         std::fill(dI.begin(), dI.end(), std::numeric_limits<T>::quiet_NaN());
-        dT = tensor<T>{lengths, tar_strides};
+        dT = tensor<T>{in_dims, tar_strides};
         std::fill(dT.begin(), dT.end(), std::numeric_limits<T>::quiet_NaN());
 
-        ref_dI = tensor<T>{lengths, in_strides};
+        ref_dI = tensor<T>{in_dims, in_strides};
         std::fill(ref_dI.begin(), ref_dI.end(), std::numeric_limits<T>::quiet_NaN());
-        ref_dT = tensor<T>{lengths, tar_strides};
+        ref_dT = tensor<T>{in_dims, tar_strides};
         std::fill(ref_dT.begin(), ref_dT.end(), std::numeric_limits<T>::quiet_NaN());
 
         input_dev  = handle.Write(input.data);
@@ -303,10 +301,10 @@ protected:
 
         miopenStatus_t status;
 
-        if(!std::isnan(divisor))
+        if(reduction != MIOPEN_L1LOSS_NONE_REDUCTION)
         {
-            cpu_smooth_l1loss_reduced_backward<T>(input, target, dO, ref_dI, ref_dT, beta, divisor);
-            status = miopen::SmoothL1LossReducedBackward(handle,
+            cpu_l1loss_reduced_backward<T>(input, target, dO, ref_dI, ref_dT, reduction);
+            status = miopen::L1LossBackward(handle,
                                                          input.desc,
                                                          input_dev.get(),
                                                          target.desc,
@@ -317,8 +315,7 @@ protected:
                                                          dI_dev.get(),
                                                          dT.desc,
                                                          dT_dev.get(),
-                                                         beta,
-                                                         divisor);
+                                                         reduction);
         }
 
         EXPECT_EQ(status, miopenStatusSuccess);
@@ -327,7 +324,7 @@ protected:
         dT.data = handle.Read<T>(dT_dev, dT.data.size());
     }
 
-    void Verify()
+    double GetTolerance()
     {
         // Computation error of fp16 is ~2^13 (=8192) bigger than
         // the one of fp32 because mantissa is shorter by 13 bits.
@@ -336,17 +333,27 @@ protected:
         // bf16 mantissa has 7 bits, by 3 bits shorter than fp16.
         if(std::is_same<T, bfloat16>::value)
             tolerance *= 8.0;
+        return tolerance;
+    }
+
+    void Verify()
+    {
+        double threshold = GetTolerance();
 
         auto error_dI = miopen::rms_range(ref_dI, dI);
         auto error_dT = miopen::rms_range(ref_dT, dT);
 
         EXPECT_TRUE(miopen::range_distance(ref_dI) == miopen::range_distance(dI));
         EXPECT_TRUE(miopen::range_distance(ref_dT) == miopen::range_distance(dT));
-        EXPECT_TRUE(error_dI < tolerance && error_dT < tolerance)
-            << "Error output beyond tolerance Error: {" << error_dI << "," << error_dT
-            << "},  Tolerance: " << tolerance;
+        EXPECT_TRUE(error_dI < threshold * 10)
+            << "Error output beyond tolerance Error: " << error_dI
+            << ",  Tolerance: " << threshold * 10;
+        EXPECT_TRUE(error_dT < threshold * 10)
+            << "Error output beyond tolerance Error: " << error_dT
+            << ",  Tolerance: " << threshold * 10;
     }
-    SmoothL1LossTestCase smooth_l1loss_config;
+
+    L1LossTestCase l1loss_config;
 
     tensor<T> input;
     tensor<T> target;
@@ -363,7 +370,5 @@ protected:
     miopen::Allocator::ManageDataPtr dI_dev;
     miopen::Allocator::ManageDataPtr dT_dev;
 
-    float beta;
-    float divisor;
+    miopenL1LossReduction_t reduction;
 };
-*/

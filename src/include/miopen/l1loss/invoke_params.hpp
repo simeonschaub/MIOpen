@@ -55,7 +55,6 @@ struct InvokeParams : public miopen::InvokeParams
     ConstData_t o_grad = nullptr;
 
     miopenL1LossReduction_t reduction = MIOPEN_L1LOSS_MEAN_REDUCTION;
-    size_t divisor                    = 1;
     Data_t workspace                  = nullptr;
     std::size_t workspace_size        = 0;
 

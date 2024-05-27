@@ -33,8 +33,7 @@ namespace miopen {
 
 namespace l1loss {
 
-bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
-{
+bool checkSameLength (const TensorDescriptor& x, const TensorDescriptor& y) {
     if(x.GetSize() != y.GetSize())
         return false;
     for(int32_t i = 0; i < x.GetSize(); ++i)
@@ -45,8 +44,7 @@ bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
     return true;
 }
 
-bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y)
-{
+bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y) {
     if(x.GetSize() != y.GetSize())
         return false;
     for(int32_t i = 0; i < x.GetSize(); ++i)
@@ -97,11 +95,12 @@ NetworkConfig L1LossFwdProblemDescription::MakeNetworkConfig() const
 
     std::ostringstream ss;
 
-    ss << "smoothl1loss_fwd";
+    ss << "l1loss_fwd";
     ss << "reduction" << reduction;
     ss << "i_dtype" << input_dtype;
     ss << "o_dtype" << output_dtype;
     ss << "size" << size;
+    ss << IsAllPacked();
 
     return NetworkConfig{ss.str()};
 }
@@ -119,6 +118,7 @@ NetworkConfig L1LossBwdProblemDescription::MakeNetworkConfig() const
     ss << "i_dtype" << input_dtype;
     ss << "o_dtype" << output_dtype;
     ss << "size" << size;
+    ss << IsAllPacked();
 
     return NetworkConfig{ss.str()};
 }
