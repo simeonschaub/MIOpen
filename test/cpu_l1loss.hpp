@@ -84,8 +84,8 @@ void cpu_l1loss_reduced_backward(tensor<T> input,
     size_t divisor = (reduction == MIOPEN_L1LOSS_MEAN_REDUCTION) ? size : 1;
 
     par_ford(size)([&](size_t i) {
-        T grad = (input[i] >= target[i]) ? static_cast<T>(dO[0] / divisor)
-                                         : static_cast<T>(-dO[0] / divisor);
+        T grad    = (input[i] >= target[i]) ? static_cast<T>(dO[0] / divisor)
+                                            : static_cast<T>(-dO[0] / divisor);
         ref_dI[i] = grad;
         ref_dT[i] = -grad;
     });
