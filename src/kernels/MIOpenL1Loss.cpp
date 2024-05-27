@@ -138,8 +138,10 @@ __device__ void L1LossReducedBackward5d_kernel(const TI* I,
     size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
     size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
 
+    FLOAT_ACCUM Ival = CVT_FLOAT2ACCUM(I[Iidx]);
+    FLOAT_ACCUM Tval = CVT_FLOAT2ACCUM(T[Tidx]);
     FLOAT_ACCUM grad =
-        (I[Iidx] >= T[Tidx]) ? CVT_FLOAT2ACCUM(dO[0]) / divisor : -CVT_FLOAT2ACCUM(dO[0]) / divisor;
+        (Ival >= Tval) ? CVT_FLOAT2ACCUM(dO[0]) / divisor : -(CVT_FLOAT2ACCUM(dO[0]) / divisor);
 
     if(dI)
         dI[TV5D_IDX(dI_tv, n[0], n[1], n[2], n[3], n[4])] = CVT_ACCUM2FLOAT(grad);

@@ -80,29 +80,12 @@ void cpu_l1loss_reduced_backward(tensor<T> input,
                                  tensor<T>& ref_dT,
                                  miopenL1LossReduction_t reduction)
 {
-    // Treat contiguous tensors as non-contiguous tensors (for consistency)
-    //auto I_tv  = get_inner_expanded_tv(input.desc);
-    //auto T_tv  = get_inner_expanded_tv(target.desc);
-    //auto dI_tv = get_inner_expanded_tv(ref_dI.desc);
-    //auto dT_tv = get_inner_expanded_tv(ref_dT.desc);
-
-    auto size = input.desc.GetElementSize();
+    auto size      = input.desc.GetElementSize();
     size_t divisor = (reduction == MIOPEN_L1LOSS_MEAN_REDUCTION) ? size : 1;
 
     par_ford(size)([&](size_t i) {
-        //uint64_t n[5];
-        //GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
-//
-        //size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
-        //size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
-//
-        T grad = (input[i] >= target[i]) ? static_cast<T>(dO[0] / divisor) : static_cast<T>(-dO[0] / divisor);
-
-        //if(fabs(sub) < beta)
-        //    grad = sub / beta * dO[0] / divisor;
-        //else
-        //    grad = (sub >= 0 ? 1.0f : -1.0f) * dO[0] / divisor;
-
+        T grad = (input[i] >= target[i]) ? static_cast<T>(dO[0] / divisor)
+                                         : static_cast<T>(-dO[0] / divisor);
         ref_dI[i] = grad;
         ref_dT[i] = -grad;
     });

@@ -415,8 +415,7 @@ int L1LossDriver<Tgpu, Tref>::RunForwardGPU()
 
         float kernel_average_time =
             iter > 1 ? (kernel_total_time - kernel_first_time) / (iter - 1) : kernel_first_time;
-        std::cout << "GPU Kernel Time Forward L1Loss Elapsed: " << kernel_average_time
-                  << " ms\n";
+        std::cout << "GPU Kernel Time Forward L1Loss Elapsed: " << kernel_average_time << " ms\n";
     }
 
     if(out_dev->FromGPU(GetStream(), out.data()) != 0)
@@ -430,12 +429,8 @@ int L1LossDriver<Tgpu, Tref>::RunForwardCPU()
 {
     if(reduction == MIOPEN_L1LOSS_MEAN_REDUCTION || reduction == MIOPEN_L1LOSS_SUM_REDUCTION)
     {
-        mloL1LossReducedForwardRunHost<Tgpu, Tref>(inputDesc,
-                                                   in.data(),
-                                                   tar.data(),
-                                                   workspacehost.data(),
-                                                   outhost.data(),
-                                                   reduction);
+        mloL1LossReducedForwardRunHost<Tgpu, Tref>(
+            inputDesc, in.data(), tar.data(), workspacehost.data(), outhost.data(), reduction);
     }
 
     return miopenStatusSuccess;
@@ -483,8 +478,7 @@ int L1LossDriver<Tgpu, Tref>::RunBackwardGPU()
 
         float kernel_average_time =
             iter > 1 ? (kernel_total_time - kernel_first_time) / (iter - 1) : kernel_first_time;
-        std::cout << "GPU Kernel Time Backward L1Loss Elapsed: " << kernel_average_time
-                  << " ms\n";
+        std::cout << "GPU Kernel Time Backward L1Loss Elapsed: " << kernel_average_time << " ms\n";
     }
 
     if(dI_dev->FromGPU(GetStream(), dI.data()) != 0)
@@ -500,13 +494,8 @@ int L1LossDriver<Tgpu, Tref>::RunBackwardCPU()
 {
     if(reduction != MIOPEN_L1LOSS_NONE_REDUCTION)
     {
-        mloL1LossReducedBackwardRunHost<Tgpu, Tref>(inputDesc,
-                                                    in.data(),
-                                                    tar.data(),
-                                                    dO.data(),
-                                                    dIhost.data(),
-                                                    dThost.data(),
-                                                    reduction);
+        mloL1LossReducedBackwardRunHost<Tgpu, Tref>(
+            inputDesc, in.data(), tar.data(), dO.data(), dIhost.data(), dThost.data(), reduction);
     }
 
     return miopenStatusSuccess;

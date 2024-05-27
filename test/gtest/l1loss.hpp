@@ -215,14 +215,7 @@ protected:
     {
         double threshold = GetTolerance();
 
-        // auto error_w = miopen::rms_range(ref_workspace, workspace);
-        //
-        // EXPECT_TRUE(miopen::range_distance(ref_workspace) == miopen::range_distance(workspace));
-        // EXPECT_TRUE(error_w < tolerance) << "Error workspace beyond tolerance Error: " << error_w
-        //                                 << ",  Tolerance: " << tolerance;
-
         auto error = miopen::rms_range(ref_output, output);
-        std::cout << "ref output = " << ref_output[0] << " output = " << output[0] << std::endl;
 
         EXPECT_TRUE(miopen::range_distance(ref_output) == miopen::range_distance(output));
         EXPECT_TRUE(error < threshold * 10) << "Error output beyond tolerance Error: " << error
@@ -254,16 +247,16 @@ struct L1LossBwdTest : public ::testing::TestWithParam<L1LossTestCase>
 protected:
     void SetUp() override
     {
-        auto&& handle        = get_handle();
-        l1loss_config = GetParam();
+        auto&& handle   = get_handle();
+        l1loss_config   = GetParam();
         auto gen_value1 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
         auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 101); };
 
-        reduction         = l1loss_config.reduction;
+        reduction       = l1loss_config.reduction;
         auto in_dims    = l1loss_config.GetInput();
         auto contiguous = l1loss_config.contiguous;
 
-        //if(contiguous)
+        // if(contiguous)
         //    GTEST_SKIP();
 
         auto in_strides = GetStrides(in_dims, contiguous);
@@ -272,7 +265,8 @@ protected:
         auto tar_strides = GetStrides(in_dims, contiguous);
         target           = tensor<T>{in_dims, tar_strides}.generate(gen_value2);
 
-        auto out_lengths = (reduction == MIOPEN_L1LOSS_NONE_REDUCTION) ? in_dims : std::vector<size_t>{1};
+        auto out_lengths =
+            (reduction == MIOPEN_L1LOSS_NONE_REDUCTION) ? in_dims : std::vector<size_t>{1};
         auto out_strides = GetStrides(out_lengths, contiguous);
 
         dO = tensor<T>{out_lengths, out_strides};
@@ -305,17 +299,17 @@ protected:
         {
             cpu_l1loss_reduced_backward<T>(input, target, dO, ref_dI, ref_dT, reduction);
             status = miopen::L1LossBackward(handle,
-                                                         input.desc,
-                                                         input_dev.get(),
-                                                         target.desc,
-                                                         target_dev.get(),
-                                                         dO.desc,
-                                                         dO_dev.get(),
-                                                         dI.desc,
-                                                         dI_dev.get(),
-                                                         dT.desc,
-                                                         dT_dev.get(),
-                                                         reduction);
+                                            input.desc,
+                                            input_dev.get(),
+                                            target.desc,
+                                            target_dev.get(),
+                                            dO.desc,
+                                            dO_dev.get(),
+                                            dI.desc,
+                                            dI_dev.get(),
+                                            dT.desc,
+                                            dT_dev.get(),
+                                            reduction);
         }
 
         EXPECT_EQ(status, miopenStatusSuccess);
