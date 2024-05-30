@@ -107,24 +107,6 @@ NetworkConfig L1LossFwdProblemDescription::MakeNetworkConfig() const
     return NetworkConfig{ss.str()};
 }
 
-NetworkConfig L1LossBwdProblemDescription::MakeNetworkConfig() const
-{
-    auto input_dtype  = iDesc.GetType();
-    auto output_dtype = doDesc.GetType();
-    auto size         = iDesc.GetElementSize();
-
-    std::ostringstream ss;
-
-    ss << "l1loss_bwd";
-    ss << "reduction" << reduction;
-    ss << "i_dtype" << input_dtype;
-    ss << "o_dtype" << output_dtype;
-    ss << "size" << size;
-    ss << IsAllPacked();
-
-    return NetworkConfig{ss.str()};
-}
-
 } // namespace l1loss
 
 } // namespace miopen

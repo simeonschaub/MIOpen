@@ -34,6 +34,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#ifndef LOCAL_SIZE_REDUCE
+#define LOCAL_SIZE_REDUCE 1024
+#endif
+
 template <class T>
 void cpu_l1loss_reduced_forward(tensor<T> input,
                                 tensor<T> target,
@@ -48,7 +52,7 @@ void cpu_l1loss_reduced_forward(tensor<T> input,
     par_ford(inputSize)([&](size_t i) { ref_workspace[i] = abs(input[i] - target[i]) / divisor; });
 
     /* Phase 2: Reduce */
-    const int local_size = 256;
+    const int local_size = LOCAL_SIZE_REDUCE;
     int offset_a         = 0;
     int offset_b         = inputSize;
     size_t _size         = inputSize;
@@ -70,25 +74,6 @@ void cpu_l1loss_reduced_forward(tensor<T> input,
         std::swap(offset_a, offset_b);
         _size = (_size + local_size - 1) / local_size;
     } while(_size > 1);
-}
-
-template <class T>
-void cpu_l1loss_reduced_backward(tensor<T> input,
-                                 tensor<T> target,
-                                 tensor<T> dO,
-                                 tensor<T>& ref_dI,
-                                 tensor<T>& ref_dT,
-                                 miopenL1LossReduction_t reduction)
-{
-    auto size      = input.desc.GetElementSize();
-    size_t divisor = (reduction == MIOPEN_L1LOSS_MEAN_REDUCTION) ? size : 1;
-
-    par_ford(size)([&](size_t i) {
-        T grad    = (input[i] >= target[i]) ? static_cast<T>(dO[0] / divisor)
-                                            : static_cast<T>(-dO[0] / divisor);
-        ref_dI[i] = grad;
-        ref_dT[i] = -grad;
-    });
 }
 
 #endif // GUARD_CPU_L1LOSS_HPP

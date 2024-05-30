@@ -55,18 +55,6 @@ struct L1LossFwdTestBfloat16 : L1LossFwdTest<bfloat16>
 {
 };
 
-struct L1LossBwdTestFloat : L1LossBwdTest<float>
-{
-};
-
-struct L1LossBwdTestFP16 : L1LossBwdTest<float16>
-{
-};
-
-struct L1LossBwdTestBfloat16 : L1LossBwdTest<bfloat16>
-{
-};
-
 } // namespace l1loss
 using namespace l1loss;
 
@@ -112,55 +100,8 @@ TEST_P(L1LossFwdTestBfloat16, L1LossTestFw)
     }
 };
 
-TEST_P(L1LossBwdTestFloat, L1LossTestBw)
-{
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
-       (GetFloatArg() == "--float" || GetFloatArg() == "--all"))
-    {
-        RunTest();
-        Verify();
-    }
-    else
-    {
-        GTEST_SKIP();
-    }
-};
-
-TEST_P(L1LossBwdTestFP16, L1LossTestBw)
-{
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
-       (GetFloatArg() == "--fp16" || GetFloatArg() == "--all"))
-    {
-        RunTest();
-        Verify();
-    }
-    else
-    {
-        GTEST_SKIP();
-    }
-};
-
-TEST_P(L1LossBwdTestBfloat16, L1LossTestBw)
-{
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
-       (GetFloatArg() == "--bfloat16" || GetFloatArg() == "--all"))
-    {
-        RunTest();
-        Verify();
-    }
-    else
-    {
-        GTEST_SKIP();
-    }
-};
-
 INSTANTIATE_TEST_SUITE_P(L1LossTestSet, L1LossFwdTestFloat, testing::ValuesIn(L1LossTestConfigs()));
 INSTANTIATE_TEST_SUITE_P(L1LossTestSet, L1LossFwdTestFP16, testing::ValuesIn(L1LossTestConfigs()));
 INSTANTIATE_TEST_SUITE_P(L1LossTestSet,
                          L1LossFwdTestBfloat16,
-                         testing::ValuesIn(L1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(L1LossTestSet, L1LossBwdTestFloat, testing::ValuesIn(L1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(L1LossTestSet, L1LossBwdTestFP16, testing::ValuesIn(L1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(L1LossTestSet,
-                         L1LossBwdTestBfloat16,
                          testing::ValuesIn(L1LossTestConfigs()));

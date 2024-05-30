@@ -90,45 +90,4 @@ miopenStatus_t L1LossForward(Handle& handle,
     return miopenStatusSuccess;
 }
 
-miopenStatus_t L1LossBackward(Handle& handle,
-                              const TensorDescriptor& iDesc,
-                              ConstData_t i,
-                              const TensorDescriptor& tDesc,
-                              ConstData_t t,
-                              const TensorDescriptor& doDesc,
-                              ConstData_t dO,
-                              const TensorDescriptor& diDesc,
-                              Data_t dI,
-                              const TensorDescriptor& dtDesc,
-                              Data_t dT,
-                              miopenL1LossReduction_t reduction)
-{
-    const auto problem =
-        l1loss::L1LossBwdProblemDescription{iDesc, tDesc, doDesc, diDesc, dtDesc, reduction};
-
-    const auto invoke_params = [&]() {
-        auto tmp      = l1loss::InvokeParams{};
-        tmp.type      = InvokeType::Run;
-        tmp.iDesc     = &iDesc;
-        tmp.tDesc     = &tDesc;
-        tmp.doDesc    = &doDesc;
-        tmp.diDesc    = &diDesc;
-        tmp.dtDesc    = &dtDesc;
-        tmp.i         = i;
-        tmp.t         = t;
-        tmp.i_grad    = dI;
-        tmp.t_grad    = dT;
-        tmp.o_grad    = dO;
-        tmp.reduction = reduction;
-        return tmp;
-    }();
-
-    const auto algo    = AlgorithmName{"L1LossBackward"};
-    const auto solvers = solver::SolverContainer<solver::l1loss::L1LossBackward5d>{};
-
-    solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
-
-    return miopenStatusSuccess;
-}
-
 } // namespace miopen

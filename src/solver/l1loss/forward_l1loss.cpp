@@ -39,7 +39,7 @@
 #include <miopen/tensor_view_5d.hpp>
 
 #define LOCAL_SIZE_FWD 256
-#define LOCAL_SIZE_REDUCE_FWD 256
+#define LOCAL_SIZE_REDUCE_FWD 1024
 
 namespace miopen {
 
@@ -65,8 +65,6 @@ const auto make_hip_kernel = [](std::vector<size_t> localsize,
 bool L1LossForward5d::IsApplicable(const ExecutionContext& /*context*/,
                                    const miopen::l1loss::L1LossFwdProblemDescription& problem) const
 {
-    size_t inputSize = problem.GetIDesc().GetElementSize();
-
     if(!problem.IsSameType())
         return false;
     if(!problem.IsRightLength())
@@ -76,8 +74,6 @@ bool L1LossForward5d::IsApplicable(const ExecutionContext& /*context*/,
     if(!problem.IsSameStride())
         return false;
     if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
-        return false;
-    if(!(inputSize < 256))
         return false;
     return true;
 }

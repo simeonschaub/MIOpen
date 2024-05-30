@@ -74,31 +74,6 @@ int32_t mloL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
     return miopenStatusSuccess;
 }
 
-template <typename Tgpu, typename Tcheck>
-int32_t mloL1LossReducedBackwardRunHost(const miopenTensorDescriptor_t iDesc,
-                                        const Tgpu* input,
-                                        const Tgpu* target,
-                                        const Tgpu* dO,
-                                        Tcheck* dI,
-                                        Tcheck* dT,
-                                        miopenL1LossReduction_t reduction)
-{
-    auto size = miopen::deref(iDesc).GetElementSize();
-    size_t divisor =
-        (reduction == MIOPEN_L1LOSS_MEAN_REDUCTION) ? miopen::deref(iDesc).GetElementSize() : 1;
-
-    par_ford(size)([&](size_t i) {
-        float grad = (input[i] >= target[i]) ? dO[0] / divisor : -dO[0] / divisor;
-
-        if(dI)
-            dI[i] = grad;
-        if(dT)
-            dT[i] = -grad;
-    });
-
-    return miopenStatusSuccess;
-}
-
 #endif
 
 inline std::vector<int> GetStrides(std::vector<int> lengths, int contiguous)
@@ -439,65 +414,12 @@ int L1LossDriver<Tgpu, Tref>::RunForwardCPU()
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::RunBackwardGPU()
 {
-    float kernel_total_time = 0;
-    float kernel_first_time = 0;
-
-    Timer t;
-    START_TIME
-
-    for(int i = 0; i < inflags.GetValueInt("iter"); i++)
-    {
-        miopen::deref(GetHandle()).ResetKernelTime();
-        miopenL1LossBackward(GetHandle(),
-                             inputDesc,
-                             in_dev->GetMem(),
-                             targetDesc,
-                             tar_dev->GetMem(),
-                             doDesc,
-                             dO_dev->GetMem(),
-                             diDesc,
-                             dI_dev->GetMem(),
-                             dtDesc,
-                             dT_dev->GetMem(),
-                             reduction);
-
-        float time = 0.0;
-        miopenGetKernelTime(GetHandle(), &time);
-        kernel_total_time += time;
-        if(i == 0)
-            kernel_first_time = time;
-    }
-
-    if(inflags.GetValueInt("time") == 1)
-    {
-        STOP_TIME
-        int iter = inflags.GetValueInt("iter");
-        if(WALL_CLOCK)
-            std::cout << "Wall-clock Time Backward L1Loss Elapsed: " << t.gettime_ms() / iter
-                      << " ms\n";
-
-        float kernel_average_time =
-            iter > 1 ? (kernel_total_time - kernel_first_time) / (iter - 1) : kernel_first_time;
-        std::cout << "GPU Kernel Time Backward L1Loss Elapsed: " << kernel_average_time << " ms\n";
-    }
-
-    if(dI_dev->FromGPU(GetStream(), dI.data()) != 0)
-        std::cerr << "Error copying (dI_dev) from GPU, size: " << dI_dev->GetSize() << std::endl;
-    if(dT_dev->FromGPU(GetStream(), dT.data()) != 0)
-        std::cerr << "Error copying (dT_dev) from GPU, size: " << dT_dev->GetSize() << std::endl;
-
     return miopenStatusSuccess;
 }
 
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::RunBackwardCPU()
 {
-    if(reduction != MIOPEN_L1LOSS_NONE_REDUCTION)
-    {
-        mloL1LossReducedBackwardRunHost<Tgpu, Tref>(
-            inputDesc, in.data(), tar.data(), dO.data(), dIhost.data(), dThost.data(), reduction);
-    }
-
     return miopenStatusSuccess;
 }
 
@@ -538,24 +460,6 @@ int L1LossDriver<Tgpu, Tref>::VerifyForward()
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::VerifyBackward()
 {
-    RunBackwardCPU();
-    const Tref tolerance = GetTolerance();
-    auto error_dI        = miopen::rms_range(dIhost, dI);
-    auto error_dT        = miopen::rms_range(dThost, dT);
-
-    if(!std::isfinite(error_dI) || error_dI > tolerance || !std::isfinite(error_dT) ||
-       error_dT > tolerance)
-    {
-        std::cout << "Backward L1Loss FAILED: {" << error_dI << "," << error_dT << "} > "
-                  << tolerance << std::endl;
-        return EC_VerifyFwd;
-    }
-    else
-    {
-        std::cout << "Backward L1Loss Verifies OK on CPU reference ({" << error_dI << ", "
-                  << error_dT << "} < " << tolerance << ')' << std::endl;
-    }
-
     return miopenStatusSuccess;
 }
 
