@@ -79,26 +79,6 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         }
     }
 
-    L1LossFwdProblemDescription(const TensorDescriptor& iDesc_,
-                                const TensorDescriptor& tDesc_,
-                                const TensorDescriptor& oDesc_)
-        : iDesc(iDesc_), tDesc(tDesc_), oDesc(oDesc_)
-    {
-        if(iDesc.GetLengths().size() != tDesc.GetLengths().size())
-        {
-            MIOPEN_THROW(miopenStatusBadParm,
-                         "L1Loss::ProblemDescription: Number of dimensions between input tensor "
-                         "and target tensor do not match.");
-        }
-
-        if(oDesc.GetLengths().size() != 1)
-        {
-            MIOPEN_THROW(miopenStatusBadParm,
-                         "L1Loss::ProblemDescription: Number of output tensor's dimension do not "
-                         "equal 1 in case of reduction.");
-        }
-    }
-
     miopenL1LossReduction_t GetReduction() const { return reduction; }
     const TensorDescriptor& GetIDesc() const { return iDesc; }
     const TensorDescriptor& GetTDesc() const { return tDesc; }
@@ -145,16 +125,6 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         }
 
         if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION && !checkSameStride(iDesc, oDesc))
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    bool IsAllPacked() const
-    {
-        if(!(iDesc.IsPacked() && tDesc.IsPacked() && oDesc.IsPacked()))
         {
             return false;
         }

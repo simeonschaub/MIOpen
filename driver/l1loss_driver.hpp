@@ -100,9 +100,6 @@ public:
         miopenCreateTensorDescriptor(&inputDesc);
         miopenCreateTensorDescriptor(&targetDesc);
         miopenCreateTensorDescriptor(&outputDesc);
-        miopenCreateTensorDescriptor(&diDesc);
-        miopenCreateTensorDescriptor(&dtDesc);
-        miopenCreateTensorDescriptor(&doDesc);
 
         data_type = miopen_type<Tgpu>{};
     }
@@ -130,9 +127,6 @@ public:
         miopenDestroyTensorDescriptor(inputDesc);
         miopenDestroyTensorDescriptor(targetDesc);
         miopenDestroyTensorDescriptor(outputDesc);
-        miopenDestroyTensorDescriptor(diDesc);
-        miopenDestroyTensorDescriptor(dtDesc);
-        miopenDestroyTensorDescriptor(doDesc);
     }
 
 private:
@@ -143,30 +137,19 @@ private:
     miopenTensorDescriptor_t inputDesc;
     miopenTensorDescriptor_t targetDesc;
     miopenTensorDescriptor_t outputDesc;
-    miopenTensorDescriptor_t diDesc;
-    miopenTensorDescriptor_t dtDesc;
-    miopenTensorDescriptor_t doDesc;
 
     std::unique_ptr<GPUMem> in_dev;
     std::unique_ptr<GPUMem> tar_dev;
     std::unique_ptr<GPUMem> out_dev;
     std::unique_ptr<GPUMem> workspace_dev;
-    std::unique_ptr<GPUMem> dI_dev;
-    std::unique_ptr<GPUMem> dT_dev;
-    std::unique_ptr<GPUMem> dO_dev;
 
     std::vector<Tgpu> in;
     std::vector<Tgpu> tar;
     std::vector<Tgpu> out;
     std::vector<Tgpu> workspace;
-    std::vector<Tgpu> dI;
-    std::vector<Tgpu> dT;
-    std::vector<Tgpu> dO;
 
     std::vector<Tref> outhost;
     std::vector<Tref> workspacehost;
-    std::vector<Tref> dIhost;
-    std::vector<Tref> dThost;
 
     size_t ws_sizeInBytes;
     miopenL1LossReduction_t reduction;
@@ -204,19 +187,6 @@ int L1LossDriver<Tgpu, Tref>::GetandSetData()
     {
         std::vector<int> out_lens = {1};
         SetTensorNd(outputDesc, out_lens, data_type);
-    }
-
-    SetTensorNd(diDesc, length, in_strides, data_type);
-    SetTensorNd(dtDesc, length, tar_strides, data_type);
-
-    if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
-    {
-        SetTensorNd(doDesc, length, in_strides, data_type);
-    }
-    else
-    {
-        std::vector<int> out_lens = {1};
-        SetTensorNd(doDesc, out_lens, data_type);
     }
 
     return miopenStatusSuccess;
@@ -308,22 +278,14 @@ int L1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     tar_dev       = std::unique_ptr<GPUMem>(new GPUMem(ctx, tar_sz, sizeof(Tgpu)));
     out_dev       = std::unique_ptr<GPUMem>(new GPUMem(ctx, out_sz, sizeof(Tgpu)));
     workspace_dev = std::unique_ptr<GPUMem>(new GPUMem(ctx, ws_sizeInBytes, sizeof(std::byte)));
-    dI_dev        = std::unique_ptr<GPUMem>(new GPUMem(ctx, in_sz, sizeof(Tgpu)));
-    dT_dev        = std::unique_ptr<GPUMem>(new GPUMem(ctx, tar_sz, sizeof(Tgpu)));
-    dO_dev        = std::unique_ptr<GPUMem>(new GPUMem(ctx, out_sz, sizeof(Tgpu)));
 
     in        = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
     tar       = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
     out       = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
     workspace = std::vector<Tgpu>(ws_sz, static_cast<Tgpu>(0));
-    dI        = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
-    dT        = std::vector<Tgpu>(tar_sz, static_cast<Tgpu>(0));
-    dO        = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
 
     outhost       = std::vector<Tref>(out_sz, static_cast<Tref>(0));
     workspacehost = std::vector<Tref>(ws_sz, static_cast<Tref>(0));
-    dIhost        = std::vector<Tref>(in_sz, static_cast<Tref>(0));
-    dThost        = std::vector<Tref>(tar_sz, static_cast<Tref>(0));
 
     for(int i = 0; i < in_sz; i++)
     {
@@ -337,16 +299,11 @@ int L1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 
     fill(out.begin(), out.end(), static_cast<Tgpu>(0));
 
-    fill(dO.begin(), dO.end(), static_cast<Tgpu>(0.5));
-
     if(in_dev->ToGPU(GetStream(), in.data()) != 0)
         std::cerr << "Error copying (in) to GPU, size: " << in_dev->GetSize() << std::endl;
 
     if(tar_dev->ToGPU(GetStream(), tar.data()) != 0)
         std::cerr << "Error copying (tar) to GPU, size: " << tar_dev->GetSize() << std::endl;
-
-    if(dO_dev->ToGPU(GetStream(), dO.data()) != 0)
-        std::cerr << "Error copying (out grad) to GPU, size: " << dO_dev->GetSize() << std::endl;
 
     return miopenStatusSuccess;
 }

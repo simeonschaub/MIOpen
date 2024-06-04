@@ -40,19 +40,13 @@ struct InvokeParams : public miopen::InvokeParams
 {
     InvokeParams() = default;
 
-    const TensorDescriptor* iDesc  = nullptr;
-    const TensorDescriptor* tDesc  = nullptr;
-    const TensorDescriptor* oDesc  = nullptr;
-    const TensorDescriptor* diDesc = nullptr;
-    const TensorDescriptor* dtDesc = nullptr;
-    const TensorDescriptor* doDesc = nullptr;
+    const TensorDescriptor* iDesc = nullptr;
+    const TensorDescriptor* tDesc = nullptr;
+    const TensorDescriptor* oDesc = nullptr;
 
-    ConstData_t i      = nullptr;
-    ConstData_t t      = nullptr;
-    Data_t o           = nullptr;
-    Data_t i_grad      = nullptr;
-    Data_t t_grad      = nullptr;
-    ConstData_t o_grad = nullptr;
+    ConstData_t i = nullptr;
+    ConstData_t t = nullptr;
+    Data_t o      = nullptr;
 
     miopenL1LossReduction_t reduction = MIOPEN_L1LOSS_MEAN_REDUCTION;
     Data_t workspace                  = nullptr;

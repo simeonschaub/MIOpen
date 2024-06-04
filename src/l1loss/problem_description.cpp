@@ -102,7 +102,6 @@ NetworkConfig L1LossFwdProblemDescription::MakeNetworkConfig() const
     ss << "i_dtype" << input_dtype;
     ss << "o_dtype" << output_dtype;
     ss << "size" << size;
-    ss << IsAllPacked();
 
     return NetworkConfig{ss.str()};
 }
