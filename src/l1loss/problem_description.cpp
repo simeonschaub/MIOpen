@@ -35,9 +35,9 @@ namespace l1loss {
 
 bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
 {
-    if(x.GetSize() != y.GetSize())
+    if(x.GetNumDims() != y.GetNumDims())
         return false;
-    for(int32_t i = 0; i < x.GetSize(); ++i)
+    for(int32_t i = 0; i < x.GetNumDims(); ++i)
     {
         if(x.GetLengths()[i] != y.GetLengths()[i])
             return false;
@@ -47,9 +47,9 @@ bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
 
 bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y)
 {
-    if(x.GetSize() != y.GetSize())
+    if(x.GetNumDims() != y.GetNumDims())
         return false;
-    for(int32_t i = 0; i < x.GetSize(); ++i)
+    for(int32_t i = 0; i < x.GetNumDims(); ++i)
     {
         if(x.GetStrides()[i] != y.GetStrides()[i])
             return false;
@@ -62,7 +62,7 @@ bool checkRightStride(const TensorDescriptor& x)
     auto strides = x.GetStrides();
     auto lengths = x.GetLengths();
     std::vector<std::pair<size_t, size_t>> p;
-    p.reserve(x.GetSize());
+    p.reserve(x.GetNumDims());
     std::transform(strides.begin(),
                    strides.end(),
                    lengths.begin(),
@@ -80,7 +80,7 @@ bool checkRightStride(const TensorDescriptor& x)
 bool checkContiguous(const TensorDescriptor& x)
 {
     size_t s = 1;
-    for(int i = x.GetSize() - 1; i >= 0; --i)
+    for(int i = x.GetNumDims() - 1; i >= 0; --i)
     {
         if(s != x.GetStrides()[i])
             return false;
