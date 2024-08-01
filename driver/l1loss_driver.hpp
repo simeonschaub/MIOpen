@@ -28,7 +28,6 @@
 
 #include "InputFlags.hpp"
 #include "driver.hpp"
-#include "miopen/errors.hpp"
 #include "tensor_driver.hpp"
 #include "timer.hpp"
 
@@ -36,10 +35,9 @@
 #include <../test/tensor_holder.hpp>
 #include <../test/verify.hpp>
 
-#include <cmath>
 #include <miopen/miopen.h>
 #include <miopen/tensor.hpp>
-#include <miopen/tensor_view_5d.hpp>
+#include <miopen/errors.hpp>
 
 #include <vector>
 
@@ -76,21 +74,6 @@ int32_t mloL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
 
 #endif
 
-inline std::vector<int> GetStrides(std::vector<int> lengths, int contiguous)
-{
-    if(contiguous != 0 && contiguous != 1)
-        std::cerr << "Error Tensor Contiguous should be 0 or 1" << std::endl;
-    if(contiguous == 0)
-        std::swap(lengths.front(), lengths.back());
-    std::vector<int> strides(lengths.size());
-    strides.back() = 1;
-    for(int i = lengths.size() - 2; i >= 0; --i)
-        strides[i] = strides[i + 1] * lengths[i + 1];
-    if(contiguous == 0)
-        std::swap(strides.front(), strides.back());
-    return strides;
-}
-
 template <typename Tgpu, typename Tref>
 class L1LossDriver : public Driver
 {
@@ -104,12 +87,12 @@ public:
         data_type = miopen_type<Tgpu>{};
     }
 
+    std::vector<int> ComputeStrides(std::vector<int> inputDim);
     int AddCmdLineArgs() override;
     int ParseCmdLineArgs(int argc, char* argv[]) override;
     InputFlags& GetInputFlags() override { return inflags; }
 
     int GetandSetData() override;
-    std::vector<int> GetTensorLengthsFromCmdLine();
 
     int AllocateBuffersAndCopy() override;
 
@@ -133,6 +116,7 @@ private:
     InputFlags inflags;
 
     int forw;
+    bool isContiguous;
 
     miopenTensorDescriptor_t inputDesc;
     miopenTensorDescriptor_t targetDesc;
@@ -155,10 +139,27 @@ private:
     miopenL1LossReduction_t reduction;
 };
 
+// Equivalent tensor.transpose(0, -1).contiguous().transpose(0, -1)
+template <typename Tgpu, typename Tref>
+std::vector<int> L1LossDriver<Tgpu, Tref>::ComputeStrides(std::vector<int> inputDim)
+{
+    if(!isContiguous)
+        std::swap(inputDim.front(), inputDim.back());
+    std::vector<int> strides(inputDim.size());
+    strides.back() = 1;
+    for(int i = inputDim.size() - 2; i >= 0; --i)
+        strides[i] = strides[i + 1] * inputDim[i + 1];
+    if(!isContiguous)
+        std::swap(strides.front(), strides.back());
+    return strides;
+}
+
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::ParseCmdLineArgs(int argc, char* argv[])
 {
     inflags.Parse(argc, argv);
+    reduction    = static_cast<miopenL1LossReduction_t>(inflags.GetValueInt("reduction"));
+    isContiguous = inflags.GetValueInt("contiguous") > 0 ? true : false;
 
     if(inflags.GetValueInt("time") == 1)
     {
@@ -170,18 +171,16 @@ int L1LossDriver<Tgpu, Tref>::ParseCmdLineArgs(int argc, char* argv[])
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::GetandSetData()
 {
-    reduction = static_cast<miopenL1LossReduction_t>(inflags.GetValueInt("Reduction"));
+    auto in_len      = inflags.GetValueTensor("dim-lengths").lengths;
+    auto in_strides  = ComputeStrides(in_len);
+    auto tar_strides = ComputeStrides(in_len);
 
-    auto length      = GetTensorLengthsFromCmdLine();
-    auto in_strides  = GetStrides(length, inflags.GetValueInt("Contiguous"));
-    auto tar_strides = GetStrides(length, inflags.GetValueInt("Contiguous"));
-
-    SetTensorNd(inputDesc, length, in_strides, data_type);
-    SetTensorNd(targetDesc, length, tar_strides, data_type);
+    SetTensorNd(inputDesc, in_len, in_strides, data_type);
+    SetTensorNd(targetDesc, in_len, tar_strides, data_type);
 
     if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
     {
-        SetTensorNd(outputDesc, length, in_strides, data_type);
+        SetTensorNd(outputDesc, in_len, in_strides, data_type);
     }
     else
     {
@@ -196,17 +195,14 @@ template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::AddCmdLineArgs()
 {
     inflags.AddInputFlag("forw", 'F', "1", "Run only Forward L1Loss (Default=1)", "int");
-    inflags.AddInputFlag("batchsize", 'n', "256", "Mini-batch size (Default=2)", "int");
-    inflags.AddInputFlag("in_channels", 'c', "4", "Number of Input Channels (Default=2)", "int");
-    inflags.AddInputFlag("in_d", 'D', "1", "Input Depth (Default=1)", "int");
-    inflags.AddInputFlag("in_h", 'H', "1", "Input Height (Default=1)", "int");
-    inflags.AddInputFlag("in_w", 'W', "128", "Input Width (Default=2)", "int");
-    inflags.AddInputFlag("Contiguous",
+    inflags.AddTensorFlag(
+        "dim-lengths", 'D', "256x512", "The dimensional lengths of the input tensor");
+    inflags.AddInputFlag("contiguous",
                          'C',
                          "1",
-                         "Is input tensor contiguous? (Default=1 for contiguous tensor)",
+                         "Tensor is contiguous or not (Default=1 for contiguous tensor)",
                          "int");
-    inflags.AddInputFlag("Reduction",
+    inflags.AddInputFlag("reduction",
                          'R',
                          "0",
                          "Reduction mode ('none'(0) | 'sum'(1) |'mean'(2)) "
@@ -219,42 +215,6 @@ int L1LossDriver<Tgpu, Tref>::AddCmdLineArgs()
         "wall", 'w', "0", "Wall-clock Time Each Layer, Requires time == 1 (Default=0)", "int");
 
     return miopenStatusSuccess;
-}
-
-template <typename Tgpu, typename Tref>
-std::vector<int> L1LossDriver<Tgpu, Tref>::GetTensorLengthsFromCmdLine()
-{
-    int in_n = inflags.GetValueInt("batchsize");
-    int in_c = inflags.GetValueInt("in_channels");
-    int in_d = inflags.GetValueInt("in_d");
-    int in_h = inflags.GetValueInt("in_h");
-    int in_w = inflags.GetValueInt("in_w");
-
-    if((in_n != 0) && (in_c != 0) && (in_d != 0) && (in_h != 0) && (in_w != 0))
-    {
-        return std::vector<int>({in_n, in_c, in_d, in_h, in_w});
-    }
-    else if((in_n != 0) && (in_c != 0) && (in_h != 0) && (in_w != 0))
-    {
-        return std::vector<int>({in_n, in_c, in_h, in_w});
-    }
-    else if((in_n != 0) && (in_c != 0) && (in_w != 0))
-    {
-        return std::vector<int>({in_n, in_c, in_w});
-    }
-    else if((in_n != 0) && (in_w != 0))
-    {
-        return std::vector<int>({in_n, in_w});
-    }
-    else if(in_n != 0)
-    {
-        return std::vector<int>({in_n});
-    }
-    else
-    {
-        std::cerr << "Error Input Tensor Lengths\n" << std::endl;
-        return std::vector<int>({0});
-    }
 }
 
 template <typename Tgpu, typename Tref>

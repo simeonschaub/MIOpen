@@ -25,13 +25,9 @@
  *******************************************************************************/
 #pragma once
 
-#include "miopen/miopen.h"
-#include <miopen/activ.hpp>
+#include <miopen/miopen.h>
 #include <miopen/problem_description_base.hpp>
 #include <miopen/tensor.hpp>
-
-#include <cassert>
-#include <string>
 
 namespace miopen {
 
@@ -39,20 +35,15 @@ struct NetworkConfig;
 
 namespace l1loss {
 
-bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y);
-bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y);
-bool checkRightStride(const TensorDescriptor& x);
-bool checkContiguous(const TensorDescriptor& x);
-
-struct L1LossFwdProblemDescription : ProblemDescriptionBase
+struct FwdProblemDescription : ProblemDescriptionBase
 {
-    L1LossFwdProblemDescription(const TensorDescriptor& iDesc_,
-                                const TensorDescriptor& tDesc_,
-                                const TensorDescriptor& oDesc_,
-                                miopenL1LossReduction_t reduction_)
+    FwdProblemDescription(const TensorDescriptor& iDesc_,
+                          const TensorDescriptor& tDesc_,
+                          const TensorDescriptor& oDesc_,
+                          miopenL1LossReduction_t reduction_)
         : iDesc(iDesc_), tDesc(tDesc_), oDesc(oDesc_), reduction(reduction_)
     {
-        if(iDesc.GetLengths().size() != tDesc.GetLengths().size())
+        if(iDesc.GetNumDims() != tDesc.GetNumDims())
         {
             MIOPEN_THROW(miopenStatusBadParm,
                          "L1Loss::ProblemDescription: Number of dimensions between input tensor "
@@ -61,7 +52,7 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
 
         if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
         {
-            if(iDesc.GetLengths().size() != oDesc.GetLengths().size())
+            if(iDesc.GetNumDims() != oDesc.GetNumDims())
             {
                 MIOPEN_THROW(miopenStatusBadParm,
                              "L1Loss::ProblemDescription: Number of dimensions between input "
@@ -70,12 +61,20 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         }
         else
         {
-            if(oDesc.GetLengths().size() != 1)
+            if(oDesc.GetNumDims() != 1)
             {
                 MIOPEN_THROW(miopenStatusBadParm,
                              "L1Loss::ProblemDescription: Number of output tensor's dimension do "
                              "not equal 1 in case of reduction.");
             }
+        }
+
+        if(!IsSameType())
+        {
+            MIOPEN_THROW(
+                miopenStatusBadParm,
+                "L1Loss::ProblemDescription: Input, target and output tensor have different "
+                "data type.");
         }
     }
 
@@ -90,45 +89,6 @@ struct L1LossFwdProblemDescription : ProblemDescriptionBase
         {
             return false;
         }
-        return true;
-    }
-
-    bool IsRightLength() const
-    {
-        if(!checkSameLength(iDesc, tDesc))
-        {
-            return false;
-        }
-
-        if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION && !checkSameLength(iDesc, oDesc))
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    bool IsRightStride() const
-    {
-        if(!checkRightStride(iDesc) || !checkRightStride(tDesc) || !checkRightStride(oDesc))
-        {
-            return false;
-        }
-        return true;
-    }
-
-    bool IsSameStride() const
-    {
-        if(!checkSameStride(iDesc, tDesc))
-        {
-            return false;
-        }
-
-        if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION && !checkSameStride(iDesc, oDesc))
-        {
-            return false;
-        }
-
         return true;
     }
 

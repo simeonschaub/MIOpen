@@ -24,22 +24,22 @@
  *
  *******************************************************************************/
 
-#include "miopen/kernel_info.hpp"
-#include "miopen/l1loss/problem_description.hpp"
-#include "miopen/miopen.h"
-#include "miopen/mlo_internal.hpp"
+#include "miopen/common.hpp"
+#include "miopen/hipoc_kernel.hpp"
+#include <miopen/tensor_view_utils.hpp>
+#include <miopen/kernel_info.hpp>
+#include <miopen/l1loss/problem_description.hpp>
+#include <miopen/miopen.h>
+#include <miopen/mlo_internal.hpp>
 #include <cstddef>
-#include <cstdint>
 #include <miopen/datatype.hpp>
 #include <miopen/kernel_build_params.hpp>
 #include <miopen/l1loss/invoke_params.hpp>
 #include <miopen/l1loss/solvers.hpp>
-#include <miopen/l1loss.hpp>
-#include <miopen/target_properties.hpp>
-#include <miopen/tensor_view_5d.hpp>
+#include <vector>
 
 #define LOCAL_SIZE_FWD 256
-#define LOCAL_SIZE_REDUCE_FWD 1024
+#define LOCAL_SIZE_REDUCE 1024
 
 namespace miopen {
 
@@ -47,32 +47,9 @@ namespace solver {
 
 namespace l1loss {
 
-const auto make_hip_kernel = [](std::vector<size_t> localsize,
-                                std::vector<size_t> gridsize,
-                                std::string kernel_file,
-                                std::string kernel_name,
-                                KernelBuildParameters build_params) {
-    while(localsize.size() < 3)
-        localsize.push_back(1);
-    while(gridsize.size() < 3)
-        gridsize.push_back(1);
-    for(int i = 0; i < localsize.size(); ++i)
-        gridsize[i] = AlignUp(gridsize[i], localsize[i]);
-    return KernelInfo{
-        build_params.GenerateFor(kbp::HIP{}), localsize, gridsize, kernel_file, kernel_name};
-};
-
 bool L1LossForward5d::IsApplicable(const ExecutionContext& /*context*/,
-                                   const miopen::l1loss::L1LossFwdProblemDescription& problem) const
+                                   const miopen::l1loss::FwdProblemDescription& problem) const
 {
-    if(!problem.IsSameType())
-        return false;
-    if(!problem.IsRightLength())
-        return false;
-    if(!problem.IsRightStride())
-        return false;
-    if(!problem.IsSameStride())
-        return false;
     if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
         return false;
     return true;
@@ -80,82 +57,147 @@ bool L1LossForward5d::IsApplicable(const ExecutionContext& /*context*/,
 
 ConvSolution
 L1LossForward5d::GetSolution(const ExecutionContext& /*context*/,
-                             const miopen::l1loss::L1LossFwdProblemDescription& problem) const
+                             const miopen::l1loss::FwdProblemDescription& problem) const
 {
     auto result = ConvSolution{miopenStatusSuccess};
 
-    auto dtype        = problem.GetODesc().GetType();
-    auto input_dtype  = miopen::GetDataType(problem.GetIDesc().GetType());
-    auto output_dtype = miopen::GetDataType(problem.GetODesc().GetType());
-    auto size         = problem.GetIDesc().GetElementSize();
+    auto dtype      = problem.GetODesc().GetType();
+    auto io_dtype   = miopen::GetDataType(dtype);
+    auto input_size = problem.GetIDesc().GetElementSize();
 
-    auto build_params =
-        KernelBuildParameters{{"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
-                              {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
-                              {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
-                              {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-                              {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
-                              {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
-                              {"REDUCE_SIZE", LOCAL_SIZE_REDUCE_FWD}};
-
-    // Phase 1: Calc loss for each element
-    result.construction_params.push_back(make_hip_kernel(
-        {LOCAL_SIZE_FWD}, {size}, "MIOpenL1Loss.cpp", "L1LossReducedForward5d", build_params));
-
-    // Phase 2: Reduce
-    auto _size = size;
-    do
     {
-        result.construction_params.push_back(make_hip_kernel(
-            {LOCAL_SIZE_REDUCE_FWD}, {_size}, "MIOpenL1Loss.cpp", "LossSum", build_params));
-        _size = AlignUp(_size, LOCAL_SIZE_REDUCE_FWD) / LOCAL_SIZE_REDUCE_FWD;
-    } while(_size > 1);
+        /* Phase 1: Calculate loss elementwise. */
+        size_t xlocalsize = LOCAL_SIZE_FWD;
+        size_t xgridsize  = AlignUp(input_size, xlocalsize);
+        size_t ylocalsize = 1;
+        size_t ygridsize  = 1;
+        size_t zlocalsize = 1;
+        size_t zgridsize  = 1;
 
-    result.invoker_factory = [](const std::vector<Kernel>& kernels) {
+        auto kernel        = KernelInfo{};
+        kernel.kernel_file = "MIOpenL1Loss.cpp";
+        kernel.kernel_name = "L1LossReducedForward5d";
+
+        const auto build_params = KernelBuildParameters{
+            {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
+            {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
+            {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
+            {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+            {"IO_TYPE", io_dtype == "bfloat16" ? "ushort" : io_dtype},
+        };
+
+        kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
+
+        kernel.l_wk.push_back(xlocalsize);
+        kernel.l_wk.push_back(ylocalsize);
+        kernel.l_wk.push_back(zlocalsize);
+        kernel.g_wk.push_back(xgridsize);
+        kernel.g_wk.push_back(ygridsize);
+        kernel.g_wk.push_back(zgridsize);
+
+        result.construction_params.push_back(kernel);
+    }
+
+    {
+        /* Phase 2: Reduce sum */
+        auto _size = input_size;
+        const auto build_params =
+            KernelBuildParameters{{"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
+                                  {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
+                                  {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
+                                  {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+                                  {"REDUCE_SIZE", LOCAL_SIZE_REDUCE}};
+
+        do
+        {
+            size_t xlocalsize = LOCAL_SIZE_REDUCE;
+            size_t xgridsize  = AlignUp(_size, xlocalsize);
+            size_t ylocalsize = 1;
+            size_t ygridsize  = 1;
+            size_t zlocalsize = 1;
+            size_t zgridsize  = 1;
+
+            auto kernel        = KernelInfo{};
+            kernel.kernel_file = "MIOpenLossReduce.cpp";
+            kernel.kernel_name = "ReduceSumLoss";
+
+            kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
+
+            kernel.l_wk.push_back(xlocalsize);
+            kernel.l_wk.push_back(ylocalsize);
+            kernel.l_wk.push_back(zlocalsize);
+            kernel.g_wk.push_back(xgridsize);
+            kernel.g_wk.push_back(ygridsize);
+            kernel.g_wk.push_back(zgridsize);
+
+            result.construction_params.push_back(kernel);
+            _size = AlignUp(_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
+        } while(_size > 1);
+    }
+
+    result.invoker_factory = [input_size, dtype](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
             decltype(auto) params = raw_params.CastTo<miopen::l1loss::InvokeParams>();
-            auto elapsed          = 0.f;
 
-            // Phase 1: Calc loss for each element
+            auto elapsed = 0.f;
+            HipEventPtr start, stop;
+
+            const bool profiling = handle_.IsProfilingEnabled();
+            if(profiling)
             {
-                decltype(auto) kernel = handle_.Run(kernels.front());
-                auto I_tv             = get_inner_expanded_tv(deref(params.iDesc));
-                auto T_tv             = get_inner_expanded_tv(deref(params.tDesc));
-                auto size             = params.iDesc->GetElementSize();
-                size_t divisor = (params.reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : size;
+                handle_.EnableProfiling(false);
+                start = miopen::make_hip_event();
+                stop  = miopen::make_hip_event();
+                hipEventRecord(start.get(), handle_.GetStream());
+            }
 
+            {
+                /* Phase 1: Calculate loss elementwise. */
+                auto I_tv      = get_inner_expanded_tv<5>(deref(params.iDesc));
+                auto T_tv      = get_inner_expanded_tv<5>(deref(params.tDesc));
+                size_t divisor = (params.reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : input_size;
+
+                decltype(auto) kernel = handle_.Run(kernels.front());
                 kernel(params.i, params.t, params.workspace, divisor, I_tv, T_tv);
             }
-            if(handle_.IsProfilingEnabled())
-                elapsed = handle_.GetKernelTime();
 
-            // Phase 2: Reduce
-            auto work_a = params.workspace;
-            auto work_b = static_cast<Data_t>(static_cast<char*>(params.workspace) +
-                                              deref(params.iDesc).GetElementSize() *
-                                                  get_data_size(deref(params.oDesc).GetType()));
-            auto size   = deref(params.iDesc).GetElementSize();
-            for(int i = 1; i < kernels.size(); ++i)
             {
-                decltype(auto) kernel = handle_.Run(kernels[i]);
-                if(i + 1 != kernels.size())
+                /* Phase 2: Reduce. */
+                auto _size      = input_size;
+                auto reduce_in  = params.workspace;
+                auto reduce_out = static_cast<Data_t>(static_cast<char*>(params.workspace) +
+                                                      input_size * get_data_size(dtype));
+
+                for(size_t i = 1; i < kernels.size(); ++i)
                 {
-                    kernel(work_a, work_b, size);
-                    std::swap(work_a, work_b);
+                    decltype(auto) kernel = handle_.Run(kernels[i]);
+                    if(i + 1 != kernels.size())
+                    {
+                        kernel(reduce_in, reduce_out, _size);
+                        std::swap(reduce_in, reduce_out);
+                    }
+                    else
+                    {
+                        kernel(reduce_in, params.o, _size);
+                    }
+                    _size = AlignUp(_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
                 }
-                else
+
+                if(profiling)
                 {
-                    kernel(work_a, params.o, size);
+                    hipEventRecord(stop.get(), handle_.GetStream());
+                    hipEventSynchronize(stop.get());
+                    hipEventElapsedTime(&elapsed, start.get(), stop.get());
+
+                    // Clean up
+                    hipEventDestroy(start.get());
+                    hipEventDestroy(stop.get());
+                    handle_.ResetKernelTime();
+                    handle_.AccumKernelTime(elapsed);
+
+                    handle_.EnableProfiling(true);
                 }
-                size = AlignUp(size, LOCAL_SIZE_REDUCE_FWD) / LOCAL_SIZE_REDUCE_FWD;
-                if(handle_.IsProfilingEnabled())
-                    elapsed += handle_.GetKernelTime();
             }
-            if(handle_.IsProfilingEnabled())
-            {
-                handle_.ResetKernelTime();
-                handle_.AccumKernelTime(elapsed);
-            };
         };
     };
 
@@ -164,16 +206,15 @@ L1LossForward5d::GetSolution(const ExecutionContext& /*context*/,
 
 std::size_t
 L1LossForward5d::GetWorkspaceSize(const ExecutionContext& /*context*/,
-                                  const miopen::l1loss::L1LossFwdProblemDescription& problem) const
+                                  const miopen::l1loss::FwdProblemDescription& problem) const
 {
     if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
     {
         return 0;
     }
 
-    return (problem.GetIDesc().GetElementSize() +
-            AlignUp(problem.GetIDesc().GetElementSize(), LOCAL_SIZE_REDUCE_FWD) /
-                LOCAL_SIZE_REDUCE_FWD) *
+    size_t input_size = problem.GetIDesc().GetElementSize();
+    return (input_size + AlignUp(input_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE) *
            get_data_size(problem.GetODesc().GetType());
 }
 

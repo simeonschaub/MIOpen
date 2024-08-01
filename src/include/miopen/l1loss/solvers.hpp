@@ -28,8 +28,6 @@
 #include <miopen/l1loss/problem_description.hpp>
 #include <miopen/solver.hpp>
 
-#include <utility>
-
 namespace miopen {
 
 namespace solver {
@@ -37,20 +35,21 @@ namespace solver {
 namespace l1loss {
 
 using L1LossForwardSolverBase =
-    NonTunableSolverBase<ExecutionContext, miopen::l1loss::L1LossFwdProblemDescription>;
+    NonTunableSolverBase<ExecutionContext, miopen::l1loss::FwdProblemDescription>;
 
 struct L1LossForward5d final : L1LossForwardSolverBase
 {
     const std::string& SolverDbId() const override { return GetSolverDbId<L1LossForward5d>(); }
 
     bool IsApplicable(const ExecutionContext& context,
-                      const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
-    ConvSolution
-    GetSolution(const ExecutionContext& context,
-                const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
+                      const miopen::l1loss::FwdProblemDescription& problem) const override;
+    bool IsImprovementOverROCm(const ExecutionContext& context,
+                               const miopen::l1loss::FwdProblemDescription& problem) const;
+    ConvSolution GetSolution(const ExecutionContext& context,
+                             const miopen::l1loss::FwdProblemDescription& problem) const override;
     std::size_t
     GetWorkspaceSize(const ExecutionContext& context,
-                     const miopen::l1loss::L1LossFwdProblemDescription& problem) const override;
+                     const miopen::l1loss::FwdProblemDescription& problem) const override;
     bool MayNeedWorkspace() const override { return true; }
 };
 

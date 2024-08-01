@@ -29,36 +29,23 @@
 #endif
 
 #include "float_types.h"
-#include "tensor_view.hpp"
+#include "warp_shuffle.hpp"
 
-template <typename TIO>
-__device__ void L1LossReducedForward5d_kernel(const TIO* I,
-                                              const TIO* T,
-                                              TIO* lsum,
-                                              const size_t divisor,
-                                              tensor_view_t<5> I_tv,
-                                              tensor_view_t<5> T_tv)
+template <typename DTYPE>
+__device__ void LossSum(const DTYPE* __restrict__ input, DTYPE* __restrict__ output, uint64_t N)
 {
-    const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
-    const float div  = static_cast<float>(divisor);
-    tensor_layout_t<5> input_layout(I_tv, gid);
+    auto gid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if(input_layout.layout[0] >= I_tv.size[0])
-        return;
+    FLOAT_ACCUM val = gid < N ? CVT_FLOAT2ACCUM(input[gid]) : CVT_FP32_2ACCUM(0.0f);
+    val             = block_reduce_sum(val);
 
-    size_t Iidx = I_tv.get_tensor_view_idx(input_layout);
-    size_t Tidx = T_tv.get_tensor_view_idx(input_layout);
-
-    FLOAT_ACCUM diff = abs(CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx]));
-    lsum[gid]        = CVT_ACCUM2FLOAT(diff / div);
+    if(threadIdx.x == 0)
+        output[blockIdx.x] = CVT_ACCUM2FLOAT(val);
 }
 
-extern "C" __global__ void L1LossReducedForward5d(const IO_TYPE* I,
-                                                  const IO_TYPE* T,
-                                                  IO_TYPE* lsum,
-                                                  const size_t divisor,
-                                                  tensor_view_t<5> I_tv,
-                                                  tensor_view_t<5> T_tv)
+extern "C" __global__ void
+ReduceSumLoss(const FLOAT* __restrict__ input, FLOAT* __restrict__ output, uint64_t N)
 {
-    L1LossReducedForward5d_kernel<IO_TYPE>(I, T, lsum, divisor, I_tv, T_tv);
+    // instantiate the kernel
+    LossSum<FLOAT>(input, output, N);
 }

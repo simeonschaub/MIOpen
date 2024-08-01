@@ -33,74 +33,16 @@ namespace miopen {
 
 namespace l1loss {
 
-bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
+NetworkConfig FwdProblemDescription::MakeNetworkConfig() const
 {
-    if(x.GetNumDims() != y.GetNumDims())
-        return false;
-    for(int32_t i = 0; i < x.GetNumDims(); ++i)
-    {
-        if(x.GetLengths()[i] != y.GetLengths()[i])
-            return false;
-    }
-    return true;
-}
-
-bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y)
-{
-    if(x.GetNumDims() != y.GetNumDims())
-        return false;
-    for(int32_t i = 0; i < x.GetNumDims(); ++i)
-    {
-        if(x.GetStrides()[i] != y.GetStrides()[i])
-            return false;
-    }
-    return true;
-}
-
-bool checkRightStride(const TensorDescriptor& x)
-{
-    auto strides = x.GetStrides();
-    auto lengths = x.GetLengths();
-    std::vector<std::pair<size_t, size_t>> p;
-    p.reserve(x.GetNumDims());
-    std::transform(strides.begin(),
-                   strides.end(),
-                   lengths.begin(),
-                   std::back_inserter(p),
-                   [](size_t a, size_t b) { return std::make_pair(a, b); });
-    std::sort(p.begin(), p.end());
-    for(int i = 1; i < p.size(); ++i)
-    {
-        if(p[i].first != p[i - 1].first * p[i - 1].second)
-            return false;
-    }
-    return true;
-}
-
-bool checkContiguous(const TensorDescriptor& x)
-{
-    size_t s = 1;
-    for(int i = x.GetNumDims() - 1; i >= 0; --i)
-    {
-        if(s != x.GetStrides()[i])
-            return false;
-        s *= x.GetLengths()[i];
-    }
-    return true;
-}
-
-NetworkConfig L1LossFwdProblemDescription::MakeNetworkConfig() const
-{
-    auto input_dtype  = iDesc.GetType();
-    auto output_dtype = oDesc.GetType();
-    auto size         = iDesc.GetElementSize();
+    auto input_dtype = iDesc.GetType();
+    auto size        = iDesc.GetElementSize();
 
     std::ostringstream ss;
 
     ss << "l1loss_fwd";
     ss << "reduction" << reduction;
     ss << "i_dtype" << input_dtype;
-    ss << "o_dtype" << output_dtype;
     ss << "size" << size;
 
     return NetworkConfig{ss.str()};

@@ -35,7 +35,7 @@ namespace l1loss {
 
 std::string GetFloatArg()
 {
-    const auto& tmp = miopen::GetStringEnv(ENV(MIOPEN_TEST_FLOAT_ARG));
+    const auto& tmp = env::value(MIOPEN_TEST_FLOAT_ARG);
     if(tmp.empty())
     {
         return "";
@@ -60,8 +60,7 @@ using namespace l1loss;
 
 TEST_P(L1LossFwdTestFloat, L1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
-       (GetFloatArg() == "--float" || GetFloatArg() == "--all"))
+    if(!MIOPEN_TEST_ALL || (env::enabled(MIOPEN_TEST_ALL) && GetFloatArg() == "--float"))
     {
         RunTest();
         Verify();
@@ -74,8 +73,7 @@ TEST_P(L1LossFwdTestFloat, L1LossTestFw)
 
 TEST_P(L1LossFwdTestFP16, L1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
-       (GetFloatArg() == "--fp16" || GetFloatArg() == "--all"))
+    if(!MIOPEN_TEST_ALL || (env::enabled(MIOPEN_TEST_ALL) && GetFloatArg() == "--fp16"))
     {
         RunTest();
         Verify();
@@ -88,8 +86,7 @@ TEST_P(L1LossFwdTestFP16, L1LossTestFw)
 
 TEST_P(L1LossFwdTestBfloat16, L1LossTestFw)
 {
-    if(miopen::IsEnabled(ENV(MIOPEN_TEST_ALL)) &&
-       (GetFloatArg() == "--bfloat16" || GetFloatArg() == "--all"))
+    if(!MIOPEN_TEST_ALL || (env::enabled(MIOPEN_TEST_ALL) && GetFloatArg() == "--bfloat16"))
     {
         RunTest();
         Verify();

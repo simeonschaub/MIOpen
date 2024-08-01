@@ -23,42 +23,51 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+
+#ifndef GUARD_WARP_SHUFFLE_HPP
+#define GUARD_WARP_SHUFFLE_HPP
+
 #ifndef MIOPEN_DONT_USE_HIP_RUNTIME_HEADERS
 #include <hip/hip_fp16.h>
 #include <hip/hip_runtime.h>
 #endif
 
 #include "float_types.h"
-#include "tensor_view.hpp"
 
-template <typename TIO>
-__device__ void L1LossReducedForward5d_kernel(const TIO* I,
-                                              const TIO* T,
-                                              TIO* lsum,
-                                              const size_t divisor,
-                                              tensor_view_t<5> I_tv,
-                                              tensor_view_t<5> T_tv)
+__device__ FLOAT_ACCUM warp_reduce_sum(FLOAT_ACCUM val)
 {
-    const size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
-    const float div  = static_cast<float>(divisor);
-    tensor_layout_t<5> input_layout(I_tv, gid);
-
-    if(input_layout.layout[0] >= I_tv.size[0])
-        return;
-
-    size_t Iidx = I_tv.get_tensor_view_idx(input_layout);
-    size_t Tidx = T_tv.get_tensor_view_idx(input_layout);
-
-    FLOAT_ACCUM diff = abs(CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx]));
-    lsum[gid]        = CVT_ACCUM2FLOAT(diff / div);
+    if(warpSize >= 64)
+        val += __shfl_down(val, 32);
+    if(warpSize >= 32)
+        val += __shfl_down(val, 16);
+    if(warpSize >= 16)
+        val += __shfl_down(val, 8);
+    if(warpSize >= 8)
+        val += __shfl_down(val, 4);
+    if(warpSize >= 4)
+        val += __shfl_down(val, 2);
+    if(warpSize >= 2)
+        val += __shfl_down(val, 1);
+    return val;
 }
 
-extern "C" __global__ void L1LossReducedForward5d(const IO_TYPE* I,
-                                                  const IO_TYPE* T,
-                                                  IO_TYPE* lsum,
-                                                  const size_t divisor,
-                                                  tensor_view_t<5> I_tv,
-                                                  tensor_view_t<5> T_tv)
+__device__ FLOAT_ACCUM block_reduce_sum(FLOAT_ACCUM val)
 {
-    L1LossReducedForward5d_kernel<IO_TYPE>(I, T, lsum, divisor, I_tv, T_tv);
+    static __shared__ FLOAT_ACCUM shared[REDUCE_SIZE / warpSize];
+    auto lane = threadIdx.x % warpSize;
+    auto wid  = threadIdx.x / warpSize;
+
+    val = warp_reduce_sum(val);
+
+    if(lane == 0)
+        shared[wid] = val;
+    __syncthreads();
+
+    val = threadIdx.x < REDUCE_SIZE / warpSize ? shared[lane] : 0;
+    if(wid == 0)
+        val = warp_reduce_sum(val);
+
+    return val;
 }
+
+#endif // GUARD_WARP_SHUFFLE_HPP

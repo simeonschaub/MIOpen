@@ -24,12 +24,9 @@
  *
  *******************************************************************************/
 
-#include "miopen/l1loss/problem_description.hpp"
-#include "miopen/miopen.h"
-#include <miopen/datatype.hpp>
+#include <miopen/l1loss/problem_description.hpp>
+#include <miopen/miopen.h>
 #include <miopen/find_solution.hpp>
-#include <miopen/float_equal.hpp>
-#include <miopen/kernel_cache.hpp>
 #include <miopen/l1loss/invoke_params.hpp>
 #include <miopen/l1loss/solvers.hpp>
 #include <miopen/l1loss.hpp>
@@ -44,7 +41,7 @@ size_t GetL1LossForwardWorkspaceSize(Handle& handle,
                                      const TensorDescriptor& oDesc)
 {
     auto ctx           = ExecutionContext{&handle};
-    const auto problem = l1loss::L1LossFwdProblemDescription{iDesc, tDesc, oDesc, reduction};
+    const auto problem = l1loss::FwdProblemDescription{iDesc, tDesc, oDesc, reduction};
 
     const auto algo    = AlgorithmName{"L1LossForward"};
     const auto solvers = solver::SolverContainer<solver::l1loss::L1LossForward5d>{};
@@ -65,7 +62,7 @@ miopenStatus_t L1LossForward(Handle& handle,
                              const TensorDescriptor& oDesc,
                              Data_t o)
 {
-    const auto problem = l1loss::L1LossFwdProblemDescription{iDesc, tDesc, oDesc, reduction};
+    const auto problem = l1loss::FwdProblemDescription{iDesc, tDesc, oDesc, reduction};
 
     const auto invoke_params = [&]() {
         auto tmp           = l1loss::InvokeParams{};

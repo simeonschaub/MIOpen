@@ -24,61 +24,51 @@
  *
  *******************************************************************************/
 
-#include "../driver/tensor_driver.hpp"
 #include "cpu_l1loss.hpp"
 #include "get_handle.hpp"
-#include "random.hpp"
 #include "tensor_holder.hpp"
 #include "verify.hpp"
 #include <algorithm>
+#include <cstddef>
 #include <gtest/gtest.h>
 #include <miopen/miopen.h>
 #include <miopen/l1loss.hpp>
 
 struct L1LossTestCase
 {
-    size_t N;
-    size_t C;
-    size_t D;
-    size_t H;
-    size_t W;
+    std::vector<size_t> dims;
     miopenL1LossReduction_t reduction;
-    bool contiguous;
+    bool isContiguous;
 
     friend std::ostream& operator<<(std::ostream& os, const L1LossTestCase& tc)
     {
-        return os << " N:" << tc.N << " C:" << tc.C << " D:" << tc.D << " H:" << tc.H
-                  << " W:" << tc.W << " reducion mode:" << tc.reduction
-                  << " contiguous:" << tc.contiguous;
+        os << "Dims: ";
+        for(auto dim_sz : tc.dims)
+        {
+            os << dim_sz << " ";
+        }
+        return os << " reducion mode: " << tc.reduction << " contiguous: " << tc.isContiguous;
     }
 
-    std::vector<size_t> GetInput()
+    L1LossTestCase() {}
+
+    L1LossTestCase(std::vector<size_t> dims_, miopenL1LossReduction_t reduction_, bool cont_)
+        : dims(dims_), reduction(reduction_), isContiguous()(cont_)
     {
-        if((N != 0) && (C != 0) && (D != 0) && (H != 0) && (W != 0))
-        {
-            return std::vector<size_t>({N, C, D, H, W});
-        }
-        else if((N != 0) && (C != 0) && (H != 0) && (W != 0))
-        {
-            return std::vector<size_t>({N, C, H, W});
-        }
-        else if((N != 0) && (C != 0) && (W != 0))
-        {
-            return std::vector<size_t>({N, C, W});
-        }
-        else if((N != 0) && (W != 0))
-        {
-            return std::vector<size_t>({N, W});
-        }
-        else if((N != 0))
-        {
-            return std::vector<size_t>({N});
-        }
-        else
-        {
-            std::cout << "Error Input Tensor Lengths\n" << std::endl;
-            return std::vector<size_t>({0});
-        }
+    }
+
+    std::vector<size_t> ComputeStrides() const
+    {
+        std::vector<size_t> inputDim = dims;
+        if(!isContiguous)
+            std::swap(inputDim.front(), inputDim.back());
+        std::vector<size_t> strides(inputDim.size());
+        strides.back() = 1;
+        for(int i = inputDim.size() - 2; i >= 0; --i)
+            strides[i] = strides[i + 1] * inputDim[i + 1];
+        if(!isContiguous)
+            std::swap(strides.front(), strides.back());
+        return strides;
     }
 };
 
@@ -86,32 +76,19 @@ inline std::vector<L1LossTestCase> L1LossTestConfigs()
 { // n c d h w dim
     // clang-format off
     return {
-        {1, 1, 1, 1, 1, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {1, 2, 3, 4, 1, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {1, 1, 1, 257, 1, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {2, 10, 128, 128, 1, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {5, 13, 17, 11, 1, MIOPEN_L1LOSS_MEAN_REDUCTION, false},
-        {256, 4, 8723, 1, 1, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {256, 4, 8723, 1, 1, MIOPEN_L1LOSS_SUM_REDUCTION, true},
-        {1, 1, 1, 1, 1, MIOPEN_L1LOSS_SUM_REDUCTION, true},
-        {34, 4, 5, 1, 1, MIOPEN_L1LOSS_SUM_REDUCTION, true},
-        {4, 7, 5, 1, 1, MIOPEN_L1LOSS_SUM_REDUCTION, true},
-        {15, 4, 5, 1, 1, MIOPEN_L1LOSS_SUM_REDUCTION, true}
+        {{1, 1, 1, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
+        {{1, 2, 3, 4, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
+        {{1, 1, 1, 257, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
+        {{2, 10, 128, 128, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
+        {{5, 13, 17, 11, 1}, MIOPEN_L1LOSS_MEAN_REDUCTION, false},
+        {{256, 4, 8723, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
+        {{256, 4, 8723, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true},
+        {{1, 1, 1, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true},
+        {{34, 4, 5, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true},
+        {{4, 7, 5, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true},
+        {{15, 4, 5, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true}
     };
     // clang-format on
-}
-
-inline std::vector<size_t> GetStrides(std::vector<size_t> lengths, bool contiguous)
-{
-    if(!contiguous)
-        std::swap(lengths.front(), lengths.back());
-    std::vector<size_t> strides(lengths.size());
-    strides.back() = 1;
-    for(int i = lengths.size() - 2; i >= 0; --i)
-        strides[i] = strides[i + 1] * lengths[i + 1];
-    if(!contiguous)
-        std::swap(strides.front(), strides.back());
-    return strides;
 }
 
 template <typename T = float>
@@ -126,23 +103,20 @@ protected:
         auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 2); };
 
         reduction       = l1loss_config.reduction;
-        auto in_dims    = l1loss_config.GetInput();
-        auto contiguous = l1loss_config.contiguous;
-
-        auto in_strides = GetStrides(in_dims, contiguous);
+        auto in_dims    = l1loss_config.dims;
+        auto in_strides = l1loss_config.ComputeStrides();
         input           = tensor<T>{in_dims, in_strides}.generate(gen_value1);
 
-        auto tar_strides = GetStrides(in_dims, contiguous);
+        auto tar_strides = l1loss_config.ComputeStrides();
         target           = tensor<T>{in_dims, tar_strides}.generate(gen_value2);
 
         auto out_lengths =
             (reduction == MIOPEN_L1LOSS_NONE_REDUCTION) ? in_dims : std::vector<size_t>{1};
-        auto out_strides = GetStrides(out_lengths, contiguous);
 
-        output = tensor<T>{out_lengths, out_strides};
+        output = tensor<T>{out_lengths};
         std::fill(output.begin(), output.end(), std::numeric_limits<T>::quiet_NaN());
 
-        ref_output = tensor<T>{out_lengths, out_strides};
+        ref_output = tensor<T>{out_lengths};
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
         std::vector<size_t> workspace_lengths;

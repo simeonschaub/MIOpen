@@ -25,12 +25,9 @@
  *******************************************************************************/
 #pragma once
 
-#include "miopen/miopen.h"
-#include <cstddef>
+#include <miopen/miopen.h>
 #include <miopen/invoke_params.hpp>
 #include <miopen/tensor.hpp>
-
-#include <limits>
 
 namespace miopen {
 
