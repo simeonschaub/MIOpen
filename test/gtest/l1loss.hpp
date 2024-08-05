@@ -28,6 +28,7 @@
 #include "get_handle.hpp"
 #include "tensor_holder.hpp"
 #include "verify.hpp"
+#include "random.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <gtest/gtest.h>
@@ -53,7 +54,7 @@ struct L1LossTestCase
     L1LossTestCase() {}
 
     L1LossTestCase(std::vector<size_t> dims_, miopenL1LossReduction_t reduction_, bool cont_)
-        : dims(dims_), reduction(reduction_), isContiguous()(cont_)
+        : dims(dims_), reduction(reduction_), isContiguous(cont_)
     {
     }
 

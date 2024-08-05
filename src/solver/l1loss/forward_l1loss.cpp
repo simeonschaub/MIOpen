@@ -47,11 +47,27 @@ namespace solver {
 
 namespace l1loss {
 
+bool L1LossForward5d::IsImprovementOverROCm(
+    const ExecutionContext& /*context*/, const miopen::l1loss::FwdProblemDescription& problem) const
+{
+    if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
+    {
+        return false;
+    }
+
+    /* TODO: Maybe <= 2 kernels should be used */
+
+    return true;
+}
+
 bool L1LossForward5d::IsApplicable(const ExecutionContext& /*context*/,
                                    const miopen::l1loss::FwdProblemDescription& problem) const
 {
-    if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
+    if(!IsImprovementOverROCm({}, problem))
+    {
         return false;
+    }
+
     return true;
 }
 

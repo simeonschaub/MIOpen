@@ -43,10 +43,13 @@ struct L1LossForward5d final : L1LossForwardSolverBase
 
     bool IsApplicable(const ExecutionContext& context,
                       const miopen::l1loss::FwdProblemDescription& problem) const override;
+
     bool IsImprovementOverROCm(const ExecutionContext& context,
                                const miopen::l1loss::FwdProblemDescription& problem) const;
+
     ConvSolution GetSolution(const ExecutionContext& context,
                              const miopen::l1loss::FwdProblemDescription& problem) const override;
+
     std::size_t
     GetWorkspaceSize(const ExecutionContext& context,
                      const miopen::l1loss::FwdProblemDescription& problem) const override;
