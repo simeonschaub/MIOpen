@@ -23,8 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GUARD_CPU_SMOOTH_L1LOSS_HPP
-#define GUARD_CPU_SMOOTH_L1LOSS_HPP
+#pragma once
 
 #include "tensor_holder.hpp"
 #include <miopen/tensor_view_5d.hpp>
@@ -117,5 +116,3 @@ void cpu_smooth_l1loss_reduced_backward(tensor<T> input,
         ref_dT[TV5D_IDX(dT_tv, n[0], n[1], n[2], n[3], n[4])] = -grad;
     });
 }
-
-#endif // GUARD_CPU_SMOOTH_L1LOSS_HPP

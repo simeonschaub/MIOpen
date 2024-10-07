@@ -24,7 +24,6 @@
  *
  *******************************************************************************/
 
-#include "../driver/tensor_driver.hpp"
 #include "cpu_smooth_l1loss.hpp"
 #include "get_handle.hpp"
 #include "random.hpp"
