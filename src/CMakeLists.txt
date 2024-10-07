@@ -191,6 +191,8 @@ set( MIOpen_Source
     rnn/Solutions/bww_multi_stream.cpp
     rope_api.cpp
     rope/problem_description.cpp
+    smoothl1loss/problem_description.cpp
+    smooth_l1loss_api.cpp
     scalar.cpp
     softmarginloss/problem_description.cpp 
     softmarginloss_api.cpp
@@ -327,6 +329,8 @@ set( MIOpen_Source
     solver/reduce/forward_sum.cpp
     solver/rope/backward_rope.cpp
     solver/rope/forward_rope.cpp
+    solver/smoothl1loss/forward_smooth_l1loss.cpp
+    solver/smoothl1loss/backward_smooth_l1loss.cpp
     solver/softmarginloss/backward_softmarginloss.cpp
     solver/softmarginloss/forward_softmarginloss.cpp
     solver/softmax/attn_softmax.cpp
@@ -499,7 +503,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/xform_kd_cov2.inc
         kernels/xform_metadata.inc
         )
-
+        
     set(MIOPEN_KERNELS
         ${STATIC_COMPOSABLE_KERNEL_SOURCE}
         ${COMPOSABLE_KERNEL_SOURCE}
@@ -546,6 +550,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/MIOpenReduceExtreme.cpp
         kernels/MIOpenReduceSum.cpp
         kernels/MIOpenRoPE.cpp
+        kernels/MIOpenSmoothL1Loss.cpp
         kernels/MIOpenSoftMarginLoss.cpp
         kernels/MIOpenSoftmax.cl
         kernels/MIOpenSoftmaxAttn.cpp
@@ -695,6 +700,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         reducecalculation.cpp
         reduceextreme.cpp
         rope.cpp
+        smooth_l1loss.cpp
         softmarginloss.cpp
         transformers_adam_w.cpp
         ${PROJECT_BINARY_DIR}/db_path.cpp

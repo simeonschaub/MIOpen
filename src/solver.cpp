@@ -40,6 +40,7 @@
 #include <miopen/reduce/solvers.hpp>
 #include <miopen/rope/solvers.hpp>
 #include <miopen/mha/solvers.hpp>
+#include <miopen/smoothl1loss/solvers.hpp>
 #include <miopen/softmarginloss/solvers.hpp>
 #include <miopen/softmax/solvers.hpp>
 
@@ -621,6 +622,12 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     Register(registry, ++id, Primitive::Batchnorm, batchnorm::BnCKBwdBackward{}.SolverDbId());
     Register(registry, ++id, Primitive::Batchnorm, batchnorm::BnCKFwdTraining{}.SolverDbId());
     Register(
+        registry, ++id, Primitive::Loss, smoothl1loss::SmoothL1LossReducedForward5d{}.SolverDbId());
+    Register(registry,
+             ++id,
+             Primitive::Loss,
+             smoothl1loss::SmoothL1LossReducedBackward5d{}.SolverDbId());
+    Register(
         registry, ++id, Primitive::Normalization, layernorm::Layernorm2DCKForward{}.SolverDbId());
     Register(
         registry, ++id, Primitive::Normalization, layernorm::Layernorm4DCKForward{}.SolverDbId());
@@ -686,14 +693,17 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     Register(registry, ++id, Primitive::Activation, glu::GLUForward{}.SolverDbId());
     Register(registry, ++id, Primitive::Activation, glu::GLUBackward{}.SolverDbId());
 
+    Register(registry, ++id, Primitive::Loss, softmarginloss::SoftMarginLossForward{}.SolverDbId());
+    Register(
+        registry, ++id, Primitive::Loss, softmarginloss::SoftMarginLossBackward{}.SolverDbId());
+
+    Register(
+        registry, ++id, Primitive::Loss, smoothl1loss::SmoothL1LossReducedForward5d{}.SolverDbId());
     Register(registry,
              ++id,
-             Primitive::SoftMarginLoss,
-             softmarginloss::SoftMarginLossForward{}.SolverDbId());
-    Register(registry,
-             ++id,
-             Primitive::SoftMarginLoss,
-             softmarginloss::SoftMarginLossBackward{}.SolverDbId());
+             Primitive::Loss,
+             smoothl1loss::SmoothL1LossReducedBackward5d{}.SolverDbId());
+
     // IMPORTANT: New solvers should be added to the end of the function!
 }
 
