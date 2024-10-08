@@ -7931,77 +7931,77 @@ MIOPEN_EXPORT miopenStatus_t miopenSoftMarginLossBackward(miopenHandle_t handle,
 
 /*! @brief Helper function to query the minimum workspace size required by the smooth L1Loss call
  *
- * @param handle                   MIOpen Handle (input)
- * @param iDesc                    Tensor descriptor for input tensor (input)
- * @param tDesc                    Tensor descriptor for target tensor (input)
- * @param oDesc                    Tensor descriptor for output tensor (input)
- * @param sizeInBytes              Pointer to data to return the minimum workspace size
- * @return                         miopenStatus_t
+ * @param [in]  handle                  MIOpen Handle
+ * @param [in]  inputDesc               Tensor descriptor for input tensor
+ * @param [in]  outputDesc              Tensor descriptor for output tensor
+ * @param [out] sizeInBytes             Pointer to data to return the minimum workspace size
+ * @param [in]  reduction               Reduction mode (none, sum, mean)
+ * @return                              miopenStatus_t
  */
 MIOPEN_EXPORT miopenStatus_t
-miopenGetSmoothL1LossReducedForwardWorkspaceSize(miopenHandle_t handle,
-                                                 miopenTensorDescriptor_t iDesc,
-                                                 miopenTensorDescriptor_t tDesc,
-                                                 miopenTensorDescriptor_t oDesc,
-                                                 size_t* sizeInBytes);
+miopenGetSmoothL1LossForwardWorkspaceSize(miopenHandle_t handle,
+                                          miopenTensorDescriptor_t inputDesc,
+                                          miopenTensorDescriptor_t outputDesc,
+                                          miopenLossReductionMode_t reduction,
+                                          size_t* sizeInBytes);
 
 /*! @brief Execute a Smooth L1Loss forward layer
  *
- * @param handle                   MIOpen handle (input)
- * @param workspace                Address of the allocated workspace data (input)
- * @param workspaceSizeInBytes     Size in bytes of the allocated workspace data (input)
- * @param iDesc                    Tensor descriptor for input tensor (input)
- * @param i                        Data tensor input (input)
- * @param tDesc                    Tensor descriptor for target tensor (input)
- * @param t                        Data tensor target (input)
- * @param oDesc                    Tensor descriptor for output tensor (input)
- * @param o                        Data tensor output (output)
- * @param beta                     Beta (input)
- * @param divisor                  Divisor (input)
- * @return                         miopenStatus_t
+ * @param [in]  handle                  MIOpen handle (input)
+ * @param [in]  workspace               Address of the allocated workspace data
+ * @param [in]  workspaceSizeInBytes    Size in bytes of the allocated workspace data
+ * @param [in]  inputDesc               Tensor descriptor for input tensor
+ * @param [in]  input                   Data tensor input
+ * @param [in]  targetDesc              Tensor descriptor for target tensor
+ * @param [in]  target                  Data tensor target
+ * @param [in]  outputDesc              Tensor descriptor for output tensor
+ * @param [out] output                  Data tensor output
+ * @param [in]  beta                    Beta
+ * @param [in]  reduction               Reduction mode (none, sum, mean)
+ * @return                              miopenStatus_t
  */
-MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossReducedForward(miopenHandle_t handle,
-                                                              void* workspace,
-                                                              size_t workspaceSizeInBytes,
-                                                              miopenTensorDescriptor_t iDesc,
-                                                              const void* i,
-                                                              miopenTensorDescriptor_t tDesc,
-                                                              const void* t,
-                                                              miopenTensorDescriptor_t oDesc,
-                                                              void* o,
-                                                              float beta,
-                                                              float divisor);
+MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
+                                                       void* workspace,
+                                                       size_t workspaceSizeInBytes,
+                                                       miopenTensorDescriptor_t inputDesc,
+                                                       const void* input,
+                                                       miopenTensorDescriptor_t targetDesc,
+                                                       const void* target,
+                                                       miopenTensorDescriptor_t outputDesc,
+                                                       void* output,
+                                                       float beta,
+                                                       miopenLossReductionMode_t reduction);
 
 /*! @brief Execute the Backward Smooth L1Loss
  *
- * @param handle                   MIOpen handle (input)
- * @param iDesc                    Tensor descriptor for input tensor (input)
- * @param i                        Data tensor input (input)
- * @param tDesc                    Tensor descriptor for target tensor (input)
- * @param t                        Data tensor target (input)
- * @param doDesc                   Tensor descriptor for output gradient (input)
- * @param dO                       Gradient of output (input)
- * @param diDesc                   Tensor descriptor for input gradient (input)
- * @param dI                       Gradient of input (output)
- * @param dtDesc                   Tensor descriptor for target gradient (input)
- * @param dT                       Gradient of target (output)
- * @param beta                     Beta (input)
- * @param divisor                  Divisor (input)
- * @return                         miopenStatus_t
+ * @param [in]  handle                  MIOpen handle
+ * @param [in]  inputDesc               Tensor descriptor for input tensor
+ * @param [in]  input                   Data tensor input
+ * @param [in]  targetDesc              Tensor descriptor for target tensor
+ * @param [in]  target                  Data tensor target
+ * @param [in]  doutputDesc             Tensor descriptor for output gradient
+ * @param [in]  doutput                 Gradient of output
+ * @param [in]  dinputDesc              Tensor descriptor for input gradient
+ * @param [out] dinput                  Gradient of input
+ * @param [in]  dtargetDesc             Tensor descriptor for target gradient
+ * @param [out] dtarget                 Gradient of target
+ * @param [in]  beta                    Beta
+ * @param [in]  reduction               Reduction mode (none, sum, mean)
+ * @return                              miopenStatus_t
  */
-MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossReducedBackward(miopenHandle_t handle,
-                                                               miopenTensorDescriptor_t iDesc,
-                                                               const void* i,
-                                                               miopenTensorDescriptor_t tDesc,
-                                                               const void* t,
-                                                               miopenTensorDescriptor_t doDesc,
-                                                               const void* dO,
-                                                               miopenTensorDescriptor_t diDesc,
-                                                               void* dI,
-                                                               miopenTensorDescriptor_t dtDesc,
-                                                               void* dT,
-                                                               float beta,
-                                                               float divisor);
+MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossBackward(miopenHandle_t handle,
+                                                        miopenTensorDescriptor_t inputargetDesc,
+                                                        const void* input,
+                                                        miopenTensorDescriptor_t targetDesc,
+                                                        const void* target,
+                                                        miopenTensorDescriptor_t doutputDesc,
+                                                        const void* doutput,
+                                                        miopenTensorDescriptor_t dinputDesc,
+                                                        void* dinput,
+                                                        miopenTensorDescriptor_t dtargetDesc,
+                                                        void* dtarget,
+                                                        float beta,
+                                                        miopenLossReductionMode_t reduction);
 
 /** @} */
 // CLOSEOUT LossFunction DOXYGEN GROUP

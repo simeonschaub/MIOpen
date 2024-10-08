@@ -28,53 +28,44 @@
 #include <miopen/smoothl1loss/problem_description.hpp>
 #include <miopen/solver.hpp>
 
-#include <utility>
-
 namespace miopen {
 
 namespace solver {
 
 namespace smoothl1loss {
 
-using SmoothL1LossReducedForwardSolverBase =
-    NonTunableSolverBase<ExecutionContext, miopen::smoothl1loss::ReducedForwardProblemDescription>;
+using SmoothL1LossForwardSolverBase =
+    NonTunableSolverBase<ExecutionContext, miopen::smoothl1loss::ForwardProblemDescription>;
 
-struct SmoothL1LossReducedForward5d final : SmoothL1LossReducedForwardSolverBase
+struct SmoothL1LossForward final : SmoothL1LossForwardSolverBase
 {
-    const std::string& SolverDbId() const override
-    {
-        return GetSolverDbId<SmoothL1LossReducedForward5d>();
-    }
+    const std::string& SolverDbId() const override { return GetSolverDbId<SmoothL1LossForward>(); }
 
-    bool IsApplicable(
-        const ExecutionContext& context,
-        const miopen::smoothl1loss::ReducedForwardProblemDescription& problem) const override;
-    ConvSolution GetSolution(
-        const ExecutionContext& context,
-        const miopen::smoothl1loss::ReducedForwardProblemDescription& problem) const override;
-    std::size_t GetWorkspaceSize(
-        const ExecutionContext& context,
-        const miopen::smoothl1loss::ReducedForwardProblemDescription& problem) const override;
+    bool
+    IsApplicable(const ExecutionContext& context,
+                 const miopen::smoothl1loss::ForwardProblemDescription& problem) const override;
+    ConvSolution
+    GetSolution(const ExecutionContext& context,
+                const miopen::smoothl1loss::ForwardProblemDescription& problem) const override;
+    std::size_t
+    GetWorkspaceSize(const ExecutionContext& context,
+                     const miopen::smoothl1loss::ForwardProblemDescription& problem) const override;
     bool MayNeedWorkspace() const override { return true; }
 };
 
-using SmoothL1LossReducedBackwardSolverBase =
-    NonTunableSolverBase<ExecutionContext, miopen::smoothl1loss::ReducedBackwardProblemDescription>;
+using SmoothL1LossBackwardSolverBase =
+    NonTunableSolverBase<ExecutionContext, miopen::smoothl1loss::BackwardProblemDescription>;
 
-struct SmoothL1LossReducedBackward5d final : SmoothL1LossReducedBackwardSolverBase
+struct SmoothL1LossBackward final : SmoothL1LossBackwardSolverBase
 {
-    const std::string& SolverDbId() const override
-    {
-        return GetSolverDbId<SmoothL1LossReducedBackward5d>();
-    }
+    const std::string& SolverDbId() const override { return GetSolverDbId<SmoothL1LossBackward>(); }
 
-    bool IsApplicable(
-        const ExecutionContext& context,
-        const miopen::smoothl1loss::ReducedBackwardProblemDescription& problem) const override;
-    ConvSolution GetSolution(
-        const ExecutionContext& context,
-        const miopen::smoothl1loss::ReducedBackwardProblemDescription& problem) const override;
-    bool MayNeedWorkspace() const override { return false; }
+    bool
+    IsApplicable(const ExecutionContext& context,
+                 const miopen::smoothl1loss::BackwardProblemDescription& problem) const override;
+    ConvSolution
+    GetSolution(const ExecutionContext& context,
+                const miopen::smoothl1loss::BackwardProblemDescription& problem) const override;
 };
 
 } // namespace smoothl1loss

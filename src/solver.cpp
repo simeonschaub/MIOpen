@@ -622,12 +622,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     Register(registry, ++id, Primitive::Batchnorm, batchnorm::BnCKBwdBackward{}.SolverDbId());
     Register(registry, ++id, Primitive::Batchnorm, batchnorm::BnCKFwdTraining{}.SolverDbId());
     Register(
-        registry, ++id, Primitive::Loss, smoothl1loss::SmoothL1LossReducedForward5d{}.SolverDbId());
-    Register(registry,
-             ++id,
-             Primitive::Loss,
-             smoothl1loss::SmoothL1LossReducedBackward5d{}.SolverDbId());
-    Register(
         registry, ++id, Primitive::Normalization, layernorm::Layernorm2DCKForward{}.SolverDbId());
     Register(
         registry, ++id, Primitive::Normalization, layernorm::Layernorm4DCKForward{}.SolverDbId());
@@ -697,12 +691,8 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
     Register(
         registry, ++id, Primitive::Loss, softmarginloss::SoftMarginLossBackward{}.SolverDbId());
 
-    Register(
-        registry, ++id, Primitive::Loss, smoothl1loss::SmoothL1LossReducedForward5d{}.SolverDbId());
-    Register(registry,
-             ++id,
-             Primitive::Loss,
-             smoothl1loss::SmoothL1LossReducedBackward5d{}.SolverDbId());
+    Register(registry, ++id, Primitive::Loss, smoothl1loss::SmoothL1LossForward{}.SolverDbId());
+    Register(registry, ++id, Primitive::Loss, smoothl1loss::SmoothL1LossBackward{}.SolverDbId());
 
     // IMPORTANT: New solvers should be added to the end of the function!
 }

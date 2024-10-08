@@ -24,14 +24,14 @@
  *
  *******************************************************************************/
 
-#include "cpu_smooth_l1loss.hpp"
+#include "cpu_smoothl1loss.hpp"
 #include "get_handle.hpp"
 #include "random.hpp"
 #include "tensor_holder.hpp"
 #include "verify.hpp"
 #include <gtest/gtest.h>
 #include <miopen/miopen.h>
-#include <miopen/smooth_l1loss.hpp>
+#include <miopen/smoothl1loss.hpp>
 
 inline std::ostream& operator<<(std::ostream& os, const std::vector<size_t>& v)
 {
@@ -50,12 +50,13 @@ struct SmoothL1LossTestCase
 {
     std::vector<size_t> lengths;
     float beta;
-    float divisor;
+    miopenLossReductionMode_t reduction;
     bool contiguous;
 
     friend std::ostream& operator<<(std::ostream& os, const SmoothL1LossTestCase& tc)
     {
-        return os << " Lengths:" << tc.lengths << " Beta:" << tc.beta << " Divisor:" << tc.divisor
+        return os << " Lengths:" << tc.lengths << " Beta:" << tc.beta
+                  << " Reduction:" << tc.reduction
                   << " Contiguous:" << (tc.contiguous ? "True" : "False");
     }
 };
@@ -63,15 +64,20 @@ struct SmoothL1LossTestCase
 inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs()
 {
     std::vector<SmoothL1LossTestCase> tcs;
-    tcs.push_back({{1, 2, 3, 4}, 1, 1, false});
-    tcs.push_back({{1, 1, 1, 257}, 1, 1, false});
-    tcs.push_back({{2, 10, 128, 128}, 1, 1, false});
-    tcs.push_back({{5, 13, 17, 11}, 1, 1, false});
-    tcs.push_back({{256, 4, 8723}, 1, 1, false});
-    tcs.push_back({{1, 1, 1}, 1, 1, true});
-    tcs.push_back({{34, 4, 5}, 1, 1, true});
-    tcs.push_back({{4, 7, 5}, 1, 1, true});
-    tcs.push_back({{15, 4, 5}, 1, 1, true});
+    auto all_mode = {
+        MIOPEN_LOSS_REDUCTION_NONE, MIOPEN_LOSS_REDUCTION_SUM, MIOPEN_LOSS_REDUCTION_MEAN};
+    for(auto reduction : all_mode)
+    {
+        tcs.push_back({{1, 2, 3, 4}, 1, reduction, false});
+        tcs.push_back({{1, 1, 1, 257}, 1, reduction, false});
+        tcs.push_back({{2, 10, 128, 128}, 1, reduction, false});
+        tcs.push_back({{5, 13, 17, 11}, 1, reduction, false});
+        tcs.push_back({{256, 4, 8723}, 1, reduction, false});
+        tcs.push_back({{1, 1, 1}, 1, reduction, true});
+        tcs.push_back({{34, 4, 5}, 1, reduction, true});
+        tcs.push_back({{4, 7, 5}, 1, reduction, true});
+        tcs.push_back({{15, 4, 5}, 1, reduction, true});
+    }
     return tcs;
 }
 
@@ -94,15 +100,15 @@ struct SmoothL1LossTestForward : public ::testing::TestWithParam<SmoothL1LossTes
 protected:
     void SetUp() override
     {
-        auto&& handle        = get_handle();
-        smooth_l1loss_config = GetParam();
-        auto gen_value1      = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 1); };
-        auto gen_value2      = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 2); };
+        auto&& handle       = get_handle();
+        smoothl1loss_config = GetParam();
+        auto gen_value1     = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 1); };
+        auto gen_value2     = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 2); };
 
-        beta            = smooth_l1loss_config.beta;
-        divisor         = smooth_l1loss_config.divisor;
-        auto lengths    = smooth_l1loss_config.lengths;
-        auto contiguous = smooth_l1loss_config.contiguous;
+        beta            = smoothl1loss_config.beta;
+        reduction       = smoothl1loss_config.reduction;
+        auto lengths    = smoothl1loss_config.lengths;
+        auto contiguous = smoothl1loss_config.contiguous;
 
         auto in_strides = GetStrides(lengths, true);
         input           = tensor<T>{lengths, in_strides}.generate(gen_value1);
@@ -110,7 +116,8 @@ protected:
         auto tar_strides = GetStrides(lengths, contiguous);
         target           = tensor<T>{lengths, tar_strides}.generate(gen_value2);
 
-        auto out_lengths = std::isnan(divisor) ? lengths : std::vector<size_t>{1};
+        auto out_lengths =
+            (reduction == MIOPEN_LOSS_REDUCTION_NONE ? lengths : std::vector<size_t>{1});
         auto out_strides = GetStrides(out_lengths, true);
 
         output = tensor<T>{out_lengths, out_strides};
@@ -120,9 +127,8 @@ protected:
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
         std::vector<size_t> workspace_lengths;
-        ws_sizeInBytes = std::isnan(divisor) ? 0
-                                             : miopen::GetSmoothL1LossReducedForwardWorkspaceSize(
-                                                   handle, input.desc, target.desc, output.desc);
+        ws_sizeInBytes =
+            miopen::GetSmoothL1LossForwardWorkspaceSize(handle, input.desc, output.desc, reduction);
         if(ws_sizeInBytes == static_cast<size_t>(-1))
             GTEST_SKIP();
 
@@ -151,25 +157,21 @@ protected:
 
         miopenStatus_t status;
 
-        if(!std::isnan(divisor))
-        {
-            cpu_smooth_l1loss_reduced_forward<T>(
-                input, target, ref_output, ref_workspace, beta, divisor);
-            status         = miopen::SmoothL1LossReducedForward(handle,
-                                                        workspace_dev.get(),
-                                                        ws_sizeInBytes,
-                                                        input.desc,
-                                                        input_dev.get(),
-                                                        target.desc,
-                                                        target_dev.get(),
-                                                        output.desc,
-                                                        output_dev.get(),
-                                                        beta,
-                                                        divisor);
-            workspace.data = handle.Read<T>(workspace_dev, workspace.data.size());
-        }
+        cpu_smoothl1loss_forward<T>(input, target, ref_output, ref_workspace, beta, reduction);
+        status         = miopen::SmoothL1LossForward(handle,
+                                             workspace_dev.get(),
+                                             ws_sizeInBytes,
+                                             input.desc,
+                                             input_dev.get(),
+                                             target.desc,
+                                             target_dev.get(),
+                                             output.desc,
+                                             output_dev.get(),
+                                             beta,
+                                             reduction);
+        workspace.data = handle.Read<T>(workspace_dev, workspace.data.size());
 
-        EXPECT_EQ(status, miopenStatusSuccess);
+        ASSERT_EQ(status, miopenStatusSuccess);
 
         output.data = handle.Read<T>(output_dev, output.data.size());
     }
@@ -186,16 +188,16 @@ protected:
 
         auto error_w = miopen::rms_range(ref_workspace, workspace);
 
-        EXPECT_TRUE(miopen::range_distance(ref_workspace) == miopen::range_distance(workspace));
-        EXPECT_TRUE(error_w < tolerance);
+        ASSERT_EQ(miopen::range_distance(ref_workspace), miopen::range_distance(workspace));
+        EXPECT_LT(error_w, tolerance);
 
         auto error = miopen::rms_range(ref_output, output);
 
-        EXPECT_TRUE(miopen::range_distance(ref_output) == miopen::range_distance(output));
-        EXPECT_TRUE(error < tolerance)
+        ASSERT_EQ(miopen::range_distance(ref_output), miopen::range_distance(output));
+        EXPECT_LT(error, tolerance)
             << "Error output beyond tolerance Error: " << error << ",  Tolerance: " << tolerance;
     }
-    SmoothL1LossTestCase smooth_l1loss_config;
+    SmoothL1LossTestCase smoothl1loss_config;
 
     tensor<T> input;
     tensor<T> target;
@@ -213,7 +215,7 @@ protected:
     size_t ws_sizeInBytes;
 
     float beta;
-    float divisor;
+    miopenLossReductionMode_t reduction;
 };
 
 template <typename T = float>
@@ -222,15 +224,15 @@ struct SmoothL1LossTestBackward : public ::testing::TestWithParam<SmoothL1LossTe
 protected:
     void SetUp() override
     {
-        auto&& handle        = get_handle();
-        smooth_l1loss_config = GetParam();
-        auto gen_value1 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
-        auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 101); };
+        auto&& handle       = get_handle();
+        smoothl1loss_config = GetParam();
+        auto gen_value1     = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
+        auto gen_value2     = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 101); };
 
-        beta            = smooth_l1loss_config.beta;
-        divisor         = smooth_l1loss_config.divisor;
-        auto lengths    = smooth_l1loss_config.lengths;
-        auto contiguous = smooth_l1loss_config.contiguous;
+        beta            = smoothl1loss_config.beta;
+        reduction       = smoothl1loss_config.reduction;
+        auto lengths    = smoothl1loss_config.lengths;
+        auto contiguous = smoothl1loss_config.contiguous;
 
         if(contiguous)
             GTEST_SKIP();
@@ -241,7 +243,8 @@ protected:
         auto tar_strides = GetStrides(lengths, contiguous);
         target           = tensor<T>{lengths, tar_strides}.generate(gen_value2);
 
-        auto out_lengths = std::isnan(divisor) ? lengths : std::vector<size_t>{1};
+        auto out_lengths =
+            (reduction == MIOPEN_LOSS_REDUCTION_NONE ? lengths : std::vector<size_t>{1});
         auto out_strides = GetStrides(out_lengths, true);
 
         dO = tensor<T>{out_lengths, out_strides};
@@ -270,23 +273,20 @@ protected:
 
         miopenStatus_t status;
 
-        if(!std::isnan(divisor))
-        {
-            cpu_smooth_l1loss_reduced_backward<T>(input, target, dO, ref_dI, ref_dT, beta, divisor);
-            status = miopen::SmoothL1LossReducedBackward(handle,
-                                                         input.desc,
-                                                         input_dev.get(),
-                                                         target.desc,
-                                                         target_dev.get(),
-                                                         dO.desc,
-                                                         dO_dev.get(),
-                                                         dI.desc,
-                                                         dI_dev.get(),
-                                                         dT.desc,
-                                                         dT_dev.get(),
-                                                         beta,
-                                                         divisor);
-        }
+        cpu_smoothl1loss_backward<T>(input, target, dO, ref_dI, ref_dT, beta, reduction);
+        status = miopen::SmoothL1LossBackward(handle,
+                                              input.desc,
+                                              input_dev.get(),
+                                              target.desc,
+                                              target_dev.get(),
+                                              dO.desc,
+                                              dO_dev.get(),
+                                              dI.desc,
+                                              dI_dev.get(),
+                                              dT.desc,
+                                              dT_dev.get(),
+                                              beta,
+                                              reduction);
 
         EXPECT_EQ(status, miopenStatusSuccess);
 
@@ -307,13 +307,16 @@ protected:
         auto error_dI = miopen::rms_range(ref_dI, dI);
         auto error_dT = miopen::rms_range(ref_dT, dT);
 
-        EXPECT_TRUE(miopen::range_distance(ref_dI) == miopen::range_distance(dI));
-        EXPECT_TRUE(miopen::range_distance(ref_dT) == miopen::range_distance(dT));
-        EXPECT_TRUE(error_dI < tolerance && error_dT < tolerance)
-            << "Error output beyond tolerance Error: {" << error_dI << "," << error_dT
-            << "},  Tolerance: " << tolerance;
+        ASSERT_EQ(miopen::range_distance(ref_dI), miopen::range_distance(dI));
+        ASSERT_EQ(miopen::range_distance(ref_dT), miopen::range_distance(dT));
+        EXPECT_LT(error_dI, tolerance)
+            << "Error Input Gradient beyond tolerance Error: " << error_dI
+            << ",  Tolerance: " << tolerance;
+        EXPECT_LT(error_dT, tolerance)
+            << "Error Target Gradient beyond tolerance Error: " << error_dT
+            << ",  Tolerance: " << tolerance;
     }
-    SmoothL1LossTestCase smooth_l1loss_config;
+    SmoothL1LossTestCase smoothl1loss_config;
 
     tensor<T> input;
     tensor<T> target;
@@ -331,5 +334,5 @@ protected:
     miopen::Allocator::ManageDataPtr dT_dev;
 
     float beta;
-    float divisor;
+    miopenLossReductionMode_t reduction;
 };

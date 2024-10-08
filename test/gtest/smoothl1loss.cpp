@@ -24,7 +24,7 @@
  *
  *******************************************************************************/
 
-#include "smooth_l1loss.hpp"
+#include "smoothl1loss.hpp"
 #include <miopen/bfloat16.hpp>
 #include <miopen/env.hpp>
 
@@ -32,16 +32,6 @@ MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
 
 namespace smoothl1loss {
-
-std::string GetFloatArg()
-{
-    const auto& tmp = miopen::GetStringEnv(ENV(MIOPEN_TEST_FLOAT_ARG));
-    if(tmp.empty())
-    {
-        return "";
-    }
-    return tmp;
-}
 
 struct SmoothL1LossTestForwardFloat : SmoothL1LossTestForward<float>
 {

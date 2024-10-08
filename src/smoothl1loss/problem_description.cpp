@@ -33,97 +33,32 @@ namespace miopen {
 
 namespace smoothl1loss {
 
-bool checkSameType(const TensorDescriptor& x, const TensorDescriptor& y)
+NetworkConfig ForwardProblemDescription::MakeNetworkConfig() const
 {
-    if(x.GetType() != y.GetType())
-        return false;
-    return true;
-}
-
-bool checkSameLength(const TensorDescriptor& x, const TensorDescriptor& y)
-{
-    if(x.GetSize() != y.GetSize())
-        return false;
-    for(int32_t i = 0; i < x.GetSize(); ++i)
-    {
-        if(x.GetLengths()[i] != y.GetLengths()[i])
-            return false;
-    }
-    return true;
-}
-
-bool checkSameStride(const TensorDescriptor& x, const TensorDescriptor& y)
-{
-    if(x.GetSize() != y.GetSize())
-        return false;
-    for(int32_t i = 0; i < x.GetSize(); ++i)
-    {
-        if(x.GetStrides()[i] != y.GetStrides()[i])
-            return false;
-    }
-    return true;
-}
-
-bool checkRightStride(const TensorDescriptor& x)
-{
-    auto strides = x.GetStrides();
-    auto lengths = x.GetLengths();
-    std::vector<std::pair<size_t, size_t>> p;
-    p.reserve(x.GetSize());
-    std::transform(strides.begin(),
-                   strides.end(),
-                   lengths.begin(),
-                   std::back_inserter(p),
-                   [](size_t a, size_t b) { return std::make_pair(a, b); });
-    std::sort(p.begin(), p.end());
-    for(int i = 1; i < p.size(); ++i)
-    {
-        if(p[i].first != p[i - 1].first * p[i - 1].second)
-            return false;
-    }
-    return true;
-}
-
-bool checkContiguous(const TensorDescriptor& x)
-{
-    size_t s = 1;
-    for(int i = x.GetSize() - 1; i >= 0; --i)
-    {
-        if(s != x.GetStrides()[i])
-            return false;
-        s *= x.GetLengths()[i];
-    }
-    return true;
-}
-
-NetworkConfig ReducedForwardProblemDescription::MakeNetworkConfig() const
-{
-    auto input_dtype  = iDesc.GetType();
-    auto output_dtype = oDesc.GetType();
-    auto size         = iDesc.GetElementSize();
+    auto dtype = iDesc.GetType();
+    auto size  = iDesc.GetElementSize();
 
     std::ostringstream ss;
 
-    ss << "smoothl1loss_reduced_fwd";
-    ss << "i_dtype" << input_dtype;
-    ss << "o_dtype" << output_dtype;
+    ss << "smoothl1loss_fwd";
+    ss << "dtype" << dtype;
     ss << "size" << size;
+    ss << "reduce" << reduction;
 
     return NetworkConfig{ss.str()};
 }
 
-NetworkConfig ReducedBackwardProblemDescription::MakeNetworkConfig() const
+NetworkConfig BackwardProblemDescription::MakeNetworkConfig() const
 {
-    auto input_dtype  = iDesc.GetType();
-    auto output_dtype = doDesc.GetType();
-    auto size         = iDesc.GetElementSize();
+    auto dtype = iDesc.GetType();
+    auto size  = iDesc.GetElementSize();
 
     std::ostringstream ss;
 
-    ss << "smoothl1loss_reduced_bwd";
-    ss << "i_dtype" << input_dtype;
-    ss << "o_dtype" << output_dtype;
+    ss << "smoothl1loss_bwd";
+    ss << "dtype" << dtype;
     ss << "size" << size;
+    ss << "reduce" << reduction;
 
     return NetworkConfig{ss.str()};
 }

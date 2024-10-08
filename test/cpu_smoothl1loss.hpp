@@ -26,33 +26,36 @@
 #pragma once
 
 #include "tensor_holder.hpp"
-#include <miopen/tensor_view_5d.hpp>
+#include <miopen/miopen.h>
+#include <miopen/tensor_view_utils.hpp>
 
 template <class T>
-void cpu_smooth_l1loss_reduced_forward(tensor<T> input,
-                                       tensor<T> target,
-                                       tensor<T>& ref_output,
-                                       tensor<T>& ref_workspace,
-                                       float beta,
-                                       float divisor)
+void cpu_smoothl1loss_forward(tensor<T> input,
+                              tensor<T> target,
+                              tensor<T>& ref_output,
+                              tensor<T>& ref_workspace,
+                              float beta,
+                              miopenLossReductionMode_t reduction)
 {
     // Treat contiguous tensors as non-contiguous tensors (for consistency)
-    auto I_tv = get_inner_expanded_tv(input.desc);
-    auto T_tv = get_inner_expanded_tv(target.desc);
+    auto I_tv = get_inner_expanded_tv<5>(input.desc);
+    auto T_tv = get_inner_expanded_tv<5>(target.desc);
+    auto O_tv = get_inner_expanded_tv<5>(ref_output.desc);
 
     auto size = input.desc.GetElementSize();
 
     /* Phase 1: Calc loss for each element. */
     par_ford(size)([&](size_t i) {
-        uint64_t n[5];
-        GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
-
-        uint64_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
-        uint64_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
-
-        auto diff = abs(input[Iidx] - target[Tidx]);
-        ref_workspace[Iidx] =
-            (diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta) / divisor;
+        const auto tensor_layout = tensor_layout_t<5>(I_tv, i);
+        const uint64_t Iidx      = I_tv.get_tensor_view_idx(tensor_layout);
+        const uint64_t Tidx      = T_tv.get_tensor_view_idx(tensor_layout);
+        auto diff                = abs(input[Iidx] - target[Tidx]);
+        auto loss                = (diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta);
+        if(reduction == MIOPEN_LOSS_REDUCTION_MEAN)
+            loss /= size;
+        ref_workspace[Iidx] = loss;
+        if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
+            ref_output[O_tv.get_tensor_view_idx(tensor_layout)] = loss;
     });
 
     /* Phase 2: Reduce */
@@ -81,38 +84,45 @@ void cpu_smooth_l1loss_reduced_forward(tensor<T> input,
 }
 
 template <class T>
-void cpu_smooth_l1loss_reduced_backward(tensor<T> input,
-                                        tensor<T> target,
-                                        tensor<T> dO,
-                                        tensor<T>& ref_dI,
-                                        tensor<T>& ref_dT,
-                                        float beta,
-                                        float divisor)
+void cpu_smoothl1loss_backward(tensor<T> input,
+                               tensor<T> target,
+                               tensor<T> dO,
+                               tensor<T>& ref_dI,
+                               tensor<T>& ref_dT,
+                               float beta,
+                               miopenLossReductionMode_t reduction)
 {
     // Treat contiguous tensors as non-contiguous tensors (for consistency)
-    auto I_tv  = get_inner_expanded_tv(input.desc);
-    auto T_tv  = get_inner_expanded_tv(target.desc);
-    auto dI_tv = get_inner_expanded_tv(ref_dI.desc);
-    auto dT_tv = get_inner_expanded_tv(ref_dT.desc);
+    auto I_tv  = get_inner_expanded_tv<5>(input.desc);
+    auto T_tv  = get_inner_expanded_tv<5>(target.desc);
+    auto dO_tv = get_inner_expanded_tv<5>(dO.desc);
+    auto dI_tv = get_inner_expanded_tv<5>(ref_dI.desc);
+    auto dT_tv = get_inner_expanded_tv<5>(ref_dT.desc);
 
     auto size = input.desc.GetElementSize();
 
     par_ford(size)([&](size_t i) {
-        uint64_t n[5];
-        GET_NCDHW(n[0], n[1], n[2], n[3], n[4], i, I_tv);
-
-        size_t Iidx = TV5D_IDX(I_tv, n[0], n[1], n[2], n[3], n[4]);
-        size_t Tidx = TV5D_IDX(T_tv, n[0], n[1], n[2], n[3], n[4]);
+        const auto tensor_layout = tensor_layout_t<5>(I_tv, i);
+        const uint64_t Iidx      = I_tv.get_tensor_view_idx(tensor_layout);
+        const uint64_t Tidx      = T_tv.get_tensor_view_idx(tensor_layout);
 
         T sub  = input[Iidx] - target[Tidx];
         T grad = static_cast<T>(0.0f);
 
         if(fabs(sub) < beta)
-            grad = sub / beta * dO[0] / divisor;
+            grad = sub / beta *
+                   dO[reduction == MIOPEN_LOSS_REDUCTION_NONE
+                          ? dO_tv.get_tensor_view_idx(tensor_layout)
+                          : 0];
         else
-            grad = (sub >= 0 ? 1.0f : -1.0f) * dO[0] / divisor;
+            grad = (sub >= 0 ? 1.0f : -1.0f) * dO[reduction == MIOPEN_LOSS_REDUCTION_NONE
+                                                      ? dO_tv.get_tensor_view_idx(tensor_layout)
+                                                      : 0];
 
-        ref_dI[TV5D_IDX(dI_tv, n[0], n[1], n[2], n[3], n[4])] = grad;
-        ref_dT[TV5D_IDX(dT_tv, n[0], n[1], n[2], n[3], n[4])] = -grad;
+        if(reduction == MIOPEN_LOSS_REDUCTION_MEAN)
+            grad = grad / size;
+
+        ref_dI[dI_tv.get_tensor_view_idx(tensor_layout)] = grad;
+        ref_dT[dT_tv.get_tensor_view_idx(tensor_layout)] = -grad;
     });
 }

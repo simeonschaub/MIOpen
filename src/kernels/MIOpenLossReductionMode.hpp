@@ -23,54 +23,20 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#pragma once
+#ifndef GUARD_KERNELS_MIOPEN_LOSS_REDUCTION_MODE_HPP
+#define GUARD_KERNELS_MIOPEN_LOSS_REDUCTION_MODE_HPP
 
-#include <miopen/invoke_params.hpp>
-#include <miopen/tensor.hpp>
-
-namespace miopen {
-
-namespace smoothl1loss {
-
-struct BaseInvokeParams : public miopen::InvokeParams
+enum class LossReductionMode_t
 {
-    const TensorDescriptor* iDesc = nullptr;
-    const TensorDescriptor* tDesc = nullptr;
-
-    ConstData_t i = nullptr;
-    ConstData_t t = nullptr;
-
-    float beta = 0;
-
-    Data_t workspace           = nullptr;
-    std::size_t workspace_size = 0;
-
-    std::size_t GetWorkspaceSize() const { return workspace_size; }
-    Data_t GetWorkspace() const { return workspace; }
+    NONE = 1,
+    SUM,
+    MEAN,
 };
 
-struct FwdInvokeParams : public BaseInvokeParams
-{
-    FwdInvokeParams() = default;
+#ifndef __HIP_DEVICE_COMPILE__
+static_assert(MIOPEN_LOSS_REDUCTION_NONE == static_cast<int>(LossReductionMode_t::NONE));
+static_assert(MIOPEN_LOSS_REDUCTION_SUM == static_cast<int>(LossReductionMode_t::SUM));
+static_assert(MIOPEN_LOSS_REDUCTION_MEAN == static_cast<int>(LossReductionMode_t::MEAN));
+#endif
 
-    const TensorDescriptor* oDesc = nullptr;
-
-    Data_t o = nullptr;
-};
-
-struct BwdInvokeParams : public BaseInvokeParams
-{
-    BwdInvokeParams() = default;
-
-    const TensorDescriptor* dIDesc = nullptr;
-    const TensorDescriptor* dTDesc = nullptr;
-    const TensorDescriptor* dODesc = nullptr;
-
-    Data_t dI      = nullptr;
-    Data_t dT      = nullptr;
-    ConstData_t dO = nullptr;
-};
-
-} // namespace smoothl1loss
-
-} // namespace miopen
+#endif // GUARD_KERNELS_MIOPEN_LOSS_REDUCTION_MODE_HPP
