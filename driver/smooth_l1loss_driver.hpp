@@ -38,7 +38,7 @@
 
 #include <miopen/miopen.h>
 #include <miopen/tensor.hpp>
-#include <miopen/tensor_view_5d.hpp>
+#include <miopen/tensor_view_utils.hpp>
 
 #include <vector>
 
