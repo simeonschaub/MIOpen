@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
+#include <miopen/env.hpp>
 #include <gtest/gtest.h>
-#include <cstdlib>
 #include <map>
 #include <string>
 #include <vector>
@@ -39,7 +39,6 @@ protected:
     void SetUp() override
     {
         prng::reset_seed();
-
         save_env_vars();
     }
 
@@ -60,15 +59,8 @@ private:
 
         for(const auto& var : env_vars)
         {
-            const char* value = std::getenv(var.c_str());
-            if(value)
-            {
-                original_env_vars[var] = value;
-            }
-            else
-            {
-                original_env_vars[var] = "";
-            }
+            auto value             = miopen::env::getEnvironmentVariable(var);
+            original_env_vars[var] = value.value_or("");
         }
     }
 
@@ -78,11 +70,11 @@ private:
         {
             if(value.empty())
             {
-                unsetenv(key.c_str());
+                miopen::env::clearEnvironmentVariable(key);
             }
             else
             {
-                setenv(key.c_str(), value.c_str(), 1);
+                miopen::env::setEnvironmentVariable(key, value);
             }
         }
     }
