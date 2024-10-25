@@ -112,7 +112,7 @@ protected:
 };
 
 // Convolution solver
-class ConvSolver : public SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>
+class MIOPEN_INTERNALS_EXPORT ConvSolver : public SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>
 {
 public:
     std::string GetAlgo(miopen::conv::Direction dir) const;
@@ -129,7 +129,7 @@ protected:
 };
 
 // Batch normalization solver
-class BatchNormSolver
+class MIOPEN_INTERNALS_EXPORT BatchNormSolver
     : public SolverMixin<miopen::ExecutionContext, miopen::batchnorm::ProblemDescription>
 {
 protected:
@@ -147,12 +147,12 @@ public:
     // dummy if a solver with specified name does not exist.
 
     // Convolution
-    static const std::vector<ConvSolver>& GetAllConvSolvers();
-    static ConvSolver GetConvSolver(const std::string& name);
+    MIOPEN_INTERNALS_EXPORT static const std::vector<ConvSolver>& GetAllConvSolvers();
+    MIOPEN_INTERNALS_EXPORT static ConvSolver GetConvSolver(const std::string& name);
 
     // Batch normalization
-    static const std::vector<BatchNormSolver>& GetAllBatchNormSolvers();
-    static BatchNormSolver GetBatchNormSolver(const std::string& name);
+    MIOPEN_INTERNALS_EXPORT static const std::vector<BatchNormSolver>& GetAllBatchNormSolvers();
+    MIOPEN_INTERNALS_EXPORT static BatchNormSolver GetBatchNormSolver(const std::string& name);
 
 private:
     template <class Solver>
