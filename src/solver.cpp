@@ -199,7 +199,7 @@ AnySolver Id::GetSolver() const
     return it != IdRegistry().value_to_entry.end() ? it->second.solver : AnySolver{};
 }
 
-const SolverBase* const Id::GetSolverBase() const
+const SolverBase* Id::GetSolverBase() const
 {
     if(!IsValid())
         return nullptr;
