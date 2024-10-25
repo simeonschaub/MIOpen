@@ -151,12 +151,10 @@ struct PerformanceConfigBnCKFwdInference : PerfConfigBase<PerformanceConfigBnCKF
     PerformanceConfigBnCKFwdInference(bool) : PerformanceConfigBnCKFwdInference(0, "") {}
     MIOPEN_INTERNALS_EXPORT void
     HeuristicInit(const miopen::batchnorm::ProblemDescription& problem);
-    MIOPEN_INTERNALS_EXPORT bool
-    SetNextValue(const miopen::batchnorm::ProblemDescription& problem);
+    MIOPEN_INTERNALS_EXPORT bool SetNextValue(const miopen::batchnorm::ProblemDescription& problem);
     MIOPEN_INTERNALS_EXPORT bool IsValidValue() const;
     MIOPEN_INTERNALS_EXPORT bool
-    IsValid(const ExecutionContext&,
-            const miopen::batchnorm::ProblemDescription& problem) const;
+    IsValid(const ExecutionContext&, const miopen::batchnorm::ProblemDescription& problem) const;
 
     template <typename Self, typename F>
     static void Visit(Self&& s, F f)
@@ -220,12 +218,10 @@ struct PerformanceConfigBnCKBwdBackward : PerfConfigBase<PerformanceConfigBnCKBw
     PerformanceConfigBnCKBwdBackward(bool) : PerformanceConfigBnCKBwdBackward(0, "") {}
     MIOPEN_INTERNALS_EXPORT void
     HeuristicInit(const miopen::batchnorm::ProblemDescription& problem);
-    MIOPEN_INTERNALS_EXPORT bool
-    SetNextValue(const miopen::batchnorm::ProblemDescription& problem);
+    MIOPEN_INTERNALS_EXPORT bool SetNextValue(const miopen::batchnorm::ProblemDescription& problem);
     MIOPEN_INTERNALS_EXPORT bool IsValidValue() const;
     MIOPEN_INTERNALS_EXPORT bool
-    IsValid(const ExecutionContext&,
-            const miopen::batchnorm::ProblemDescription& problem) const;
+    IsValid(const ExecutionContext&, const miopen::batchnorm::ProblemDescription& problem) const;
 
     template <typename Self, typename F>
     static void Visit(Self&& s, F f)
@@ -291,12 +287,10 @@ struct PerformanceConfigBnCKFwdTraining : PerfConfigBase<PerformanceConfigBnCKFw
     PerformanceConfigBnCKFwdTraining(bool) : PerformanceConfigBnCKFwdTraining(0, "") {}
     MIOPEN_INTERNALS_EXPORT void
     HeuristicInit(const miopen::batchnorm::ProblemDescription& problem);
-    MIOPEN_INTERNALS_EXPORT bool
-    SetNextValue(const miopen::batchnorm::ProblemDescription& problem);
+    MIOPEN_INTERNALS_EXPORT bool SetNextValue(const miopen::batchnorm::ProblemDescription& problem);
     MIOPEN_INTERNALS_EXPORT bool IsValidValue() const;
     MIOPEN_INTERNALS_EXPORT bool
-    IsValid(const ExecutionContext&,
-            const miopen::batchnorm::ProblemDescription& problem) const;
+    IsValid(const ExecutionContext&, const miopen::batchnorm::ProblemDescription& problem) const;
 
     template <typename Self, typename F>
     static void Visit(Self&& s, F f)
