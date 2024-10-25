@@ -187,7 +187,7 @@ private:
 //
 // 1b (Nev version):
 //
-// const auto solver_list = miopen::fin::FinInterface::GetAllConvSolvers();
+// const auto& solver_list = miopen::fin::FinInterface::GetAllConvSolvers();
 // for(const auto& solver : solver_list)
 // {
 //     std::unordered_map<std::string, std::string> solver_info;
@@ -235,7 +235,7 @@ private:
 // Batch normalization solvers:
 //
 // ...
-// const auto solver_list = miopen::fin::FinInterface::GetAllBatchNormSolvers();
+// const auto& solver_list = miopen::fin::FinInterface::GetAllBatchNormSolvers();
 // ...
 //
 // ...
