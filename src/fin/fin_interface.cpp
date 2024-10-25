@@ -24,6 +24,7 @@
  *
  *******************************************************************************/
 
+#include <type_traits>
 #include <utility>
 
 #include <miopen/fin/fin_interface.hpp>
@@ -167,17 +168,38 @@ std::string ConvSolver::GetAlgo(miopen::conv::Direction dir) const
 
 // ================== FinInterface ==================
 template <class Solver>
-const std::vector<Solver>& FinInterface::GetAllSolvers(miopen::solver::Primitive primitive)
+struct SolverToPrimitive;
+
+template <>
+struct SolverToPrimitive<ConvSolver>
 {
-    static const auto solvers = [primitive] {
-        const auto& ids = GetSolversByPrimitive(primitive);
+    static auto GetPrimitive() { return miopen::solver::Primitive::Convolution; }
+};
+
+template <>
+struct SolverToPrimitive<BatchNormSolver>
+{
+    static auto GetPrimitive() { return miopen::solver::Primitive::Batchnorm; }
+};
+
+template <class Solver>
+const std::vector<Solver>& FinInterface::GetAllSolvers()
+{
+    static const auto solvers = [] {
+        const auto& ids = GetSolversByPrimitive(SolverToPrimitive<Solver>::GetPrimitive());
         std::vector<Solver> solvers;
+
         for(const auto& id : ids)
         {
             if(!id.IsValid())
                 MIOPEN_THROW(miopenStatusInternalError);
-            solvers.emplace_back(Solver{id.GetSolverBase(), id.Value()});
+
+            if constexpr(std::is_same_v<Solver, ConvSolver>)
+                solvers.emplace_back(Solver{id.GetSolverBase(), id.Value(), id.GetAlgo()});
+            else
+                solvers.emplace_back(Solver{id.GetSolverBase(), id.Value()});
         }
+
         return solvers;
     }();
     return solvers;
@@ -189,36 +211,26 @@ Solver FinInterface::GetSolver(const std::string& name)
     const auto id = miopen::solver::Id{name};
     if(!id.IsValid())
         return {name};
-    return {id.GetSolverBase(), id.Value()};
+
+    if constexpr(std::is_same_v<Solver, ConvSolver>)
+        return {id.GetSolverBase(), id.Value(), id.GetAlgo()};
+    else
+        return {id.GetSolverBase(), id.Value()};
 }
 
 const std::vector<ConvSolver>& FinInterface::GetAllConvSolvers()
 {
-    static const auto solvers = [] {
-        const auto& ids = GetSolversByPrimitive(miopen::solver::Primitive::Convolution);
-        std::vector<ConvSolver> solvers;
-        for(const auto& id : ids)
-        {
-            if(!id.IsValid())
-                MIOPEN_THROW(miopenStatusInternalError);
-            solvers.emplace_back(ConvSolver{id.GetSolverBase(), id.Value(), id.GetAlgo()});
-        }
-        return solvers;
-    }();
-    return solvers;
+    return GetAllSolvers<ConvSolver>();
 }
 
 ConvSolver FinInterface::GetConvSolver(const std::string& name)
 {
-    const auto id = miopen::solver::Id{name};
-    if(!id.IsValid())
-        return {name};
-    return {id.GetSolverBase(), id.Value(), id.GetAlgo()};
+    return GetSolver<ConvSolver>(name);
 }
 
 const std::vector<BatchNormSolver>& FinInterface::GetAllBatchNormSolvers()
 {
-    return GetAllSolvers<BatchNormSolver>(miopen::solver::Primitive::Batchnorm);
+    return GetAllSolvers<BatchNormSolver>();
 }
 
 BatchNormSolver FinInterface::GetBatchNormSolver(const std::string& name)

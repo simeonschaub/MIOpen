@@ -121,6 +121,7 @@ protected:
     ConvSolver(const miopen::solver::SolverBase* solver_base,
                uint64_t solver_id,
                miopenConvAlgorithm_t algo_);
+    ConvSolver(const miopen::solver::SolverBase* solver_base, uint64_t solver_id) = delete;
     using SolverMixin::SolverMixin;
 
     miopenConvAlgorithm_t algo;
@@ -156,7 +157,7 @@ public:
 
 private:
     template <class Solver>
-    static const std::vector<Solver>& GetAllSolvers(miopen::solver::Primitive primitive);
+    static const std::vector<Solver>& GetAllSolvers();
 
     template <class Solver>
     static Solver GetSolver(const std::string& name);
