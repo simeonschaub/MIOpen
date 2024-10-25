@@ -82,28 +82,22 @@ bool Solver::IsDynamic() const
 template <class Context, class Problem>
 bool SolverMixin<Context, Problem>::IsApplicable(const Context& ctx, const Problem& problem) const
 {
-    std::ignore = ctx;
-    std::ignore = problem;
-
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
-    return static_cast<const miopen::solver::SolverInterface<Context, Problem>*>(sbase)->IsApplicable(
-        ctx, problem);
+    using SolverInterface = miopen::solver::SolverInterface<Context, Problem>;
+    return static_cast<const SolverInterface*>(sbase)->IsApplicable(ctx, problem);
 }
 
 template <class Context, class Problem>
 size_t SolverMixin<Context, Problem>::GetWorkspaceSize(const Context& ctx,
                                                        const Problem& problem) const
 {
-    std::ignore = ctx;
-    std::ignore = problem;
-
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
-    return static_cast<const miopen::solver::SolverInterface<Context, Problem>*>(sbase)->GetWorkspaceSize(
-        ctx, problem);
+    using SolverInterface = miopen::solver::SolverInterface<Context, Problem>;
+    return static_cast<const SolverInterface*>(sbase)->GetWorkspaceSize(ctx, problem);
 }
 
 template <class Context, class Problem>
