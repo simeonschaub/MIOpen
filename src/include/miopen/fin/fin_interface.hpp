@@ -112,7 +112,8 @@ protected:
 };
 
 // Convolution solver
-class MIOPEN_INTERNALS_EXPORT ConvSolver : public SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>
+class MIOPEN_INTERNALS_EXPORT ConvSolver
+    : public SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>
 {
 public:
     std::string GetAlgo(miopen::conv::Direction dir) const;
