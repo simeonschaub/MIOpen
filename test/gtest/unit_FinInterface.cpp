@@ -239,9 +239,9 @@ const auto& GetBatchNormSolversInfo()
         {"BnBwdTrainingSpatialMultiple",    {118,   false,  false}},
         {"BnBwdTrainingPerActivation",      {119,   false,  false}},
         {"BnFwdInference",                  {120,   true,   false}},
-        {"BnCKFwdInference",                {142,   true,   false}},
-        {"BnCKBwdBackward",                 {143,   true,   false}},
-        {"BnCKFwdTraining",                 {144,   true,   false}},
+        {"BnCKFwdInference",                {142,   true,   true}},
+        {"BnCKBwdBackward",                 {143,   true,   true}},
+        {"BnCKFwdTraining",                 {144,   true,   true}},
         // clang-format on
     };
 
