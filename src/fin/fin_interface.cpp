@@ -82,10 +82,13 @@ bool Solver::IsDynamic() const
 template <class Context, class Problem>
 bool SolverMixin<Context, Problem>::IsApplicable(const Context& ctx, const Problem& problem) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
-    return static_cast<miopen::solver::SolverInterface<Context, Problem>*>(sbase)->IsApplicable(
+    return static_cast<const miopen::solver::SolverInterface<Context, Problem>*>(sbase)->IsApplicable(
         ctx, problem);
 }
 
@@ -93,10 +96,13 @@ template <class Context, class Problem>
 size_t SolverMixin<Context, Problem>::GetWorkspaceSize(const Context& ctx,
                                                        const Problem& problem) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
-    return static_cast<miopen::solver::SolverInterface<Context, Problem>*>(sbase)->GetWorkspaceSize(
+    return static_cast<const miopen::solver::SolverInterface<Context, Problem>*>(sbase)->GetWorkspaceSize(
         ctx, problem);
 }
 
@@ -108,6 +114,12 @@ SolverMixin<Context, Problem>::FindSolution(const Context& ctx,
                                             const miopen::AnyInvokeParams& invoke_ctx,
                                             const std::string& perf_cfg) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+    std::ignore = db;
+    std::ignore = invoke_ctx;
+    std::ignore = perf_cfg;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
@@ -119,6 +131,9 @@ template <class Context, class Problem>
 std::vector<miopen::solver::ConvSolution>
 SolverMixin<Context, Problem>::GetAllSolutions(const Context& ctx, const Problem& problem) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
@@ -131,6 +146,10 @@ std::string SolverMixin<Context, Problem>::GetPerfCfgParams(const Context& ctx,
                                                             const Problem& problem,
                                                             const PerformanceDb& db) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+    std::ignore = db;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
@@ -143,6 +162,10 @@ bool SolverMixin<Context, Problem>::TestPerfCfgParams(const Context& ctx,
                                                       const Problem& problem,
                                                       const std::string& params) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+    std::ignore = params;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
