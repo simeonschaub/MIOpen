@@ -249,7 +249,6 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     decltype(auto) out  = problem.GetOut();**/
 
     const auto workspace_req = GetWorkspaceSize(ctx, problem);
-    std::cout << "workspace: " << workspace_req << std::endl;
 
     auto soln         = ConvSolution{miopenStatusSuccess};
     soln.workspace_sz = workspace_req;
@@ -295,7 +294,6 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
     kernel.comp_options += " -DCK_DONT_USE_HIP_RUNTIME_HEADERS";
     kernel.comp_options += " -DCK_CODE_GEN_RTC";
-    std::cout << "comp options: " << kernel.comp_options << std::endl;
 
     soln.construction_params.push_back(kernel);
 
