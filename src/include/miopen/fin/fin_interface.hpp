@@ -55,7 +55,7 @@ struct SolverBase;
 namespace fin {
 
 // Base classes for solvers.
-class Solver
+class MIOPEN_INTERNALS_EXPORT Solver
 {
 public:
     // GetId(), IsDynamic() and IsTunable() throw miopenStatusNotInitialized if the solver is not
