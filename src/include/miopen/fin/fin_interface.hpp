@@ -148,18 +148,22 @@ protected:
 
 // GetAll*Solvers() - returns all solvers for a particular primitive. All solvers are always valid.
 //
-// Get*Solvers(names) - returns all solvers with the names specified in the list for a particular primitive. May return dummies ​​for solvers that do not exist.
+// Get*Solvers(names) - returns all solvers with the names specified in the list for a particular
+// primitive. May return dummies ​​for solvers that do not exist.
 //
-// Get*Solver(name) - returns single solver by its name for a particular primitive. May return a dummy if a solver with specified name does not exist.
+// Get*Solver(name) - returns single solver by its name for a particular primitive. May return a
+// dummy if a solver with specified name does not exist.
 
 // Convolution
 MIOPEN_INTERNALS_EXPORT const std::vector<ConvSolver>& GetAllConvSolvers();
-MIOPEN_INTERNALS_EXPORT std::vector<ConvSolver> GetConvSolvers(const std::vector<std::string>& names);
+MIOPEN_INTERNALS_EXPORT std::vector<ConvSolver>
+GetConvSolvers(const std::vector<std::string>& names);
 MIOPEN_INTERNALS_EXPORT ConvSolver GetConvSolver(const std::string& name);
 
 // Batch normalization
 MIOPEN_INTERNALS_EXPORT const std::vector<BatchNormSolver>& GetAllBatchNormSolvers();
-MIOPEN_INTERNALS_EXPORT std::vector<BatchNormSolver> GetBatchNormSolvers(const std::vector<std::string>& names);
+MIOPEN_INTERNALS_EXPORT std::vector<BatchNormSolver>
+GetBatchNormSolvers(const std::vector<std::string>& names);
 MIOPEN_INTERNALS_EXPORT BatchNormSolver GetBatchNormSolver(const std::string& name);
 
 // Examples:

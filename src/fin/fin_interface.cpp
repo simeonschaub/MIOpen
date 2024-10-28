@@ -252,20 +252,14 @@ std::vector<Solver> GetSolvers(const std::vector<std::string>& names)
 
 } // namespace
 
-const std::vector<ConvSolver>& GetAllConvSolvers()
-{
-    return GetAllSolvers<ConvSolver>();
-}
+const std::vector<ConvSolver>& GetAllConvSolvers() { return GetAllSolvers<ConvSolver>(); }
 
 std::vector<ConvSolver> GetConvSolvers(const std::vector<std::string>& names)
 {
     return GetSolvers<ConvSolver>(names);
 }
 
-ConvSolver GetConvSolver(const std::string& name)
-{
-    return GetSolver<ConvSolver>(name);
-}
+ConvSolver GetConvSolver(const std::string& name) { return GetSolver<ConvSolver>(name); }
 
 const std::vector<BatchNormSolver>& GetAllBatchNormSolvers()
 {
