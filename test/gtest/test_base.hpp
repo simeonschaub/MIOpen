@@ -31,6 +31,7 @@
 #include <vector>
 #include <random.hpp>
 
+template <typename DerivedTest>
 class TestBase : public ::testing::Test
 {
 protected:
@@ -47,15 +48,7 @@ protected:
 private:
     void save_env_vars()
     {
-        std::vector<std::string> env_vars = {"CMAKE_CURRENT_BINARY_DIR",
-                                             "MIOPEN_TEST_MLIR",
-                                             "MIOPEN_TEST_COMPOSABLEKERNEL",
-                                             "CODECOV_TEST",
-                                             "MIOPEN_TEST_DBSYNC",
-                                             "MIOPEN_TEST_CONV",
-                                             "MIOPEN_TEST_DEEPBENCH",
-                                             "MIOPEN_DEBUG_TUNING_ITERATIONS_MAX",
-                                             "MIOPEN_TEST_WITH_MIOPENDRIVER"};
+        std::vector<std::string> env_vars = DerivedTest::get_env_vars();
 
         for(const auto& var : env_vars)
         {
