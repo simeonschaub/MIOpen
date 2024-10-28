@@ -32,7 +32,7 @@
 #include <miopen/solver_id.hpp>
 
 namespace miopen {
-namespace fin {
+namespace fin_interface {
 
 // ================== Solver ==================
 Solver::Solver(const miopen::solver::SolverBase* solver_base, uint64_t solver_id)
@@ -184,6 +184,8 @@ std::string ConvSolver::GetAlgo(miopen::conv::Direction dir) const
 }
 
 // ================== FinInterface ==================
+namespace {
+
 template <class Solver>
 struct SolverToPrimitive;
 
@@ -199,8 +201,10 @@ struct SolverToPrimitive<BatchNormSolver>
     static auto GetPrimitive() { return miopen::solver::Primitive::Batchnorm; }
 };
 
+} // namespace
+
 template <class Solver>
-const std::vector<Solver>& FinInterface::GetAllSolvers()
+const std::vector<Solver>& GetAllSolvers()
 {
     static const auto solvers = [] {
         const auto& ids = GetSolversByPrimitive(SolverToPrimitive<Solver>::GetPrimitive());
@@ -223,7 +227,7 @@ const std::vector<Solver>& FinInterface::GetAllSolvers()
 }
 
 template <class Solver>
-Solver FinInterface::GetSolver(const std::string& name)
+Solver GetSolver(const std::string& name)
 {
     const auto id = miopen::solver::Id{name};
     if(!id.IsValid())
@@ -235,25 +239,48 @@ Solver FinInterface::GetSolver(const std::string& name)
         return {id.GetSolverBase(), id.Value()};
 }
 
-const std::vector<ConvSolver>& FinInterface::GetAllConvSolvers()
+namespace {
+
+template <class Solver>
+std::vector<Solver> GetSolvers(const std::vector<std::string>& names)
+{
+    std::vector<Solver> solvers;
+    for(const auto& name : names)
+        solvers.emplace_back(GetSolver<Solver>(name));
+    return solvers;
+}
+
+} // namespace
+
+const std::vector<ConvSolver>& GetAllConvSolvers()
 {
     return GetAllSolvers<ConvSolver>();
 }
 
-ConvSolver FinInterface::GetConvSolver(const std::string& name)
+std::vector<ConvSolver> GetConvSolvers(const std::vector<std::string>& names)
+{
+    return GetSolvers<ConvSolver>(names);
+}
+
+ConvSolver GetConvSolver(const std::string& name)
 {
     return GetSolver<ConvSolver>(name);
 }
 
-const std::vector<BatchNormSolver>& FinInterface::GetAllBatchNormSolvers()
+const std::vector<BatchNormSolver>& GetAllBatchNormSolvers()
 {
     return GetAllSolvers<BatchNormSolver>();
 }
 
-BatchNormSolver FinInterface::GetBatchNormSolver(const std::string& name)
+std::vector<BatchNormSolver> GetBatchNormSolvers(const std::vector<std::string>& names)
+{
+    return GetSolvers<BatchNormSolver>(names);
+}
+
+BatchNormSolver GetBatchNormSolver(const std::string& name)
 {
     return GetSolver<BatchNormSolver>(name);
 }
 
-} // namespace fin
+} // namespace fin_interface
 } // namespace miopen
