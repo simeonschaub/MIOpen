@@ -116,13 +116,13 @@ class MIOPEN_INTERNALS_EXPORT ConvSolver
     : public SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>
 {
 public:
+    ConvSolver(const miopen::solver::SolverBase* solver_base, uint64_t solver_id) = delete;
     std::string GetAlgo(miopen::conv::Direction dir) const;
 
 protected:
     ConvSolver(const miopen::solver::SolverBase* solver_base,
                uint64_t solver_id,
                miopenConvAlgorithm_t algo_);
-    ConvSolver(const miopen::solver::SolverBase* solver_base, uint64_t solver_id) = delete;
     using SolverMixin::SolverMixin;
 
     miopenConvAlgorithm_t algo;
