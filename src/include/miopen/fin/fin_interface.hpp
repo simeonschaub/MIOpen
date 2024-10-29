@@ -57,7 +57,7 @@ namespace fin_interface {
 // ================== Interface for Fin ==================
 
 // Base classes for solvers.
-class MIOPEN_INTERNALS_EXPORT Solver
+class Solver
 {
 public:
     // GetId(), IsDynamic() and IsTunable() throw miopenStatusNotInitialized if the solver is not
@@ -116,8 +116,11 @@ protected:
     using Solver::Solver;
 };
 
+extern template class SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>;
+extern template class SolverMixin<miopen::ExecutionContext, miopen::batchnorm::ProblemDescription>;
+
 // Convolution solver
-class MIOPEN_INTERNALS_EXPORT ConvSolver
+class MIOPEN_INTERNALS_EXPORT ConvSolver final
     : public SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>
 {
 public:
@@ -139,7 +142,7 @@ protected:
 };
 
 // Batch normalization solver
-class MIOPEN_INTERNALS_EXPORT BatchNormSolver
+class MIOPEN_INTERNALS_EXPORT BatchNormSolver final
     : public SolverMixin<miopen::ExecutionContext, miopen::batchnorm::ProblemDescription>
 {
 protected:

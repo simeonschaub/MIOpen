@@ -167,6 +167,10 @@ bool SolverMixin<Context, Problem>::TestPerfCfgParams(const Context& ctx,
     MIOPEN_THROW(miopenStatusNotImplemented);
 }
 
+// Explicit instantiation
+template class SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>;
+template class SolverMixin<miopen::ExecutionContext, miopen::batchnorm::ProblemDescription>;
+
 // ================== ConvSolver ==================
 ConvSolver::ConvSolver(const miopen::solver::SolverBase* solver_base,
                        uint64_t solver_id,
