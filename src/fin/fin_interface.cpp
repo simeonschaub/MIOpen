@@ -24,6 +24,7 @@
  *
  *******************************************************************************/
 
+#include <type_traits>
 #include <utility>
 
 #include <miopen/fin/fin_interface.hpp>
@@ -31,7 +32,7 @@
 #include <miopen/solver_id.hpp>
 
 namespace miopen {
-namespace fin {
+namespace fin_interface {
 
 // ================== Solver ==================
 Solver::Solver(const miopen::solver::SolverBase* solver_base, uint64_t solver_id)
@@ -84,8 +85,8 @@ bool SolverMixin<Context, Problem>::IsApplicable(const Context& ctx, const Probl
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
-    return static_cast<miopen::solver::SolverInterface<Context, Problem>*>(sbase)->IsApplicable(
-        ctx, problem);
+    using SolverInterface = miopen::solver::SolverInterface<Context, Problem>;
+    return static_cast<const SolverInterface*>(sbase)->IsApplicable(ctx, problem);
 }
 
 template <class Context, class Problem>
@@ -95,8 +96,8 @@ size_t SolverMixin<Context, Problem>::GetWorkspaceSize(const Context& ctx,
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
-    return static_cast<miopen::solver::SolverInterface<Context, Problem>*>(sbase)->GetWorkspaceSize(
-        ctx, problem);
+    using SolverInterface = miopen::solver::SolverInterface<Context, Problem>;
+    return static_cast<const SolverInterface*>(sbase)->GetWorkspaceSize(ctx, problem);
 }
 
 template <class Context, class Problem>
@@ -107,6 +108,12 @@ SolverMixin<Context, Problem>::FindSolution(const Context& ctx,
                                             const miopen::AnyInvokeParams& invoke_ctx,
                                             const std::string& perf_cfg) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+    std::ignore = db;
+    std::ignore = invoke_ctx;
+    std::ignore = perf_cfg;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
@@ -118,6 +125,9 @@ template <class Context, class Problem>
 std::vector<miopen::solver::ConvSolution>
 SolverMixin<Context, Problem>::GetAllSolutions(const Context& ctx, const Problem& problem) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
@@ -130,6 +140,10 @@ std::string SolverMixin<Context, Problem>::GetPerfCfgParams(const Context& ctx,
                                                             const Problem& problem,
                                                             const PerformanceDb& db) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+    std::ignore = db;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
@@ -142,12 +156,20 @@ bool SolverMixin<Context, Problem>::TestPerfCfgParams(const Context& ctx,
                                                       const Problem& problem,
                                                       const std::string& params) const
 {
+    std::ignore = ctx;
+    std::ignore = problem;
+    std::ignore = params;
+
     if(sbase == nullptr)
         MIOPEN_THROW(miopenStatusNotInitialized);
 
     /// \todo
     MIOPEN_THROW(miopenStatusNotImplemented);
 }
+
+// Explicit instantiation
+template class SolverMixin<miopen::ExecutionContext, miopen::conv::ProblemDescription>;
+template class SolverMixin<miopen::ExecutionContext, miopen::batchnorm::ProblemDescription>;
 
 // ================== ConvSolver ==================
 ConvSolver::ConvSolver(const miopen::solver::SolverBase* solver_base,
@@ -166,65 +188,99 @@ std::string ConvSolver::GetAlgo(miopen::conv::Direction dir) const
 }
 
 // ================== FinInterface ==================
-template <class Solver>
-const std::vector<Solver>& FinInterface::GetAllSolvers(miopen::solver::Primitive primitive)
-{
-    static const auto solvers = [primitive] {
-        const auto& ids = GetSolversByPrimitive(primitive);
-        std::vector<Solver> solvers;
-        for(const auto& id : ids)
-        {
-            if(!id.IsValid())
-                MIOPEN_THROW(miopenStatusInternalError);
-            solvers.emplace_back(Solver{id.GetSolverBase(), id.Value()});
-        }
-        return solvers;
-    }();
-    return solvers;
-}
+namespace {
 
 template <class Solver>
-Solver FinInterface::GetSolver(const std::string& name)
-{
-    const auto id = miopen::solver::Id{name};
-    if(!id.IsValid())
-        return {name};
-    return {id.GetSolverBase(), id.Value()};
-}
+struct SolverToPrimitive;
 
-const std::vector<ConvSolver>& FinInterface::GetAllConvSolvers()
+template <>
+struct SolverToPrimitive<ConvSolver>
+{
+    static auto GetPrimitive() { return miopen::solver::Primitive::Convolution; }
+};
+
+template <>
+struct SolverToPrimitive<BatchNormSolver>
+{
+    static auto GetPrimitive() { return miopen::solver::Primitive::Batchnorm; }
+};
+
+} // namespace
+
+template <class Solver>
+const std::vector<Solver>& GetAllSolvers()
 {
     static const auto solvers = [] {
-        const auto& ids = GetSolversByPrimitive(miopen::solver::Primitive::Convolution);
-        std::vector<ConvSolver> solvers;
+        const auto& ids = GetSolversByPrimitive(SolverToPrimitive<Solver>::GetPrimitive());
+        std::vector<Solver> solvers;
+        solvers.reserve(ids.size());
+
         for(const auto& id : ids)
         {
             if(!id.IsValid())
                 MIOPEN_THROW(miopenStatusInternalError);
-            solvers.emplace_back(ConvSolver{id.GetSolverBase(), id.Value(), id.GetAlgo()});
+
+            if constexpr(std::is_same_v<Solver, ConvSolver>)
+                solvers.emplace_back(Solver{id.GetSolverBase(), id.Value(), id.GetAlgo()});
+            else
+                solvers.emplace_back(Solver{id.GetSolverBase(), id.Value()});
         }
+
         return solvers;
     }();
     return solvers;
 }
 
-ConvSolver FinInterface::GetConvSolver(const std::string& name)
+template <class Solver>
+Solver GetSolver(const std::string& name)
 {
     const auto id = miopen::solver::Id{name};
     if(!id.IsValid())
         return {name};
-    return {id.GetSolverBase(), id.Value(), id.GetAlgo()};
+
+    if constexpr(std::is_same_v<Solver, ConvSolver>)
+        return {id.GetSolverBase(), id.Value(), id.GetAlgo()};
+    else
+        return {id.GetSolverBase(), id.Value()};
 }
 
-const std::vector<BatchNormSolver>& FinInterface::GetAllBatchNormSolvers()
+namespace {
+
+template <class Solver>
+std::vector<Solver> GetSolvers(const std::vector<std::string>& names)
 {
-    return GetAllSolvers<BatchNormSolver>(miopen::solver::Primitive::Batchnorm);
+    std::vector<Solver> solvers;
+    solvers.reserve(names.size());
+    for(const auto& name : names)
+        solvers.emplace_back(GetSolver<Solver>(name));
+    return solvers;
 }
 
-BatchNormSolver FinInterface::GetBatchNormSolver(const std::string& name)
+} // namespace
+
+const std::vector<ConvSolver>& GetAllConvSolvers() { return GetAllSolvers<ConvSolver>(); }
+
+std::vector<ConvSolver> GetConvSolvers(const std::vector<std::string>& names)
+{
+    return GetSolvers<ConvSolver>(names);
+}
+
+ConvSolver GetConvSolver(const std::string& name) { return GetSolver<ConvSolver>(name); }
+
+const std::vector<BatchNormSolver>& GetAllBatchNormSolvers()
+{
+    return GetAllSolvers<BatchNormSolver>();
+}
+
+std::vector<BatchNormSolver> GetBatchNormSolvers(const std::vector<std::string>& names)
+{
+    return GetSolvers<BatchNormSolver>(names);
+}
+
+BatchNormSolver GetBatchNormSolver(const std::string& name)
 {
     return GetSolver<BatchNormSolver>(name);
 }
 
-} // namespace fin
+} // namespace fin_interface
 } // namespace miopen
