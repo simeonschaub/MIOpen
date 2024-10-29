@@ -380,8 +380,8 @@ public:
     void RunTest()
     {
         const auto& solvers_info = GetSolversInfo<decltype(TestCase{}.info)>();
-        const auto& names = GetSolverNames<decltype(TestCase{}.info)>();
-        const auto solvers = InterfaceGetSolvers<TestCase>(names);
+        const auto& names        = GetSolverNames<decltype(TestCase{}.info)>();
+        const auto solvers       = InterfaceGetSolvers<TestCase>(names);
 
         ASSERT_EQ(solvers.size(), names.size());
         for(const auto& solver : solvers)
@@ -414,9 +414,9 @@ public:
 } // namespace
 
 // Convolution
-using CPU_FinInterfaceTestGetAllConvSolvers_NONE      = TestGetAllSolvers<ConvTestCase>;
-using CPU_FinInterfaceTestGetConvSolvers_NONE         = TestGetSolvers<ConvTestCase>;
-using CPU_FinInterfaceTestGetConvSolver_NONE          = TestGetSolver<ConvTestCase>;
+using CPU_FinInterfaceTestGetAllConvSolvers_NONE = TestGetAllSolvers<ConvTestCase>;
+using CPU_FinInterfaceTestGetConvSolvers_NONE    = TestGetSolvers<ConvTestCase>;
+using CPU_FinInterfaceTestGetConvSolver_NONE     = TestGetSolver<ConvTestCase>;
 
 TEST_P(CPU_FinInterfaceTestGetAllConvSolvers_NONE, FinInterface) { this->RunTest(); };
 TEST_P(CPU_FinInterfaceTestGetConvSolvers_NONE, FinInterface) { this->RunTest(); };
