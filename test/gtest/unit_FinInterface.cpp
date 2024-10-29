@@ -253,6 +253,20 @@ const auto& GetSolversInfo<BatchNormSolverInfo>()
     return solver_info;
 }
 
+template <class SolverInfo>
+const auto& GetSolverNames()
+{
+    static const auto names = [] {
+        std::vector<std::string> names;
+        const auto& sinfo = GetSolversInfo<SolverInfo>();
+        names.reserve(sinfo.size());
+        for(const auto& s : sinfo)
+            names.push_back(s.first);
+        return names;
+    }();
+    return names;
+}
+
 template <class TestCase>
 const auto& GetTestCases()
 {
@@ -267,6 +281,7 @@ const auto& GetTestCases()
     return test_cases;
 }
 
+// Checks
 template <class Solver, class SolverInfo>
 void CheckSolverInfo(const Solver& solver, const SolverInfo& info)
 {
@@ -285,6 +300,7 @@ void CheckSolver(const Solver& solver, const TestCase& test_case)
     ASSERT_NO_FATAL_FAILURE(CheckSolverInfo(solver, test_case.info));
 }
 
+// GetAll*Solvers()
 template <class TestCase>
 const auto& InterfaceGetAllSolvers();
 
@@ -300,6 +316,23 @@ const auto& InterfaceGetAllSolvers<BatchNormTestCase>()
     return miopen::fin_interface::GetAllBatchNormSolvers();
 }
 
+// Get*Solvers(names)
+template <class TestCase>
+const auto InterfaceGetSolvers(const std::vector<std::string>& names);
+
+template <>
+const auto InterfaceGetSolvers<ConvTestCase>(const std::vector<std::string>& names)
+{
+    return miopen::fin_interface::GetConvSolvers(names);
+}
+
+template <>
+const auto InterfaceGetSolvers<BatchNormTestCase>(const std::vector<std::string>& names)
+{
+    return miopen::fin_interface::GetBatchNormSolvers(names);
+}
+
+// Get*Solver(name)
 template <class TestCase>
 auto InterfaceGetSolver(const std::string& name);
 
@@ -315,6 +348,7 @@ auto InterfaceGetSolver<BatchNormTestCase>(const std::string& name)
     return miopen::fin_interface::GetBatchNormSolver(name);
 }
 
+// Tests
 template <class TestCase>
 class TestGetAllSolvers : public ::testing::TestWithParam<TestParams>
 {
@@ -340,6 +374,31 @@ public:
 };
 
 template <class TestCase>
+class TestGetSolvers : public ::testing::TestWithParam<TestParams>
+{
+public:
+    void RunTest()
+    {
+        const auto& solvers_info = GetSolversInfo<decltype(TestCase{}.info)>();
+        const auto& names = GetSolverNames<decltype(TestCase{}.info)>();
+        const auto solvers = InterfaceGetSolvers<TestCase>(names);
+
+        ASSERT_EQ(solvers.size(), names.size());
+        for(const auto& solver : solvers)
+        {
+            const auto& name        = solver.GetName();
+            const auto& solver_info = solvers_info.find(name);
+            if(solver_info == solvers_info.end())
+            {
+                const std::string error = name + " not found";
+                GTEST_FAIL() << error;
+            }
+            ASSERT_NO_FATAL_FAILURE(CheckSolver(solver, TestCase{name, solver_info->second}));
+        }
+    }
+};
+
+template <class TestCase>
 class TestGetSolver : public ::testing::TestWithParam<std::tuple<TestParams, TestCase>>
 {
 public:
@@ -355,17 +414,27 @@ public:
 } // namespace
 
 using CPU_FinInterfaceTestGetAllConvSolvers_NONE      = TestGetAllSolvers<ConvTestCase>;
+using CPU_FinInterfaceTestGetConvSolvers_NONE         = TestGetSolvers<ConvTestCase>;
 using CPU_FinInterfaceTestGetConvSolver_NONE          = TestGetSolver<ConvTestCase>;
+
 using CPU_FinInterfaceTestGetAllBatchNormSolvers_NONE = TestGetAllSolvers<BatchNormTestCase>;
+using CPU_FinInterfaceTestGetBatchNormSolvers_NONE    = TestGetSolvers<BatchNormTestCase>;
 using CPU_FinInterfaceTestGetBatchNormSolver_NONE     = TestGetSolver<BatchNormTestCase>;
 
 TEST_P(CPU_FinInterfaceTestGetAllConvSolvers_NONE, FinInterface) { this->RunTest(); };
+TEST_P(CPU_FinInterfaceTestGetConvSolvers_NONE, FinInterface) { this->RunTest(); };
 TEST_P(CPU_FinInterfaceTestGetConvSolver_NONE, FinInterface) { this->RunTest(); };
+
 TEST_P(CPU_FinInterfaceTestGetAllBatchNormSolvers_NONE, FinInterface) { this->RunTest(); };
+TEST_P(CPU_FinInterfaceTestGetBatchNormSolvers_NONE, FinInterface) { this->RunTest(); };
 TEST_P(CPU_FinInterfaceTestGetBatchNormSolver_NONE, FinInterface) { this->RunTest(); };
 
 INSTANTIATE_TEST_SUITE_P(Full,
                          CPU_FinInterfaceTestGetAllConvSolvers_NONE,
+                         testing::Values(GetTestParams()));
+
+INSTANTIATE_TEST_SUITE_P(Full,
+                         CPU_FinInterfaceTestGetConvSolvers_NONE,
                          testing::Values(GetTestParams()));
 
 INSTANTIATE_TEST_SUITE_P(Full,
@@ -375,6 +444,10 @@ INSTANTIATE_TEST_SUITE_P(Full,
 
 INSTANTIATE_TEST_SUITE_P(Full,
                          CPU_FinInterfaceTestGetAllBatchNormSolvers_NONE,
+                         testing::Values(GetTestParams()));
+
+INSTANTIATE_TEST_SUITE_P(Full,
+                         CPU_FinInterfaceTestGetBatchNormSolvers_NONE,
                          testing::Values(GetTestParams()));
 
 // clang-format off
