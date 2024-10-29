@@ -209,6 +209,7 @@ const std::vector<Solver>& GetAllSolvers()
     static const auto solvers = [] {
         const auto& ids = GetSolversByPrimitive(SolverToPrimitive<Solver>::GetPrimitive());
         std::vector<Solver> solvers;
+        solvers.reserve(ids.size());
 
         for(const auto& id : ids)
         {
@@ -245,6 +246,7 @@ template <class Solver>
 std::vector<Solver> GetSolvers(const std::vector<std::string>& names)
 {
     std::vector<Solver> solvers;
+    solvers.reserve(names.size());
     for(const auto& name : names)
         solvers.emplace_back(GetSolver<Solver>(name));
     return solvers;

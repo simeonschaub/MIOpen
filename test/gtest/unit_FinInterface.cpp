@@ -259,6 +259,7 @@ const auto& GetTestCases()
     static const auto test_cases = [] {
         std::vector<TestCase> test_cases;
         const auto& sinfo = GetSolversInfo<decltype(TestCase{}.info)>();
+        test_cases.reserve(sinfo.size());
         for(const auto& s : sinfo)
             test_cases.emplace_back(TestCase{s.first, s.second});
         return test_cases;
