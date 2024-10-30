@@ -31,7 +31,12 @@
 
 #include <gtest/gtest.h>
 
+// batchnorm::ProblemDescription
+#include <miopen/batchnorm/problem_description.hpp>
 #include <miopen/fin/fin_interface.hpp>
+
+#include "get_handle.hpp"
+#include "unit_conv_solver.hpp"
 
 namespace {
 
@@ -89,7 +94,76 @@ struct ConvSolverInfo : SolverInfo
 
 using BatchNormSolverInfo = SolverInfo;
 
-template <class Info>
+struct SolverConfig
+{
+    SolverConfig() : empty(true) {}
+    SolverConfig(bool empty_) : empty(empty_) {}
+
+    bool empty;
+};
+
+struct ConvSolverConfig : SolverConfig, private miopen::unit_tests::ConvTestCase
+{
+    ConvSolverConfig(miopen::conv::Direction direction_,
+                     miopen::unit_tests::TensorDescriptorParams&& x,
+                     miopen::unit_tests::TensorDescriptorParams&& w,
+                     miopenDataType_t type_y,
+                     miopen::unit_tests::ConvolutionDescriptorParams&& conv)
+        : SolverConfig(false),
+          miopen::unit_tests::ConvTestCase(std::move(x), std::move(w), type_y, std::move(conv)),
+          direction(direction_)
+    {
+    }
+
+    auto GetProblemDescription() const { return GetProblemDescription(direction); }
+
+    friend std::ostream& operator<<(std::ostream& os, const ConvSolverConfig& config)
+    {
+        os << "(";
+        if(config.empty)
+        {
+            os << "empty";
+        }
+        else
+        {
+            os << "direction:" << static_cast<int>(config.direction);
+            os << ", " << static_cast<const miopen::unit_tests::ConvTestCase&>(config);
+        }
+        os << ")";
+        return os;
+    }
+
+private:
+    miopen::conv::Direction direction;
+
+    using miopen::unit_tests::ConvTestCase::GetProblemDescription;
+    using SolverConfig::SolverConfig;
+};
+
+struct BatchNormSolverConfig : SolverConfig
+{
+    BatchNormSolverConfig(int dummy) : SolverConfig(false) { std::ignore = dummy; }
+
+    auto GetProblemDescription() const
+    {
+        return miopen::batchnorm::ProblemDescription{{}, {}, {}, {}, {}, {}, {}, {}};
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const BatchNormSolverConfig& config)
+    {
+        os << "(";
+        if(config.empty)
+            os << "empty";
+        else
+            os << "none";
+        os << ")";
+        return os;
+    }
+
+    using SolverConfig::SolverConfig;
+};
+
+template <class Info, class SolverConfig>
 struct TestCase
 {
     friend std::ostream& operator<<(std::ostream& os, const TestCase& tc)
@@ -97,16 +171,18 @@ struct TestCase
         os << "(";
         os << "name:" << tc.name;
         os << ", info:" << tc.info;
+        os << ", config:" << tc.config;
         os << ")";
         return os;
     }
 
     std::string name;
     Info info;
+    SolverConfig config;
 };
 
-using ConvTestCase      = TestCase<ConvSolverInfo>;
-using BatchNormTestCase = TestCase<BatchNormSolverInfo>;
+using ConvTestCase      = TestCase<ConvSolverInfo, ConvSolverConfig>;
+using BatchNormTestCase = TestCase<BatchNormSolverInfo, BatchNormSolverConfig>;
 
 const auto& GetTestParams()
 {
@@ -253,6 +329,36 @@ const auto& GetSolversInfo<BatchNormSolverInfo>()
     return solver_info;
 }
 
+template <class SolverConfig>
+const auto& GetSolverConfigs();
+
+template <>
+const auto& GetSolverConfigs<ConvSolverConfig>()
+{
+    static const std::unordered_map<std::string, ConvSolverConfig> configs = {
+        // clang-format off
+        {"ConvDirectNaiveConvFwd", {miopen::conv::Direction::Forward,           {miopenFloat, {1, 16, 14, 14}}, {miopenFloat, {48, 16, 5, 5}}, miopenFloat, {{2, 2}, {1, 1}, {1, 1}}}},
+        {"ConvDirectNaiveConvBwd", {miopen::conv::Direction::BackwardData,      {miopenFloat, {1, 16, 14, 14}}, {miopenFloat, {48, 16, 5, 5}}, miopenFloat, {{2, 2}, {1, 1}, {1, 1}}}},
+        {"ConvDirectNaiveConvWrw", {miopen::conv::Direction::BackwardWeights,   {miopenFloat, {1, 16, 14, 14}}, {miopenFloat, {48, 16, 5, 5}}, miopenFloat, {{2, 2}, {1, 1}, {1, 1}}}},
+        // clang-format on
+    };
+
+    return configs;
+}
+
+template <>
+const auto& GetSolverConfigs<BatchNormSolverConfig>()
+{
+    static const std::unordered_map<std::string, BatchNormSolverConfig> configs = {
+        // clang-format off
+        /// \todo add configs
+        {"DummySolver", {42}},
+        // clang-format on
+    };
+
+    return configs;
+}
+
 template <class SolverInfo>
 const auto& GetSolverNames()
 {
@@ -272,13 +378,39 @@ const auto& GetTestCases()
 {
     static const auto test_cases = [] {
         std::vector<TestCase> test_cases;
-        const auto& sinfo = GetSolversInfo<decltype(TestCase{}.info)>();
+        const auto& sinfo   = GetSolversInfo<decltype(TestCase{}.info)>();
+        const auto& configs = GetSolverConfigs<decltype(TestCase{}.config)>();
         test_cases.reserve(sinfo.size());
         for(const auto& s : sinfo)
-            test_cases.emplace_back(TestCase{s.first, s.second});
+        {
+            const auto& config = configs.find(s.first);
+            if(config == configs.end())
+                test_cases.emplace_back(TestCase{s.first, s.second, {}});
+            else
+                test_cases.emplace_back(TestCase{s.first, s.second, config->second});
+        }
         return test_cases;
     }();
     return test_cases;
+}
+
+// Context
+template <class Problem>
+auto GetContext(miopen::Handle* handle, const Problem& problem);
+
+template <>
+auto GetContext(miopen::Handle* handle, const miopen::conv::ProblemDescription& problem)
+{
+    auto tmp = miopen::ExecutionContext{handle};
+    problem.SetupFloats(tmp);
+    return tmp;
+}
+
+template <>
+auto GetContext(miopen::Handle* handle, const miopen::batchnorm::ProblemDescription&)
+{
+    auto tmp = miopen::ExecutionContext{handle};
+    return tmp;
 }
 
 // Checks
@@ -292,12 +424,25 @@ void CheckSolverInfo(const Solver& solver, const SolverInfo& info)
         ASSERT_EQ(solver.GetAlgo(miopen::conv::Direction::Forward), info.algo);
 }
 
+template <class Solver, class SolverConfig>
+void CheckSolverConfig(const Solver& solver, const SolverConfig& config)
+{
+    auto&& handle      = get_handle();
+    const auto problem = config.GetProblemDescription();
+    const auto ctx     = GetContext(&handle, problem);
+
+    ASSERT_EQ(solver.IsApplicable(ctx, problem), true);
+    std::ignore = solver.GetWorkspaceSize(ctx, problem);
+}
+
 template <class Solver, class TestCase>
 void CheckSolver(const Solver& solver, const TestCase& test_case)
 {
     ASSERT_EQ(solver.GetName(), test_case.name);
     ASSERT_EQ(solver.IsValid(), true);
     ASSERT_NO_FATAL_FAILURE(CheckSolverInfo(solver, test_case.info));
+    if(!test_case.config.empty)
+        ASSERT_NO_FATAL_FAILURE(CheckSolverConfig(solver, test_case.config));
 }
 
 // GetAll*Solvers()
@@ -393,7 +538,7 @@ public:
                 const std::string error = name + " not found";
                 GTEST_FAIL() << error;
             }
-            ASSERT_NO_FATAL_FAILURE(CheckSolver(solver, TestCase{name, solver_info->second}));
+            ASSERT_NO_FATAL_FAILURE(CheckSolver(solver, TestCase{name, solver_info->second, {}}));
         }
     }
 };
