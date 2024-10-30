@@ -151,13 +151,13 @@ miopen::ConvolutionDescriptor ConvTestCase::GetConv() const
     return conv.GetConvolutionDescriptor();
 }
 
-miopen::conv::ProblemDescription ConvTestCase::GetProblemDescription(miopen::conv::Direction direction) const
+miopen::conv::ProblemDescription
+ConvTestCase::GetProblemDescription(miopen::conv::Direction direction) const
 {
     const auto x_desc    = GetXTensorDescriptor();
     const auto w_desc    = GetWTensorDescriptor();
     const auto conv_desc = GetConv();
-    const auto y_desc =
-        conv_desc.GetForwardOutputTensor(x_desc, w_desc, GetYDataType());
+    const auto y_desc    = conv_desc.GetForwardOutputTensor(x_desc, w_desc, GetYDataType());
 
     switch(direction)
     {

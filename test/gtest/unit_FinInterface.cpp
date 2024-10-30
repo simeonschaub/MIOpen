@@ -96,12 +96,8 @@ using BatchNormSolverInfo = SolverInfo;
 
 struct SolverConfig
 {
-    SolverConfig() : empty(true)
-    {
-    }
-    SolverConfig(bool empty_) : empty(empty_)
-    {
-    }
+    SolverConfig() : empty(true) {}
+    SolverConfig(bool empty_) : empty(empty_) {}
 
     bool empty;
 };
@@ -112,14 +108,14 @@ struct ConvSolverConfig : SolverConfig, private miopen::unit_tests::ConvTestCase
                      miopen::unit_tests::TensorDescriptorParams&& x,
                      miopen::unit_tests::TensorDescriptorParams&& w,
                      miopenDataType_t type_y,
-                     miopen::unit_tests::ConvolutionDescriptorParams&& conv) : SolverConfig(false), miopen::unit_tests::ConvTestCase(std::move(x), std::move(w), type_y, std::move(conv)), direction(direction_)
+                     miopen::unit_tests::ConvolutionDescriptorParams&& conv)
+        : SolverConfig(false),
+          miopen::unit_tests::ConvTestCase(std::move(x), std::move(w), type_y, std::move(conv)),
+          direction(direction_)
     {
     }
 
-    auto GetProblemDescription() const
-    {
-        return GetProblemDescription(direction);
-    }
+    auto GetProblemDescription() const { return GetProblemDescription(direction); }
 
     friend std::ostream& operator<<(std::ostream& os, const ConvSolverConfig& config)
     {
@@ -140,16 +136,13 @@ struct ConvSolverConfig : SolverConfig, private miopen::unit_tests::ConvTestCase
 private:
     miopen::conv::Direction direction;
 
-    using SolverConfig::SolverConfig;
     using miopen::unit_tests::ConvTestCase::GetProblemDescription;
+    using SolverConfig::SolverConfig;
 };
 
 struct BatchNormSolverConfig : SolverConfig
 {
-    BatchNormSolverConfig(int dummy) : SolverConfig(false)
-    {
-        std::ignore = dummy;
-    }
+    BatchNormSolverConfig(int dummy) : SolverConfig(false) { std::ignore = dummy; }
 
     auto GetProblemDescription() const
     {
@@ -385,7 +378,7 @@ const auto& GetTestCases()
 {
     static const auto test_cases = [] {
         std::vector<TestCase> test_cases;
-        const auto& sinfo = GetSolversInfo<decltype(TestCase{}.info)>();
+        const auto& sinfo   = GetSolversInfo<decltype(TestCase{}.info)>();
         const auto& configs = GetSolverConfigs<decltype(TestCase{}.config)>();
         test_cases.reserve(sinfo.size());
         for(const auto& s : sinfo)
@@ -434,9 +427,9 @@ void CheckSolverInfo(const Solver& solver, const SolverInfo& info)
 template <class Solver, class SolverConfig>
 void CheckSolverConfig(const Solver& solver, const SolverConfig& config)
 {
-    auto&& handle = get_handle();
+    auto&& handle      = get_handle();
     const auto problem = config.GetProblemDescription();
-    const auto ctx = GetContext(&handle, problem);
+    const auto ctx     = GetContext(&handle, problem);
 
     ASSERT_EQ(solver.IsApplicable(ctx, problem), true);
     std::ignore = solver.GetWorkspaceSize(ctx, problem);
