@@ -68,7 +68,7 @@ bool RNNBwWeightMSIsFast(const int seqLen)
 }
 
 std::tuple<size_t, size_t> RNNDescriptor::GetTmpSpaceSizeDynamicAlgo(
-    Handle& /*handle*/, const SeqTensorDescriptor& xDesc, miopenRNNFWDMode_t fwdMode) const
+    Handle& /*handle*/, const SeqTensorDescriptor& xDesc, miopenRNNFWDMode_t /*fwdMode*/) const
 {
     return rnn_base::RNNDynamicModularSingleStreamFWD::getTempBuffersSize(*this, xDesc);
 }
