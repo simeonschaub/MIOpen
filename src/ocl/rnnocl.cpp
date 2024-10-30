@@ -2617,6 +2617,8 @@ void RNNDescriptor::RNNForwardTraining(Handle& handle,
                                                    hy,
                                                    cyDesc,
                                                    cy,
+                                                   workSpace,
+                                                   workSpaceSize,
                                                    reserveSpace,
                                                    reserveSpaceSize);
         }
@@ -2673,6 +2675,8 @@ void RNNDescriptor::RNNForwardTraining(Handle& handle,
                                                           hy,
                                                           cyDesc,
                                                           cy,
+                                                          workSpace,
+                                                          workSpaceSize,
                                                           reserveSpace,
                                                           reserveSpaceSize);
 
@@ -2708,6 +2712,8 @@ void RNNDescriptor::RNNForwardTrainingPackedTensors(
     Data_t hy,
     const TensorDescriptor& cyDesc,
     Data_t cy,
+    Data_t workSpace,
+    size_t workSpaceSize,
     Data_t reserveSpace,
     size_t reserveSpaceSize) const
 {
@@ -2824,8 +2830,8 @@ void RNNDescriptor::RNNForwardTrainingPackedTensors(
                               cy,
                               y_seq,
                               y,
-                              nullptr,
-                              0,
+                              workSpace,
+                              workSpaceSize,
                               reserveSpace,
                               reserveSpaceSize);
     }

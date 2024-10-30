@@ -49,6 +49,28 @@ struct runtimeArgsFwd
 
 class RNNModuleAlgoBase
 {
+protected:
+    static GeneralLstmTempBuffer backwardInterimInfoBuilder(const RNNDescriptor& rnnDesc,
+                                                            const SeqTensorDescriptor& xDesc)
+    {
+        auto layers_cnt             = static_cast<int>(rnnDesc.nLayers);
+        const size_t seq_directions = rnnDesc.dirMode == miopenRNNbidirection ? 2 : 1;
+        auto hidden_vec_sz          = rnnDesc.hsize;
+
+        return GeneralLstmTempBuffer::build(
+            layers_cnt, xDesc.GetTotalSequenceLen(), seq_directions, hidden_vec_sz);
+    }
+
+    static GeneralLstmRedBuffer forwardInterimInfoBuilder(const RNNDescriptor& rnnDesc,
+                                                          const SeqTensorDescriptor& xDesc)
+    {
+        auto layers_cnt             = static_cast<int>(rnnDesc.nLayers);
+        const size_t seq_directions = rnnDesc.dirMode == miopenRNNbidirection ? 2 : 1;
+        auto hidden_vec_sz          = rnnDesc.hsize;
+
+        return GeneralLstmRedBuffer::build(
+            layers_cnt, xDesc.GetTotalSequenceLen(), seq_directions, hidden_vec_sz);
+    }
 
 public:
     static RNNModuleAlgoBase create(const RNNDescriptor& rnnDesc,
@@ -71,14 +93,11 @@ public:
 
         // class update req
         assert(!is_seq_bidir);
-        const size_t seq_directions = is_seq_bidir ? 2 : 1;
 
         // TODO all size_t
-        GeneralLstmRedBuffer rb_layout = GeneralLstmRedBuffer::build(
-            layers_cnt, xDesc.GetTotalSequenceLen(), seq_directions, hidden_vec_sz);
+        GeneralLstmRedBuffer rb_layout = forwardInterimInfoBuilder(rnnDesc, xDesc);
 
-        GeneralLstmTempBuffer workspace_info = GeneralLstmTempBuffer::build(
-            layers_cnt, xDesc.GetTotalSequenceLen(), seq_directions, hidden_vec_sz);
+        GeneralLstmTempBuffer workspace_info = backwardInterimInfoBuilder(rnnDesc, xDesc);
 
         WeightsBufferDescriptor weights_layout =
             WeightsBufferDescriptor::create(static_cast<int>(input_vec_sz),
@@ -162,9 +181,88 @@ public:
         return layer_id * (isBidirectSeq ? 2 : 1) +
                (direction == SequenceDirection::Forward ? 0 : 1);
     }
+
+    template <typename BufType>
+    inline miopen::TensorDescriptor BuildLstmTmpBlockDesc2D(const BufType& buf_info,
+                                                            const size_t batch_size) const
+    {
+        const std::array<size_t, 4>& tmp_block_stride = buf_info.getGateBlockStride();
+        const std::array<size_t, 4>& tmp_block_size   = buf_info.getGateBlockSize();
+
+        // batch, gateBlock_elements
+        return miopen::TensorDescriptor{rnnDesc.dataType,
+                                        {batch_size, tmp_block_size[3]},
+                                        {tmp_block_stride[1], tmp_block_stride[3]}};
+    }
+
+    inline miopen::TensorDescriptor BuildLstmFilterXDesc2D(int layer_id) const
+    {
+        assert(rnnDesc.inputMode == 0 || layer_id != 0);
+        // TODO replace by stride
+        auto x_vec = layer_id != 0 ? weightsLayout.xInVec : weightsLayout.inVec;
+
+        // gateBlock_elements, ht_vec
+        return miopen::TensorDescriptor{
+            rnnDesc.dataType, {weightsLayout.gatesCnt * weightsLayout.hVec, x_vec}, {x_vec, 1}};
+    }
+
+    inline miopen::TensorDescriptor BuildLstmFilterHidDesc2D() const
+    {
+        // TODO replace by stride
+        auto h_vec = weightsLayout.hVec;
+
+        // gateBlock_elements, ht_vec
+        return miopen::TensorDescriptor{
+            rnnDesc.dataType, {weightsLayout.gatesCnt * weightsLayout.hVec, h_vec}, {h_vec, 1}};
+    }
+
+    inline miopen::TensorDescriptor BuildWsHtDesc2D(size_t batch_size) const
+    {
+        auto& ht_stride = workspaceInfo.getHiddenStateStride();
+        auto& ht_size   = workspaceInfo.hStateSizes;
+
+        // batch, gateBlock_elements
+        return miopen::TensorDescriptor{
+            rnnDesc.dataType, {batch_size, ht_size[3]}, {ht_stride[1], ht_stride[3]}};
+    }
+
+    // 2 dims batch, vec
+    inline miopen::TensorDescriptor BuildHxCxDesc2D(size_t batch_size) const
+    {
+        const std::vector<size_t> hx_size{batch_size, hiddenHxCxInfo.getHiddenSize()};
+        const std::vector<size_t> hx_stride{hiddenHxCxInfo.getStrides()[1],
+                                            hiddenHxCxInfo.getStrides()[2]};
+
+        return miopen::TensorDescriptor{rnnDesc.dataType, hx_size, hx_stride};
+    }
+
+    // 3 dims layer, batch, vec
+    inline miopen::TensorDescriptor BuildHxCxDesc3D(size_t layer_size, size_t batch_size) const
+    {
+        const std::vector<size_t> hx_accum_size{
+            layer_size, batch_size, hiddenHxCxInfo.getHiddenSize()};
+
+        return miopen::TensorDescriptor{
+            rnnDesc.dataType, hx_accum_size, hiddenHxCxInfo.getStrides()};
+    }
+
+    // 3 dims layer, batch, vec
+    inline miopen::TensorDescriptor BuildTempDhtDesc3D(size_t layer_size, size_t batch_size) const
+    {
+        const std::vector<size_t> dy_dhy_accum_size{
+            layer_size, batch_size, hiddenHxCxInfo.getHiddenSize()};
+
+        const auto ws_dy_stride = [](const auto& ws_4dim_strides) -> std::vector<size_t> {
+            // convert 4dim stride to 3 dim without direction
+            // TODO change hiddenBufferDesc
+            return std::vector<size_t>{ws_4dim_strides[0], ws_4dim_strides[1], ws_4dim_strides[3]};
+        }(workspaceInfo.getHiddenStateStride());
+
+        return miopen::TensorDescriptor{rnnDesc.dataType, dy_dhy_accum_size, ws_dy_stride};
+    }
 };
 
-class RNNForwardDataModularAlgo : RNNModuleAlgoBase
+class RNNForwardDataModularAlgo : protected RNNModuleAlgoBase
 {
 public:
     // Compute API
@@ -252,87 +350,150 @@ public:
 #endif // MIOPEN_USE_GEMM&& MIOPEN_BACKEND_HIP
     }
 
+    std::tuple<size_t, size_t> getTempBuffersSize() const
+    {
+
+        return std::make_tuple(workspaceInfo.getBufferSize() * GetTypeSize(rnnDesc.dataType),
+                               reservLayout.getBufferSize() * GetTypeSize(rnnDesc.dataType));
+    }
+
+    static std::tuple<size_t, size_t> getTempBuffersSize(const RNNDescriptor& rnnD,
+                                                         const SeqTensorDescriptor& xDesc)
+    {
+        auto wsInfo     = backwardInterimInfoBuilder(rnnD, xDesc);
+        auto reservInfo = forwardInterimInfoBuilder(rnnD, xDesc);
+
+        return std::make_tuple(wsInfo.getBufferSize() * GetTypeSize(rnnD.dataType),
+                               reservInfo.getBufferSize() * GetTypeSize(rnnD.dataType));
+    }
+
     RNNForwardDataModularAlgo(RNNModuleAlgoBase base) : RNNModuleAlgoBase(std::move(base)) {}
 
 private:
-    template <typename BufType>
-    inline miopen::TensorDescriptor BuildLstmTmpBlockDesc2D(const BufType& buf_info,
-                                                            const size_t batch_size) const
-    {
-        const std::array<size_t, 4>& tmp_block_stride = buf_info.getGateBlockStride();
-        const std::array<size_t, 4>& tmp_block_size   = buf_info.getGateBlockSize();
+};
 
-        // batch, gateBlock_elements
-        return miopen::TensorDescriptor{rnnDesc.dataType,
-                                        {batch_size, tmp_block_size[3]},
-                                        {tmp_block_stride[1], tmp_block_stride[3]}};
+class RNNModuleAlgoDynamic : public RNNForwardDataModularAlgo
+{
+    static SeqTensorDescriptor buildDynamicVirtual(const SeqTensorDescriptor& desc)
+    {
+        std::vector<unsigned int> def_layout{1, 0, 2};
+        return {desc.GetType(), def_layout, desc.GetLengths(), false};
     }
 
-    inline miopen::TensorDescriptor BuildLstmFilterXDesc2D(int layer_id) const
+    static SeqTensorDescriptor buildRealToDynamicMapTmp(const SeqTensorDescriptor& desc)
     {
-        assert(rnnDesc.inputMode == 0 || layer_id != 0);
-        // TODO replace by stride
-        auto x_vec = layer_id != 0 ? weightsLayout.xInVec : weightsLayout.inVec;
-
-        // gateBlock_elements, ht_vec
-        return miopen::TensorDescriptor{
-            rnnDesc.dataType, {weightsLayout.gatesCnt * weightsLayout.hVec, x_vec}, {x_vec, 1}};
+        std::vector<unsigned int> def_layout{1, 0, 2};
+        return {desc.GetType(),
+                def_layout,
+                desc.GetLengths(),
+                desc.GetSequenceLengthsVector(),
+                std::vector<char>{},
+                true,
+                true};
     }
 
-    inline miopen::TensorDescriptor BuildLstmFilterHidDesc2D() const
+public:
+    RNNModuleAlgoDynamic(const RNNDescriptor& rnnD,
+                         const SeqTensorDescriptor& xTDesc,
+                         const SeqTensorDescriptor& yTDesc,
+                         const TensorDescriptor& hDesc,
+                         miopenRNNFWDMode_t mode)
+        : RNNForwardDataModularAlgo(RNNModuleAlgoBase::create(
+              rnnD, buildDynamicVirtual(xTDesc), buildDynamicVirtual(yTDesc), hDesc, mode)),
+          realBatchController(BatchController::Create(xTDesc)),
+          realXDesc(xTDesc),
+          realYDesc(yTDesc),
+          tmpMapXDesc(buildRealToDynamicMapTmp(xTDesc)),
+          tmpMapYDesc(buildRealToDynamicMapTmp(yTDesc))
     {
-        // TODO replace by stride
-        auto h_vec = weightsLayout.hVec;
-
-        // gateBlock_elements, ht_vec
-        return miopen::TensorDescriptor{
-            rnnDesc.dataType, {weightsLayout.gatesCnt * weightsLayout.hVec, h_vec}, {h_vec, 1}};
     }
 
-    inline miopen::TensorDescriptor BuildWsHtDesc2D(size_t batch_size) const
+    struct runtimeArgsFwdDynamicExt
     {
-        auto& ht_stride = workspaceInfo.getHiddenStateStride();
-        auto& ht_size   = workspaceInfo.hStateSizes;
+        const ConstData_t realX;
+        const Data_t tempX;
+        const ConstData_t hx;
+        const ConstData_t cx;
+        const Data_t realY;
+        const Data_t tempY;
+        const Data_t hy;
+        const Data_t cy;
+        const ConstData_t w;
+        const Data_t workSpace;
+        const Data_t reserveSpace;
+    };
 
-        // batch, gateBlock_elements
-        return miopen::TensorDescriptor{
-            rnnDesc.dataType, {batch_size, ht_size[3]}, {ht_stride[1], ht_stride[3]}};
+    runtimeArgsFwdDynamicExt createRuntimeArgsExt(const runtimeArgsFwd& runtimeArgs) const
+    {
+        const Data_t temp_x =
+            moveDataPtr(runtimeArgs.workSpace, workspaceInfo.getBufferSizeImpl(), rnnDesc.dataType);
+
+        const Data_t temp_y = moveDataPtrByte(temp_x, tmpMapXDesc.GetTensorMaxByteSpace());
+
+        return {
+            runtimeArgs.x,
+            temp_x,
+            runtimeArgs.hx,
+            runtimeArgs.cx,
+            runtimeArgs.y,
+            temp_y,
+            runtimeArgs.hy,
+            runtimeArgs.cy,
+            runtimeArgs.w,
+            runtimeArgs.workSpace,
+            runtimeArgs.reserveSpace,
+        };
     }
 
-    // 2 dims batch, vec
-    inline miopen::TensorDescriptor BuildHxCxDesc2D(size_t batch_size) const
+    auto getTempBuffersSize() const
     {
-        const std::vector<size_t> hx_size{batch_size, hiddenHxCxInfo.getHiddenSize()};
-        const std::vector<size_t> hx_stride{hiddenHxCxInfo.getStrides()[1],
-                                            hiddenHxCxInfo.getStrides()[2]};
+        auto [ws_size, reserve_size] = RNNForwardDataModularAlgo::getTempBuffersSize();
 
-        return miopen::TensorDescriptor{rnnDesc.dataType, hx_size, hx_stride};
+        return std::make_tuple(ws_size + tmpMapXDesc.GetTensorMaxByteSpace() +
+                                   tmpMapYDesc.GetTensorMaxByteSpace(),
+                               reserve_size);
     }
 
-    // 3 dims layer, batch, vec
-    inline miopen::TensorDescriptor BuildHxCxDesc3D(size_t layer_size, size_t batch_size) const
+    static auto getTempBuffersSize(const RNNDescriptor& rnnD, const SeqTensorDescriptor& xDesc)
     {
-        const std::vector<size_t> hx_accum_size{
-            layer_size, batch_size, hiddenHxCxInfo.getHiddenSize()};
+        auto y_desc = [](const RNNDescriptor& rnnD, const SeqTensorDescriptor& xDesc) {
+            std::vector<size_t> y_lenghts{xDesc.GetLengths()};
+            y_lenghts[2] = rnnD.hsize * (rnnD.dirMode == miopenRNNbidirection ? 2 : 1);
+            return SeqTensorDescriptor{xDesc.GetType(), y_lenghts};
+        }(rnnD, xDesc);
 
-        return miopen::TensorDescriptor{
-            rnnDesc.dataType, hx_accum_size, hiddenHxCxInfo.getStrides()};
+        auto temp_x_desc = buildDynamicVirtual(xDesc);
+        auto temp_y_desc = buildDynamicVirtual(y_desc);
+
+        auto [ws_size, reserve_size] =
+            RNNForwardDataModularAlgo::getTempBuffersSize(rnnD, temp_x_desc);
+
+        return std::make_tuple(ws_size + temp_x_desc.GetTensorMaxByteSpace() +
+                                   temp_y_desc.GetTensorMaxByteSpace(),
+                               reserve_size);
     }
 
-    // 3 dims layer, batch, vec
-    inline miopen::TensorDescriptor BuildTempDhtDesc3D(size_t layer_size, size_t batch_size) const
-    {
-        const std::vector<size_t> dy_dhy_accum_size{
-            layer_size, batch_size, hiddenHxCxInfo.getHiddenSize()};
+    void realXProp(const Handle& handle, const runtimeArgsFwdDynamicExt& runtimeArgsExt) const;
 
-        const auto ws_dy_stride = [](const auto& ws_4dim_strides) -> std::vector<size_t> {
-            // convert 4dim stride to 3 dim without direction
-            // TODO change hiddenBufferDesc
-            return std::vector<size_t>{ws_4dim_strides[0], ws_4dim_strides[1], ws_4dim_strides[3]};
-        }(workspaceInfo.getHiddenStateStride());
+    void realYProp(const Handle& handle, const runtimeArgsFwdDynamicExt& runtimeArgsExt) const;
 
-        return miopen::TensorDescriptor{rnnDesc.dataType, dy_dhy_accum_size, ws_dy_stride};
-    }
+    void PrepareWriteBuffers(const Handle& handle,
+                             const runtimeArgsFwdDynamicExt& runtimeArgsExt,
+                             const runtimeArgsFwd& runtimeArgs) const;
+
+    void PropHyCy(const Handle& handle,
+                  const runtimeArgsFwd& runtimeArgs,
+                  size_t layer,
+                  const SequenceIterator& currentSeq,
+                  SequenceDirection direction) const;
+
+private:
+    BatchController realBatchController;
+
+    SeqTensorDescriptor realXDesc;
+    SeqTensorDescriptor realYDesc;
+    SeqTensorDescriptor tmpMapXDesc;
+    SeqTensorDescriptor tmpMapYDesc;
 };
 
 class RNNBackwardDataModularAlgo : RNNModuleAlgoBase
@@ -550,6 +711,44 @@ public:
 
     const rnn_base::RNNForwardDataModularAlgo rnnAlgoModules;
 
+    const RNNDescriptor& rnnDesc;
+    const size_t max_seq_len;
+};
+
+class RNNDynamicModularSingleStreamFWD
+{
+private:
+public:
+    RNNDynamicModularSingleStreamFWD(const RNNDescriptor& rnn,
+                                     const SeqTensorDescriptor& xDesc,
+                                     const SeqTensorDescriptor& yDesc,
+                                     const TensorDescriptor& hDesc,
+                                     miopenRNNFWDMode_t mode)
+        : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode),
+          rnnDesc(rnn),
+          max_seq_len(xDesc.GetMaxSequenceLength())
+    {
+    }
+
+    static bool IsApplicable()
+    {
+#if MIOPEN_USE_GEMM && MIOPEN_BACKEND_HIP
+        return true;
+#else
+        return false;
+#endif // MIOPEN_USE_GEMM&& MIOPEN_BACKEND_HIP
+    }
+
+    auto getTempBuffersSize() const { return rnnAlgoModules.getTempBuffersSize(); }
+
+    static auto getTempBuffersSize(const RNNDescriptor& rnn, const SeqTensorDescriptor& xDesc)
+    {
+        return rnn_base::RNNModuleAlgoDynamic::getTempBuffersSize(rnn, xDesc);
+    }
+
+    void ComputeFWD(Handle& handle, const runtimeArgsFwd& runtimeArgs) const;
+
+    const rnn_base::RNNModuleAlgoDynamic rnnAlgoModules;
     const RNNDescriptor& rnnDesc;
     const size_t max_seq_len;
 };

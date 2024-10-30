@@ -64,6 +64,16 @@ OutputIt exclusive_scan_wa(InputIt first, InputIt last, OutputIt d_first, T init
 
 } // namespace WA_RHEL
 
+inline Data_t moveDataPtrByte(Data_t ptr, size_t byteOffset)
+{
+    return static_cast<Data_t>(reinterpret_cast<char*>(ptr) + byteOffset);
+}
+
+inline Data_t moveDataPtr(Data_t ptr, size_t elementOffset, miopenDataType_t elementType)
+{
+    return moveDataPtrByte(ptr, elementOffset * GetTypeSize(elementType));
+}
+
 namespace rnn_base {
 
 enum class SequenceDirection
@@ -913,6 +923,8 @@ public:
     {
         return {lengths[1] * lengths[2], lengths[2], 1};
     }
+
+    inline size_t getBufferSizeImpl() const { return packedLens[0]; }
 
     // private:
     //  local caching

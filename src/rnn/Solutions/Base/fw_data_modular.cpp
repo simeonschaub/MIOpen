@@ -527,6 +527,98 @@ void RNNForwardDataModularAlgo::PropY(const Handle& handle, const runtimeArgsFwd
     }
 }
 
+void RNNModuleAlgoDynamic::realXProp(const Handle& handle,
+                                     const runtimeArgsFwdDynamicExt& runtimeArgsExt) const
+{
+
+    RNNTensorBaseLayoutConverter::ConvertInputTensorGPUData(
+        handle, realXDesc, runtimeArgsExt.realX, tmpMapXDesc, runtimeArgsExt.tempX, nullptr, false);
+}
+
+void RNNModuleAlgoDynamic::realYProp(const Handle& handle,
+                                     const runtimeArgsFwdDynamicExt& runtimeArgsExt) const
+{
+    RNNTensorBaseLayoutConverter::ConvertInputTensorGPUData(
+        handle, tmpMapYDesc, runtimeArgsExt.tempY, realYDesc, runtimeArgsExt.realY, nullptr, false);
+}
+
+void RNNModuleAlgoDynamic::PrepareWriteBuffers(const Handle& handle,
+                                               const runtimeArgsFwdDynamicExt& runtimeArgsExt,
+                                               const runtimeArgsFwd& runtimeArgs) const
+{
+    RNNForwardDataModularAlgo::PrepareWriteBuffers(handle, runtimeArgs);
+    realXProp(handle, runtimeArgsExt);
+}
+
+void RNNModuleAlgoDynamic::PropHyCy(const Handle& handle,
+                                    const runtimeArgsFwd& runtimeArgs,
+                                    size_t layer,
+                                    const SequenceIterator& currentSeq,
+                                    SequenceDirection direction) const
+{
+    if(runtimeArgs.hy != nullptr || (runtimeArgs.cy != nullptr))
+    {
+        const auto gap_batch_size = [&]() {
+            if(currentSeq.isLast())
+            {
+                return realBatchController.getBatchSize(currentSeq.getPhisVal());
+            }
+            else
+            {
+                if(direction == SequenceDirection::Forward)
+                {
+                    return realBatchController.getBatchSize(currentSeq.getPhisVal()) -
+                           realBatchController.getBatchSize(currentSeq.getNext().getPhisVal());
+                }
+                else
+                    return static_cast<size_t>(0);
+            }
+        }();
+
+        const auto gap_batch_offset = [&]() {
+            if(currentSeq.isLast())
+                return static_cast<size_t>(0);
+            else
+                return realBatchController.getBatchSize(currentSeq.getPhisVal()) - gap_batch_size;
+        }();
+
+        if(gap_batch_size > 0)
+        {
+
+            auto src_desc = BuildTempDhtDesc3D(1, gap_batch_size);
+
+            auto dst_desc = BuildHxCxDesc3D(1, gap_batch_size);
+
+            size_t tmp_batch_offset =
+                batchController.getBatchSum(currentSeq.getPhisVal()) + gap_batch_offset;
+
+            if(runtimeArgs.hy != nullptr)
+            {
+                CopyTensor(handle,
+                           src_desc,
+                           runtimeArgs.reserveSpace,
+                           dst_desc,
+                           runtimeArgs.hy,
+                           reservLayout.getGasOffset(
+                               layer, tmp_batch_offset, direction, LstmGateAndState::Ht),
+                           hiddenHxCxInfo.getOffset(layer, gap_batch_offset));
+            }
+
+            if(runtimeArgs.cy != nullptr)
+            {
+                CopyTensor(handle,
+                           src_desc,
+                           runtimeArgs.reserveSpace,
+                           dst_desc,
+                           runtimeArgs.cy,
+                           reservLayout.getGasOffset(
+                               layer, tmp_batch_offset, direction, LstmGateAndState::St),
+                           hiddenHxCxInfo.getOffset(layer, gap_batch_offset));
+            }
+        }
+    }
+}
+
 //
 //
 //

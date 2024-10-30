@@ -43,6 +43,8 @@
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_RNNBWDMS_EXP)
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_RNNBWMS_EXP)
 
+MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_RNN_DYNAMIC_EXP)
+
 namespace miopen {
 
 bool RNNBwdMSIsFast(const int seqLen)
@@ -65,6 +67,12 @@ bool RNNBwWeightMSIsFast(const int seqLen)
     return false;
 }
 
+std::tuple<size_t, size_t> RNNDescriptor::GetTmpSpaceSizeDynamicAlgo(
+    Handle& /*handle*/, const SeqTensorDescriptor& xDesc, miopenRNNFWDMode_t fwdMode) const
+{
+    return rnn_base::RNNDynamicModularSingleStreamFWD::getTempBuffersSize(*this, xDesc);
+}
+
 void RNNDescriptor::ModularForward(Handle& handle,
                                    miopenRNNFWDMode_t fwdMode,
                                    ConstData_t w,
@@ -83,9 +91,19 @@ void RNNDescriptor::ModularForward(Handle& handle,
                                    Data_t reserveSpace,
                                    size_t /*reserveSpaceSize*/) const
 {
-    rnn_base::RNNModularSingleStreamFWD single_stream{*this, xDesc, yDesc, hDesc, fwdMode};
-    single_stream.ComputeFWD(
-        handle, rnn_base::runtimeArgsFwd{x, hx, cx, y, hy, cy, w, workSpace, reserveSpace});
+    if(env::enabled(MIOPEN_RNN_DYNAMIC_EXP))
+    {
+        rnn_base::RNNDynamicModularSingleStreamFWD single_stream{
+            *this, xDesc, yDesc, hDesc, fwdMode};
+        single_stream.ComputeFWD(
+            handle, rnn_base::runtimeArgsFwd{x, hx, cx, y, hy, cy, w, workSpace, reserveSpace});
+    }
+    else
+    {
+        rnn_base::RNNModularSingleStreamFWD single_stream{*this, xDesc, yDesc, hDesc, fwdMode};
+        single_stream.ComputeFWD(
+            handle, rnn_base::runtimeArgsFwd{x, hx, cx, y, hy, cy, w, workSpace, reserveSpace});
+    }
 }
 
 void RNNDescriptor::ModularBackward(Handle& handle,

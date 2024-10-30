@@ -33,11 +33,15 @@
 #include <numeric>
 #include <ostream>
 
+#include "miopen/env.hpp"
+
 // Disable specific warnings
 #define MIO_RNN_DEBUG 0
 
 #define MIOPEN_RNN_SYNCH 0
 #define MIO_RNN_CPP_PROF 0
+
+MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_RNN_DYNAMIC_EXP)
 
 namespace miopen {
 
@@ -483,6 +487,15 @@ size_t RNNDescriptor::GetWorkspaceSize(Handle& handle,
                                                  dirMode == miopenRNNbidirection,
                                                  dataType);
 
+    if(env::enabled(MIOPEN_RNN_DYNAMIC_EXP))
+    {
+        auto [ws, rs] = GetTmpSpaceSizeDynamicAlgo(handle, xDesc, miopenRNNTraining);
+        return std::max(ws,
+                        GetMainSolWorkspaceSize(
+                            total_sequence_len, fwdMode, miopenRNNDataSeqMajorNotPadded)) +
+               transformer_tmp_space + reduction_ws;
+    }
+
     return transformer_tmp_space + reduction_ws +
            GetMainSolWorkspaceSize(total_sequence_len, fwdMode, miopenRNNDataSeqMajorNotPadded);
 }
@@ -564,18 +577,25 @@ size_t RNNDescriptor::GetReserveSize(size_t batchLenSum) const
 //  with tensor with maximum sequence length and maximum count of non empty sequences.
 // The previous version of this function returned a size sufficient only for the current tensor
 // size.
-size_t RNNDescriptor::GetMaxReserveSize(Handle& /* handle */,
-                                        const SeqTensorDescriptor& xDesc) const
+size_t RNNDescriptor::GetMaxReserveSize(Handle& handle, const SeqTensorDescriptor& xDesc) const
 {
     if(xDesc.GetType() != dataType)
     {
         MIOPEN_THROW(miopenStatusBadParm, "Data type mismatch between descriptors");
     }
+
+    if(env::enabled(MIOPEN_RNN_DYNAMIC_EXP))
+    {
+        auto [ws, rs] = GetTmpSpaceSizeDynamicAlgo(handle, xDesc, miopenRNNTraining);
+        return std::max(
+            rs, GetReserveSize(xDesc.GetMaxSequenceLength() * xDesc.GetMaxCountOfSequences()));
+    }
+
     return GetReserveSize(xDesc.GetMaxSequenceLength() * xDesc.GetMaxCountOfSequences());
 }
 
 // Legacy.
-size_t RNNDescriptor::GetReserveSize(Handle& /* handle */,
+size_t RNNDescriptor::GetReserveSize(Handle& handle,
                                      const int seqLength,
                                      c_array_view<const miopenTensorDescriptor_t> xDesc) const
 {
@@ -1211,6 +1231,8 @@ void RNNDescriptor::RNNVanillaForward(Handle& handle,
                                                hy,
                                                cDesc,
                                                cy,
+                                               workSpace,
+                                               workSpaceSize,
                                                reserveSpace,
                                                reserveSpaceSize);
     }
