@@ -60,11 +60,27 @@ void ConvDataType(std::stringstream& ss, const miopen::TensorDescriptor& desc)
     }
 }
 
-void BnDataType(std::stringstream& ss, const miopen::TensorDescriptor& desc)
+// test based on the input tensor and scaleMean.
+// We choose scaleMean because its a accumulator type.
+void BnDataType(std::stringstream& ss,
+                const miopen::TensorDescriptor& xDesc,
+                const miopen::TensorDescriptor& sMeanDesc)
 {
-    if(desc.GetType() == miopenHalf)
+    if(xDesc.GetType() == miopenHalf && sMeanDesc.GetType() == miopenHalf)
     {
         ss << "bnormfp16";
+    }
+    else if(xDesc.GetType() == miopenBFloat16 && sMeanDesc.GetType() == miopenBFloat16)
+    {
+        ss << "bnormbfp16";
+    }
+    else if(xDesc.GetType() == miopenHalf && sMeanDesc.GetType() == miopenFloat)
+    {
+        ss << "bnormfp16fp32";
+    }
+    else if(xDesc.GetType() == miopenBFloat16 && sMeanDesc.GetType() == miopenFloat)
+    {
+        ss << "bnormbfp16fp32";
     }
     else
     {
@@ -142,9 +158,9 @@ std::string ConvArgsForMIOpenDriver(const miopen::TensorDescriptor& xDesc,
            << " -v " << convDesc.GetConvStrides()[1]   //
            << " -l " << convDesc.GetConvDilations()[0] //
            << " -j " << convDesc.GetConvDilations()[1];
-        std::string x_layout = xDesc.GetLayout("NCHW");
-        std::string w_layout = wDesc.GetLayout("NCHW");
-        std::string y_layout = yDesc.GetLayout("NCHW");
+        std::string x_layout = xDesc.GetLayout_str();
+        std::string w_layout = wDesc.GetLayout_str();
+        std::string y_layout = yDesc.GetLayout_str();
         if(x_layout != "NCHW")
         {
             ss << " --in_layout " << x_layout;
@@ -182,9 +198,9 @@ std::string ConvArgsForMIOpenDriver(const miopen::TensorDescriptor& xDesc,
            << " -l " << convDesc.GetConvDilations()[1]            //
            << " -j " << convDesc.GetConvDilations()[2]            //
            << " --spatial_dim 3";
-        std::string x_layout = xDesc.GetLayout("NCDHW");
-        std::string w_layout = wDesc.GetLayout("NCDHW");
-        std::string y_layout = yDesc.GetLayout("NCDHW");
+        std::string x_layout = xDesc.GetLayout_str();
+        std::string w_layout = wDesc.GetLayout_str();
+        std::string y_layout = yDesc.GetLayout_str();
         if(x_layout != "NCDHW")
         {
             ss << " --in_layout " << x_layout;
@@ -211,7 +227,8 @@ std::string ConvArgsForMIOpenDriver(const miopen::TensorDescriptor& xDesc,
     return ss.str();
 }
 
-std::string BnormArgsForMIOpenDriver(miopenTensorDescriptor_t xDesc,
+std::string BnormArgsForMIOpenDriver(const miopenTensorDescriptor_t xDesc,
+                                     const miopenTensorDescriptor_t sMeanDesc,
                                      miopenBatchNormMode_t bn_mode,
                                      const void* resultRunningMean,
                                      const void* resultRunningVariance,
@@ -224,7 +241,7 @@ std::string BnormArgsForMIOpenDriver(miopenTensorDescriptor_t xDesc,
     miopenGetTensorDescriptorSize(xDesc, &size);
     std::stringstream ss;
     if(print_for_bn_driver)
-        BnDataType(ss, miopen::deref(xDesc));
+        BnDataType(ss, miopen::deref(xDesc), miopen::deref(sMeanDesc));
 
     ss << " -n " << miopen::deref(xDesc).GetLengths()[0] // clang-format off
             << " -c " << miopen::deref(xDesc).GetLengths()[1];
@@ -248,6 +265,7 @@ std::string BnormArgsForMIOpenDriver(miopenTensorDescriptor_t xDesc,
                      resultRunningVariance,
                      resultSaveMean,
                      resultSaveInvVariance);
+        ss << " --layout " << miopen::deref(xDesc).GetLayout_str();
     }
     return ss.str();
 }

@@ -58,7 +58,10 @@ struct MIOPEN_INTERNALS_EXPORT ProblemDescription : ProblemDescriptionBase, Prob
     ProblemDescription(miopenBatchNormMode_t bn_mode_,
                        const TensorDescriptor& xDesc_,
                        const TensorDescriptor& yDesc_,
-                       const TensorDescriptor& bnScaleBiasMeanVarDesc_,
+                       const TensorDescriptor& scaleDesc_,
+                       const TensorDescriptor& biasDesc_,
+                       const TensorDescriptor& sMeanDesc_,
+                       const TensorDescriptor& sVarianceDesc_,
                        double expAvgFactor_,
                        double epsilon_,
                        bool resultsave_,
@@ -67,31 +70,42 @@ struct MIOPEN_INTERNALS_EXPORT ProblemDescription : ProblemDescriptionBase, Prob
           bn_mode(bn_mode_),
           xDesc(xDesc_),
           yOrDyDesc(yDesc_),
-          scaleBiasDesc(bnScaleBiasMeanVarDesc_),
+          scaleDesc(scaleDesc_),
+          biasDesc(biasDesc_),
+          sMeanDesc(sMeanDesc_),
+          sVarianceDesc(sVarianceDesc_),
           expAvgFactor(expAvgFactor_),
           epsilon(epsilon_),
           resultsave(resultsave_),
           resultrunning(resultrunning_)
     {
-        in_layout  = xDesc.GetLayout(xDesc.GetLengths().size() == 4 ? "NCHW" : "NCDHW");
-        out_layout = yOrDyDesc.GetLayout(yOrDyDesc.GetLengths().size() == 4 ? "NCHW" : "NCDHW");
+        SetSpatialDims();
+        in_layout  = ComputeInLayout();
+        out_layout = ComputeOutLayout();
     }
 
-    // Forward
+    // Forward Inference
     ProblemDescription(miopenBatchNormMode_t bn_mode_,
                        const TensorDescriptor& xDesc_,
                        const TensorDescriptor& yDesc_,
-                       const TensorDescriptor& bnScaleBiasMeanVarDesc_,
+                       const TensorDescriptor& scaleDesc_,
+                       const TensorDescriptor& biasDesc_,
+                       const TensorDescriptor& sMeanDesc_,
+                       const TensorDescriptor& sVarianceDesc_,
                        double epsilon_)
         : direction(Direction::ForwardInference),
           bn_mode(bn_mode_),
           xDesc(xDesc_),
           yOrDyDesc(yDesc_),
-          scaleBiasDesc(bnScaleBiasMeanVarDesc_),
+          scaleDesc(scaleDesc_),
+          biasDesc(biasDesc_),
+          sMeanDesc(sMeanDesc_),
+          sVarianceDesc(sVarianceDesc_),
           epsilon(epsilon_)
     {
-        in_layout  = xDesc.GetLayout(xDesc.GetLengths().size() == 4 ? "NCHW" : "NCDHW");
-        out_layout = yOrDyDesc.GetLayout(yOrDyDesc.GetLengths().size() == 4 ? "NCHW" : "NCDHW");
+        SetSpatialDims();
+        in_layout  = ComputeInLayout();
+        out_layout = ComputeOutLayout();
     }
 
     // Backward
@@ -99,7 +113,10 @@ struct MIOPEN_INTERNALS_EXPORT ProblemDescription : ProblemDescriptionBase, Prob
                        const TensorDescriptor& xDesc_,
                        const TensorDescriptor& dyDesc_,
                        const TensorDescriptor& dxDesc_,
-                       const TensorDescriptor& bnScaleBiasDiffDesc_,
+                       const TensorDescriptor& scaleDesc_,
+                       const TensorDescriptor& biasDesc_,
+                       const TensorDescriptor& sMeanDesc_,
+                       const TensorDescriptor& sVarianceDesc_,
                        double epsilon_,
                        bool useSaved_)
         : direction(Direction::Backward),
@@ -107,15 +124,28 @@ struct MIOPEN_INTERNALS_EXPORT ProblemDescription : ProblemDescriptionBase, Prob
           xDesc(xDesc_),
           yOrDyDesc(dyDesc_),
           dxDesc(dxDesc_),
-          scaleBiasDesc(bnScaleBiasDiffDesc_),
+          scaleDesc(scaleDesc_),
+          biasDesc(biasDesc_),
+          sMeanDesc(sMeanDesc_),
+          sVarianceDesc(sVarianceDesc_),
           epsilon(epsilon_),
           useSaved(useSaved_)
     {
-        in_layout  = xDesc.GetLayout(xDesc.GetLengths().size() == 4 ? "NCHW" : "NCDHW");
-        out_layout = yOrDyDesc.GetLayout(yOrDyDesc.GetLengths().size() == 4 ? "NCHW" : "NCDHW");
-        din_layout = dxDesc.GetLayout(dxDesc.GetLengths().size() == 4 ? "NCHW" : "NCDHW");
+        SetSpatialDims();
+        in_layout  = ComputeInLayout();
+        out_layout = ComputeOutLayout();
+        din_layout = ComputeDinLayout();
     }
 
+    void SetSpatialDims()
+    {
+        if(Is2D())
+            spatial_dim = 2;
+        else if(Is3D())
+            spatial_dim = 3;
+        else
+            MIOPEN_THROW("Unknown spatial dim!");
+    }
     Direction GetDirection() const { return direction; }
     miopenBatchNormMode_t GetMode() const { return bn_mode; }
     const TensorDescriptor& GetXDesc() const { return xDesc; }
@@ -141,13 +171,13 @@ struct MIOPEN_INTERNALS_EXPORT ProblemDescription : ProblemDescriptionBase, Prob
     const TensorDescriptor& GetBnScaleBiasMeanVarDesc() const
     {
         assert(direction == Direction::ForwardTraining || direction == Direction::ForwardInference);
-        return scaleBiasDesc;
+        return scaleDesc;
     }
 
     const TensorDescriptor& GetScaleBiasDiffDesc() const
     {
         assert(direction == Direction::Backward);
-        return scaleBiasDesc;
+        return scaleDesc;
     }
 
     bool GetResultSave() const
@@ -183,6 +213,7 @@ struct MIOPEN_INTERNALS_EXPORT ProblemDescription : ProblemDescriptionBase, Prob
     }
 
     bool Is2D() const { return xDesc.GetLengths().size() == 4; }
+    bool Is3D() const { return xDesc.GetLengths().size() == 5; }
 
     bool IsFp64() const { return xDesc.GetType() == miopenDouble; }
     bool IsFp32() const { return xDesc.GetType() == miopenFloat; }
@@ -199,10 +230,14 @@ struct MIOPEN_INTERNALS_EXPORT ProblemDescription : ProblemDescriptionBase, Prob
 private:
     Direction direction;
     miopenBatchNormMode_t bn_mode;
-    TensorDescriptor xDesc;
-    TensorDescriptor yOrDyDesc;
+    TensorDescriptor xDesc;     // input
+    TensorDescriptor yOrDyDesc; // output
     TensorDescriptor dxDesc;
-    TensorDescriptor scaleBiasDesc;
+
+    TensorDescriptor scaleDesc; // scale
+    TensorDescriptor biasDesc;  // bias (shift)
+    TensorDescriptor sMeanDesc;
+    TensorDescriptor sVarianceDesc;
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -216,16 +251,22 @@ private:
 #pragma clang diagnostic pop
 #endif
 
-    bool resultsave        = false;
-    bool resultrunning     = false;
-    bool useSaved          = false;
-    std::string in_layout  = "NCHW";
-    std::string out_layout = "NCHW";
-    std::string din_layout = "NCHW";
+    bool resultsave         = false;
+    bool resultrunning      = false;
+    bool useSaved           = false;
+    std::string in_layout   = "NCHW";
+    std::string out_layout  = "NCHW";
+    std::string din_layout  = "NCHW";
+    std::size_t spatial_dim = 2;
 
     NetworkConfig MakeForwardTrainingNetworkConfig() const;
     NetworkConfig MakeForwardInferenceNetworkConfig() const;
     NetworkConfig MakeBackwardNetworkConfig() const;
+
+    std::string ComputeLayout(const TensorDescriptor& td) const { return td.GetLayout_str(); }
+    std::string ComputeInLayout() const { return ComputeLayout(xDesc); }
+    std::string ComputeOutLayout() const { return ComputeLayout(yOrDyDesc); }
+    std::string ComputeDinLayout() const { return ComputeLayout(dxDesc); }
 };
 
 } // namespace batchnorm
