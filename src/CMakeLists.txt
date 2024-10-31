@@ -195,9 +195,9 @@ set( MIOpen_Source
     rnn/Solutions/bww_multi_stream.cpp
     rope_api.cpp
     rope/problem_description.cpp
+    scalar.cpp
     smoothl1loss/problem_description.cpp
     smoothl1loss_api.cpp
-    scalar.cpp
     softmarginloss/problem_description.cpp 
     softmarginloss_api.cpp
     softmax.cpp
