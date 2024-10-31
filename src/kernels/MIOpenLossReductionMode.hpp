@@ -28,7 +28,7 @@
 
 enum class LossReductionMode_t
 {
-    NONE = 1,
+    NONE = 0,
     SUM,
     MEAN,
 };

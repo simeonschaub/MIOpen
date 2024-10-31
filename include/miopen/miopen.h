@@ -7990,7 +7990,7 @@ MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossForward(miopenHandle_t handle,
  * @return                              miopenStatus_t
  */
 MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossBackward(miopenHandle_t handle,
-                                                        miopenTensorDescriptor_t inputargetDesc,
+                                                        miopenTensorDescriptor_t inputDesc,
                                                         const void* input,
                                                         miopenTensorDescriptor_t targetDesc,
                                                         const void* target,

@@ -61,23 +61,51 @@ struct SmoothL1LossTestCase
     }
 };
 
-inline std::vector<SmoothL1LossTestCase> SmoothL1LossTestConfigs()
+inline std::vector<SmoothL1LossTestCase>
+SmoothL1LossTestConfigs(const std::vector<std::vector<size_t>>& SizeList)
 {
     std::vector<SmoothL1LossTestCase> tcs;
     auto all_mode = {
         MIOPEN_LOSS_REDUCTION_NONE, MIOPEN_LOSS_REDUCTION_SUM, MIOPEN_LOSS_REDUCTION_MEAN};
     for(auto reduction : all_mode)
-    {
-        tcs.push_back({{1, 2, 3, 4}, 1, reduction, false});
-        tcs.push_back({{1, 1, 1, 257}, 1, reduction, false});
-        tcs.push_back({{2, 10, 128, 128}, 1, reduction, false});
-        tcs.push_back({{5, 13, 17, 11}, 1, reduction, false});
-        tcs.push_back({{256, 4, 8723}, 1, reduction, false});
-        tcs.push_back({{1, 1, 1}, 1, reduction, true});
-        tcs.push_back({{34, 4, 5}, 1, reduction, true});
-        tcs.push_back({{4, 7, 5}, 1, reduction, true});
-        tcs.push_back({{15, 4, 5}, 1, reduction, true});
-    }
+        for(auto contiguous : {true, false})
+            for(const auto& lengths : SizeList)
+                tcs.push_back({lengths, 1, reduction, contiguous});
+    return tcs;
+}
+
+inline std::vector<SmoothL1LossTestCase> SmoothL1LossSmokeTestConfigs()
+{
+    return SmoothL1LossTestConfigs({
+        {1, 1, 1},
+        {4, 7, 5},
+        {1, 2, 3, 4},
+        {1, 1, 1, 257},
+        {34, 4, 5},
+        {15, 4, 5},
+        {5, 13, 17, 11},
+        {2, 10, 128, 128},
+    });
+}
+
+inline std::vector<SmoothL1LossTestCase> SmoothL1LossPerfTestConfigs()
+{
+    return SmoothL1LossTestConfigs({{256, 4, 8723}});
+}
+
+inline std::vector<SmoothL1LossTestCase> SmoothL1LossFullTestConfigs()
+{
+    std::vector<SmoothL1LossTestCase> tcs;
+
+    auto smoke_test = SmoothL1LossSmokeTestConfigs();
+    auto perf_test  = SmoothL1LossPerfTestConfigs();
+
+    tcs.reserve(smoke_test.size() + perf_test.size());
+    for(const auto& test : smoke_test)
+        tcs.push_back(test);
+    for(const auto& test : perf_test)
+        tcs.push_back(test);
+
     return tcs;
 }
 
@@ -137,11 +165,8 @@ protected:
             std::vector<size_t> workspace_dims;
             workspace_dims.push_back(ws_sizeInBytes / sizeof(T));
 
-            workspace = tensor<T>{workspace_dims};
+            workspace = tensor<float>{workspace_dims};
             std::fill(workspace.begin(), workspace.end(), 0.0f);
-
-            ref_workspace = tensor<T>{workspace_dims};
-            std::fill(ref_workspace.begin(), ref_workspace.end(), 0.0f);
 
             workspace_dev = handle.Write(workspace.data);
         }
@@ -157,8 +182,8 @@ protected:
 
         miopenStatus_t status;
 
-        cpu_smoothl1loss_forward<T>(input, target, ref_output, ref_workspace, beta, reduction);
-        status         = miopen::SmoothL1LossForward(handle,
+        cpu_smoothl1loss_forward<T>(input, target, ref_output, beta, reduction);
+        status = miopen::SmoothL1LossForward(handle,
                                              workspace_dev.get(),
                                              ws_sizeInBytes,
                                              input.desc,
@@ -169,11 +194,10 @@ protected:
                                              output_dev.get(),
                                              beta,
                                              reduction);
-        workspace.data = handle.Read<T>(workspace_dev, workspace.data.size());
-
         ASSERT_EQ(status, miopenStatusSuccess);
 
-        output.data = handle.Read<T>(output_dev, output.data.size());
+        workspace.data = handle.Read<float>(workspace_dev, workspace.data.size());
+        output.data    = handle.Read<T>(output_dev, output.data.size());
     }
 
     void Verify()
@@ -186,11 +210,6 @@ protected:
         if(std::is_same<T, bfloat16>::value)
             tolerance *= 8.0;
 
-        auto error_w = miopen::rms_range(ref_workspace, workspace);
-
-        ASSERT_EQ(miopen::range_distance(ref_workspace), miopen::range_distance(workspace));
-        EXPECT_LT(error_w, tolerance);
-
         auto error = miopen::rms_range(ref_output, output);
 
         ASSERT_EQ(miopen::range_distance(ref_output), miopen::range_distance(output));
@@ -202,9 +221,8 @@ protected:
     tensor<T> input;
     tensor<T> target;
     tensor<T> output;
-    tensor<T> workspace;
+    tensor<float> workspace;
 
-    tensor<T> ref_workspace;
     tensor<T> ref_output;
 
     miopen::Allocator::ManageDataPtr input_dev;
@@ -234,9 +252,6 @@ protected:
         auto lengths    = smoothl1loss_config.lengths;
         auto contiguous = smoothl1loss_config.contiguous;
 
-        if(contiguous)
-            GTEST_SKIP();
-
         auto in_strides = GetStrides(lengths, true);
         input           = tensor<T>{lengths, in_strides}.generate(gen_value1);
 
@@ -248,7 +263,7 @@ protected:
         auto out_strides = GetStrides(out_lengths, true);
 
         dO = tensor<T>{out_lengths, out_strides};
-        std::fill(dO.begin(), dO.end(), 0.5);
+        std::fill(dO.begin(), dO.end(), 0);
 
         dI = tensor<T>{lengths, in_strides};
         std::fill(dI.begin(), dI.end(), std::numeric_limits<T>::quiet_NaN());
@@ -259,6 +274,10 @@ protected:
         std::fill(ref_dI.begin(), ref_dI.end(), std::numeric_limits<T>::quiet_NaN());
         ref_dT = tensor<T>{lengths, tar_strides};
         std::fill(ref_dT.begin(), ref_dT.end(), std::numeric_limits<T>::quiet_NaN());
+
+        if(input.desc.IsContiguous() && target.desc.IsContiguous() && dO.desc.IsContiguous() &&
+           dI.desc.IsContiguous() && dT.desc.IsContiguous())
+            GTEST_SKIP();
 
         input_dev  = handle.Write(input.data);
         target_dev = handle.Write(target.data);

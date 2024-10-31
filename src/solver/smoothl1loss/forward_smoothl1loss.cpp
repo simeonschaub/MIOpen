@@ -92,7 +92,7 @@ ConvSolution SmoothL1LossForward::GetSolution(
                                   {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
                                   {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
                                   {"REDUCTION_TYPE", static_cast<int>(problem.GetReduction())},
-                                  {"NDIM", VIEW_DIMS}};
+                                  {"VIEW_DIMS", VIEW_DIMS}};
         result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS_FWD},
                                                              {size},
                                                              "MIOpenSmoothL1Loss.cpp",
@@ -143,6 +143,7 @@ ConvSolution SmoothL1LossForward::GetSolution(
                 kernel(params.i,
                        params.t,
                        params.o,
+                       params.beta,
                        deref(params.iDesc).GetElementSize(),
                        i_tv,
                        t_tv,
@@ -180,6 +181,7 @@ ConvSolution SmoothL1LossForward::GetSolution(
                     kernel(params.i,
                            params.t,
                            params.workspace,
+                           params.beta,
                            params.iDesc->GetElementSize(),
                            i_tv,
                            t_tv,

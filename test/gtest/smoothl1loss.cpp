@@ -28,89 +28,127 @@
 #include <miopen/bfloat16.hpp>
 #include <miopen/env.hpp>
 
-MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
-MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
-
 namespace smoothl1loss {
 
-struct SmoothL1LossTestForwardFloat : SmoothL1LossTestForward<float>
+struct GPU_SmoothL1LossForward_FP32 : SmoothL1LossTestForward<float>
 {
 };
 
-struct SmoothL1LossTestForwardHalf : SmoothL1LossTestForward<half>
+struct GPU_SmoothL1LossForward_FP16 : SmoothL1LossTestForward<half>
 {
 };
 
-struct SmoothL1LossTestForwardBfloat16 : SmoothL1LossTestForward<bfloat16>
+struct GPU_SmoothL1LossForward_BFP16 : SmoothL1LossTestForward<bfloat16>
 {
 };
 
-struct SmoothL1LossTestBackwardFloat : SmoothL1LossTestBackward<float>
+struct GPU_SmoothL1LossBackward_FP32 : SmoothL1LossTestBackward<float>
 {
 };
 
-struct SmoothL1LossTestBackwardHalf : SmoothL1LossTestBackward<half>
+struct GPU_SmoothL1LossBackward_FP16 : SmoothL1LossTestBackward<half>
 {
 };
 
-struct SmoothL1LossTestBackwardBfloat16 : SmoothL1LossTestBackward<bfloat16>
+struct GPU_SmoothL1LossBackward_BFP16 : SmoothL1LossTestBackward<bfloat16>
 {
 };
 
 } // namespace smoothl1loss
 using namespace smoothl1loss;
 
-TEST_P(SmoothL1LossTestForwardFloat, SmoothL1LossTestFw)
+TEST_P(GPU_SmoothL1LossForward_FP32, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(SmoothL1LossTestForwardHalf, SmoothL1LossTestFw)
+TEST_P(GPU_SmoothL1LossForward_FP16, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(SmoothL1LossTestForwardBfloat16, SmoothL1LossTestFw)
+TEST_P(GPU_SmoothL1LossForward_BFP16, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(SmoothL1LossTestBackwardFloat, SmoothL1LossTestBw)
+TEST_P(GPU_SmoothL1LossBackward_FP32, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(SmoothL1LossTestBackwardHalf, SmoothL1LossTestBw)
+TEST_P(GPU_SmoothL1LossBackward_FP16, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(SmoothL1LossTestBackwardBfloat16, SmoothL1LossTestBw)
+TEST_P(GPU_SmoothL1LossBackward_BFP16, Test)
 {
     RunTest();
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestForwardFloat,
-                         testing::ValuesIn(SmoothL1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestForwardHalf,
-                         testing::ValuesIn(SmoothL1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestForwardBfloat16,
-                         testing::ValuesIn(SmoothL1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestBackwardFloat,
-                         testing::ValuesIn(SmoothL1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestBackwardHalf,
-                         testing::ValuesIn(SmoothL1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(SmoothL1LossTestSet,
-                         SmoothL1LossTestBackwardBfloat16,
-                         testing::ValuesIn(SmoothL1LossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke,
+                         GPU_SmoothL1LossForward_FP32,
+                         testing::ValuesIn(SmoothL1LossSmokeTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke,
+                         GPU_SmoothL1LossForward_FP16,
+                         testing::ValuesIn(SmoothL1LossSmokeTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke,
+                         GPU_SmoothL1LossForward_BFP16,
+                         testing::ValuesIn(SmoothL1LossSmokeTestConfigs()));
+
+INSTANTIATE_TEST_SUITE_P(Perf,
+                         GPU_SmoothL1LossForward_FP32,
+                         testing::ValuesIn(SmoothL1LossPerfTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Perf,
+                         GPU_SmoothL1LossForward_FP16,
+                         testing::ValuesIn(SmoothL1LossPerfTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Perf,
+                         GPU_SmoothL1LossForward_BFP16,
+                         testing::ValuesIn(SmoothL1LossPerfTestConfigs()));
+
+INSTANTIATE_TEST_SUITE_P(Full,
+                         GPU_SmoothL1LossForward_FP32,
+                         testing::ValuesIn(SmoothL1LossFullTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Full,
+                         GPU_SmoothL1LossForward_FP16,
+                         testing::ValuesIn(SmoothL1LossFullTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Full,
+                         GPU_SmoothL1LossForward_BFP16,
+                         testing::ValuesIn(SmoothL1LossFullTestConfigs()));
+
+INSTANTIATE_TEST_SUITE_P(Smoke,
+                         GPU_SmoothL1LossBackward_FP32,
+                         testing::ValuesIn(SmoothL1LossSmokeTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke,
+                         GPU_SmoothL1LossBackward_FP16,
+                         testing::ValuesIn(SmoothL1LossSmokeTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke,
+                         GPU_SmoothL1LossBackward_BFP16,
+                         testing::ValuesIn(SmoothL1LossSmokeTestConfigs()));
+
+INSTANTIATE_TEST_SUITE_P(Perf,
+                         GPU_SmoothL1LossBackward_FP32,
+                         testing::ValuesIn(SmoothL1LossPerfTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Perf,
+                         GPU_SmoothL1LossBackward_FP16,
+                         testing::ValuesIn(SmoothL1LossPerfTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Perf,
+                         GPU_SmoothL1LossBackward_BFP16,
+                         testing::ValuesIn(SmoothL1LossPerfTestConfigs()));
+
+INSTANTIATE_TEST_SUITE_P(Full,
+                         GPU_SmoothL1LossBackward_FP32,
+                         testing::ValuesIn(SmoothL1LossFullTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Full,
+                         GPU_SmoothL1LossBackward_FP16,
+                         testing::ValuesIn(SmoothL1LossFullTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Full,
+                         GPU_SmoothL1LossBackward_BFP16,
+                         testing::ValuesIn(SmoothL1LossFullTestConfigs()));

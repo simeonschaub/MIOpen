@@ -73,6 +73,10 @@ bool SmoothL1LossBackward::IsApplicable(
     const ExecutionContext& context,
     const miopen::smoothl1loss::BackwardProblemDescription& problem) const
 {
+    if(!(problem.GetIDesc().GetType() == miopenFloat ||
+         problem.GetIDesc().GetType() == miopenHalf ||
+         problem.GetIDesc().GetType() == miopenBFloat16))
+        return false;
     if(!IsImprovementOverROCm(context, problem))
         return false;
     if(problem.GetIDesc().GetNumDims() > VIEW_DIMS)
@@ -96,7 +100,8 @@ ConvSolution SmoothL1LossBackward::GetSolution(
         {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
         {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
         {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-        {"NDIMS", VIEW_DIMS},
+        {"REDUCTION_TYPE", static_cast<int>(problem.GetReduction())},
+        {"VIEW_DIMS", VIEW_DIMS},
     };
 
     result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_NONCONTIGUOUS_BWD},

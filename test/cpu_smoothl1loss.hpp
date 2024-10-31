@@ -30,57 +30,35 @@
 #include <miopen/tensor_view_utils.hpp>
 
 template <class T>
-void cpu_smoothl1loss_forward(tensor<T> input,
-                              tensor<T> target,
+void cpu_smoothl1loss_forward(const tensor<T> input,
+                              const tensor<T> target,
                               tensor<T>& ref_output,
-                              tensor<T>& ref_workspace,
-                              float beta,
-                              miopenLossReductionMode_t reduction)
+                              const float beta,
+                              const miopenLossReductionMode_t reduction)
 {
     // Treat contiguous tensors as non-contiguous tensors (for consistency)
     auto I_tv = get_inner_expanded_tv<5>(input.desc);
     auto T_tv = get_inner_expanded_tv<5>(target.desc);
     auto O_tv = get_inner_expanded_tv<5>(ref_output.desc);
 
-    auto size = input.desc.GetElementSize();
+    auto size       = input.desc.GetElementSize();
+    double loss_sum = 0.0;
 
-    /* Phase 1: Calc loss for each element. */
-    par_ford(size)([&](size_t i) {
+    ford(size)([&](size_t i) {
         const auto tensor_layout = tensor_layout_t<5>(I_tv, i);
         const uint64_t Iidx      = I_tv.get_tensor_view_idx(tensor_layout);
         const uint64_t Tidx      = T_tv.get_tensor_view_idx(tensor_layout);
-        auto diff                = abs(input[Iidx] - target[Tidx]);
-        auto loss                = (diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta);
-        if(reduction == MIOPEN_LOSS_REDUCTION_MEAN)
-            loss /= size;
-        ref_workspace[Iidx] = loss;
+        float diff               = abs(input[Iidx] - target[Tidx]);
+        float loss               = (diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta);
         if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
-            ref_output[O_tv.get_tensor_view_idx(tensor_layout)] = loss;
+            ref_output[O_tv.get_tensor_view_idx(tensor_layout)] = static_cast<T>(loss);
+        else
+            loss_sum += loss;
     });
-
-    /* Phase 2: Reduce */
-    const int local_size = 256;
-    int offset_a         = 0;
-    int offset_b         = size;
-    size_t _size         = size;
-    do
-    {
-        for(int i = 0; i < _size; i += local_size)
-        {
-            T shared[local_size];
-            for(int j = 0; j < local_size; ++j)
-                shared[j] = i + j < _size ? ref_workspace[offset_a + i + j] : 0.0f;
-            for(int offset = local_size / 2; offset > 0; offset >>= 1)
-                for(int j = 0; j < offset; ++j)
-                    shared[j] += shared[j + offset];
-            if(_size <= local_size)
-                ref_output[0] = shared[0];
-            else
-                ref_workspace[offset_b + i / local_size] = shared[0];
-        }
-        std::swap(offset_a, offset_b);
-        _size = (_size + local_size - 1) / local_size;
-    } while(_size > 1);
+    if(reduction == MIOPEN_LOSS_REDUCTION_MEAN)
+        loss_sum /= size;
+    if(reduction != MIOPEN_LOSS_REDUCTION_NONE)
+        ref_output[0] = static_cast<T>(loss_sum);
 }
 
 template <class T>

@@ -50,7 +50,7 @@ __device__ void SmoothL1LossForward(const TIO* I,
 
     FLOAT_ACCUM i    = CVT_FLOAT2ACCUM(I[I_tv.get_tensor_view_idx(tensor_layout)]);
     FLOAT_ACCUM t    = CVT_FLOAT2ACCUM(T[T_tv.get_tensor_view_idx(tensor_layout)]);
-    float diff       = abs(i - t);
+    FLOAT_ACCUM diff = abs(i - t);
     FLOAT_ACCUM loss = diff < beta ? 0.5f * diff * diff / beta : diff - 0.5f * beta;
 
     switch(REDUCTION_T)
@@ -66,7 +66,7 @@ __device__ void SmoothL1LossForward(const TIO* I,
 
 extern "C" __global__ void SmoothL1LossForward(const FLOAT* __restrict__ I,
                                                const FLOAT* __restrict__ T,
-                                               FLOAT* __restrict__ O,
+                                               void* __restrict__ O,
                                                const float beta,
                                                const uint64_t size,
                                                tensor_view_t<VIEW_DIMS> I_tv,
@@ -74,7 +74,8 @@ extern "C" __global__ void SmoothL1LossForward(const FLOAT* __restrict__ I,
                                                tensor_view_t<VIEW_DIMS> O_tv)
 {
     // instantiate the kernel
-    SmoothL1LossForward<FLOAT, VIEW_DIMS, REDUCTION_TYPE>(I, T, O, beta, size, I_tv, T_tv, O_tv);
+    SmoothL1LossForward<FLOAT, VIEW_DIMS, static_cast<LossReductionMode_t>(REDUCTION_TYPE)>(
+        I, T, O, beta, size, I_tv, T_tv, O_tv);
 }
 
 template <typename TIO, uint32_t NDIM, LossReductionMode_t REDUCTION_T>
@@ -137,6 +138,6 @@ extern "C" __global__ void SmoothL1LossBackward(const FLOAT* __restrict__ I,
                                                 tensor_view_t<VIEW_DIMS> dI_tv,
                                                 tensor_view_t<VIEW_DIMS> dT_tv)
 {
-    SmoothL1LossBackward<FLOAT, VIEW_DIMS, REDUCTION_TYPE>(
+    SmoothL1LossBackward<FLOAT, VIEW_DIMS, static_cast<LossReductionMode_t>(REDUCTION_TYPE)>(
         I, T, dO, dI, dT, beta, size, I_tv, T_tv, dO_tv, dI_tv, dT_tv);
 }
