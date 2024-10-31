@@ -57,7 +57,7 @@ namespace fin_interface {
 // ================== Interface for Fin ==================
 
 // Base classes for solvers.
-class Solver
+class MIOPEN_INTERNALS_EXPORT Solver
 {
 public:
     // GetId(), IsDynamic() and IsTunable() throw miopenStatusNotInitialized if the solver is not
