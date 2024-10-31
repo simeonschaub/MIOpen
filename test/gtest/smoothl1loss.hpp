@@ -154,7 +154,6 @@ protected:
         ref_output = tensor<T>{out_lengths, out_strides};
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
-        std::vector<size_t> workspace_lengths;
         ws_sizeInBytes =
             miopen::GetSmoothL1LossForwardWorkspaceSize(handle, input.desc, output.desc, reduction);
         if(ws_sizeInBytes == static_cast<size_t>(-1))
