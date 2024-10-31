@@ -2,7 +2,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2022 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,35 +23,18 @@
  * SOFTWARE.
  *
  *******************************************************************************/
+#include "multimarginloss_driver.hpp"
+#include "registry_driver_maker.hpp"
 
-#pragma once
-
-#include <type_traits>
-
-namespace miopen {
-
-namespace detail {
-
-template <typename...>
-using void_t = void;
-
-template <class Default, class AlwaysVoid, template <class...> class Op, class... Args>
-struct MemberDetector
+static Driver* makeDriver(const std::string& base_arg)
 {
-    using value_t = std::false_type;
-    using type    = Default;
-};
+    if(base_arg == "multimarginloss")
+        return new MultiMarginLossDriver<float, float>();
+    if(base_arg == "multimarginlossfp16")
+        return new MultiMarginLossDriver<float16, float>();
+    if(base_arg == "multimarginlossbfp16")
+        return new MultiMarginLossDriver<bfloat16, float>();
+    return nullptr;
+}
 
-template <class Default, template <class...> class Op, class... Args>
-struct MemberDetector<Default, void_t<Op<Args...>>, Op, Args...>
-{
-    using value_t = std::true_type;
-    using type    = Op<Args...>;
-};
-
-} // namespace detail
-
-template <template <class...> class Op, class... Args>
-using HasMember = typename detail::MemberDetector<void, void, Op, Args...>::value_t;
-
-} // namespace miopen
+REGISTER_DRIVER_MAKER(makeDriver);

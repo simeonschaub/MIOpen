@@ -162,6 +162,8 @@ set( MIOpen_Source
     lrn_api.cpp
     mha/mha_descriptor.cpp
     mha/problem_description.cpp
+    multimarginloss/problem_description.cpp
+    multimarginloss_api.cpp
     op_args.cpp
     operator.cpp
     performance_config.cpp
@@ -183,8 +185,10 @@ set( MIOpen_Source
     rnn/rnn_util.cpp
     rnn/selector.cpp
     rnn/Solutions/rnn_transformer.cpp
+    rnn/Solutions/Base/fw_data_modular.cpp
     rnn/Solutions/Base/bw_weights_modular.cpp
     rnn/Solutions/Base/bw_data_modular.cpp
+    rnn/Solutions/fwd_s_stream.cpp
     rnn/Solutions/bwd_s_stream.cpp
     rnn/Solutions/bwd_multi_stream.cpp
     rnn/Solutions/bww_s_steam.cpp
@@ -311,8 +315,10 @@ set( MIOpen_Source
     solver/layernorm/forward_layernorm2d_ck.cpp
     solver/layernorm/forward_layernorm4d_ck.cpp
     solver/layernorm/forward_t5layernorm.cpp
+    solver/mha/mha_ck_fa_v2_solver_forward.cpp
     solver/mha/mha_solver_backward.cpp
     solver/mha/mha_solver_forward.cpp
+    solver/multimarginloss/forward_multimarginloss.cpp
     solver/pooling/forward2d.cpp
     solver/pooling/forwardNaive.cpp
     solver/pooling/forwardNd.cpp
@@ -537,6 +543,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/MIOpenLayerNorm.cpp
         kernels/MIOpenLRNBwd.cl
         kernels/MIOpenLRNFwd.cl
+        kernels/MIOpenMultiMarginLoss.cpp
         kernels/MIOpenNeuron.cl
         kernels/MIOpenPReLU.cpp
         kernels/MIOpenPooling.cl
@@ -677,6 +684,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         layernorm.cpp
         lrn.cpp
         mlo_dir_conv.cpp
+        multimarginloss.cpp
         ocl/activ_ocl.cpp
         ocl/batchnormocl.cpp
         ocl/convolutionocl.cpp
@@ -847,7 +855,7 @@ target_include_directories(MIOpen PUBLIC
 )
 
 if(MIOPEN_USE_COMPOSABLEKERNEL)
-set(MIOPEN_CK_LINK_FLAGS composable_kernel::device_other_operations composable_kernel::device_gemm_operations composable_kernel::device_conv_operations composable_kernel::device_reduction_operations hip::host)
+set(MIOPEN_CK_LINK_FLAGS composable_kernel::device_other_operations composable_kernel::device_gemm_operations composable_kernel::device_conv_operations composable_kernel::device_reduction_operations composable_kernel::device_mha_operations hip::host)
 endif()
 
 if(WIN32)

@@ -2737,6 +2737,67 @@ miopenBatchNormalizationForwardTraining(miopenHandle_t handle,
                                         double epsilon,
                                         void* resultSaveMean,
                                         void* resultSaveInvVariance);
+/*! @brief Execute forward training layer for batch normalization
+ *
+ * Batch normalization pass for forward training pass.
+ * Takes in batch normalization mode bn_mode and input tensor x, output tensor y, bnBias and bnScale
+ * with their descriptor.
+ *
+ * If either resultSaveMean, or resultSaveInvVariance are null pointers then the values for the mean
+ * and inverse variance will not be used.
+ *
+ * Likewise, if either resultRunningMean, or resultRunningVariance are null pointers then the values
+ * for the running mean and variance will not be saved.
+ * Running averages and variances are scaled using an exponential averaging factor: \f[
+ * \mu_{old} = \mu_{new}*factor + \mu_{old}*(1-factor)
+ * \f]
+ * where \f[
+ * factor=1/(1+iteration)
+ * \f]
+ *
+ * @param handle                    MIOpen handle (input)
+ * @param bn_mode                   Batch normalization mode (input)
+ * @param alpha                     Floating point scaling factor, allocated on the host (input)
+ * @param beta                      Floating point shift factor, allocated on the host (input)
+ * @param xDesc                     Tensor descriptor for data input tensor x (input)
+ * @param x                         Data tensor x (input)
+ * @param yDesc                     Tensor descriptor for output data tensor y (input)
+ * @param y                         Data tensor y (output)
+ * @param ScaleDesc                 Tensor descriptor for BN scaling
+ * @param biasVarDesc               Tensor descriptor for BN bias
+ * @param savedMeanDesc             Tensor descriptor for BN saved Mean
+ * @param savedVarDesc              Tensor descriptor for BN saved Variance
+ * @param bnScale                   Batch norm scaling, gamma, tensor (input)
+ * @param bnBias                    Batch norm bias, beta, tensor (input)
+ * @param expAvgFactor              Exponential averaging factor (input)
+ * @param resultRunningMean         Running average saved for inference (output)
+ * @param resultRunningVariance     Running variance saved for inference (output)
+ * @param epsilon                   Value to stablize inverse variance calculation (input)
+ * @param resultSaveMean            Saved mini-batch mean for backwards pass (output)
+ * @param resultSaveInvVariance     Saved mini-batch inverse variance for backwards pass (output)
+ * @return                          miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t
+miopenBatchNormalizationForwardTraining_V2(miopenHandle_t handle,
+                                           miopenBatchNormMode_t bn_mode,
+                                           void* alpha,
+                                           void* beta,
+                                           const miopenTensorDescriptor_t xDesc,
+                                           const void* x,
+                                           const miopenTensorDescriptor_t yDesc,
+                                           void* y,
+                                           const miopenTensorDescriptor_t scaleDesc,
+                                           const miopenTensorDescriptor_t biasVarDesc,
+                                           const miopenTensorDescriptor_t savedMeanDesc,
+                                           const miopenTensorDescriptor_t savedVarDesc,
+                                           void* bnScale,
+                                           void* bnBias,
+                                           double expAvgFactor,
+                                           void* resultRunningMean,
+                                           void* resultRunningVariance,
+                                           double epsilon,
+                                           void* resultSaveMean,
+                                           void* resultSaveInvVariance);
 
 /*! @brief Execute forward inference layer for batch normalization
  *
@@ -2782,6 +2843,56 @@ miopenBatchNormalizationForwardInference(miopenHandle_t handle,
                                          void* estimatedMean,
                                          void* estimatedVariance,
                                          double epsilon);
+
+/*! @brief Execute forward inference layer for batch normalization
+ *
+ * Batch normalization pass for forward inference pass.
+ * Takes in batch normalization mode bn_mode and input tensor x, output tensor y, bnBias and bnScale
+ * with their descriptor.
+ *
+ * If either estimatedMean, or estimatedVariance are null pointers then the values for the mean and
+ * variance will be calculated from input data and this calculated mean and variance will be used
+ * to update input values.
+ * If variance is zero and epsilon is also zero, this function outputs NAN values.  Input espilon
+ * value should always be non zero positive value.
+ *
+ * @param handle                    MIOpen handle (input)
+ * @param bn_mode                   Batch normalization mode (input)
+ * @param alpha                     Floating point scaling factor, allocated on the host (input)
+ * @param beta                      Floating point shift factor, allocated on the host (input)
+ * @param xDesc                     Tensor descriptor for data input tensor x (input)
+ * @param x                         Data tensor x (input)
+ * @param yDesc                     Tensor descriptor for output data tensor y (input)
+ * @param y                         Data tensor y (output)
+ * @param ScaleDesc                 Tensor descriptor for BN scaling
+ * @param biasVarDesc               Tensor descriptor for BN bias
+ * @param estMeanDesc               Tensor descriptor for BN estimated Mean
+ * @param estVarianceDesc           Tensor descriptor for BN estimated Variance
+ * @param bnScale                   Batch norm scaling, gamma, tensor (input)
+ * @param bnBias                    Batch norm bias, beta, tensor (input)
+ * @param estimatedMean             Running average saved during forward training (input)
+ * @param estimatedVariance         Running variance saved during forward training (input)
+ * @param epsilon                   Value to stabilize inverse variance calculation (input)
+ * @return                          miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t
+miopenBatchNormalizationForwardInference_V2(miopenHandle_t handle,
+                                            miopenBatchNormMode_t bn_mode,
+                                            void* alpha,
+                                            void* beta,
+                                            const miopenTensorDescriptor_t xDesc,
+                                            const void* x,
+                                            const miopenTensorDescriptor_t yDesc,
+                                            void* y,
+                                            const miopenTensorDescriptor_t scaleDesc,
+                                            const miopenTensorDescriptor_t biasDesc,
+                                            const miopenTensorDescriptor_t estMeanDesc,
+                                            const miopenTensorDescriptor_t estVarianceDesc,
+                                            void* bnScale,
+                                            void* bnBias,
+                                            void* estimatedMean,
+                                            void* estimatedVariance,
+                                            double epsilon);
 
 /*! @brief Execute backwards propagation layer for batch normalization
  *
@@ -2837,6 +2948,68 @@ miopenBatchNormalizationBackward(miopenHandle_t handle,
                                  double epsilon,
                                  const void* savedMean,
                                  const void* savedInvVariance);
+
+/*! @brief Execute backwards propagation layer for batch normalization
+ *
+ * Batch normalization pass for backwards propagation training pass.
+ * The method for backwards propagation batch normalization.
+ *
+ * Takes in batch normalization mode bn_mode and input tensor data x, input activation tensor dy,
+ * output tensor dx, the learned tensors resultBNBiasDiff and resultBNScaleDiff with their
+ * descriptor.
+ *
+ * If BOTH savedMean, and savedVariance are not null pointers then the method will use the saved
+ * mean and variance calculated by the forward training phase.
+ *
+ * @param handle                    MIOpen handle (input)
+ * @param bn_mode                   Batch normalization mode (input)
+ * @param alphaDataDiff             Floating point scaling factor, allocated on the host (input)
+ * @param betaDataDiff              Floating point shift factor, allocated on the host (input)
+ * @param alphaParamDiff            Floating point scaling factor, allocated on the host (input)
+ * @param betaParamDiff             Floating point shift factor, allocated on the host (input)
+ * @param xDesc                     Tensor descriptor for data input tensor x (input)
+ * @param x                         Data tensor x (input)
+ * @param dyDesc                    Tensor descriptor for output data tensor y (input)
+ * @param dy                        Data tensor y (input)
+ * @param dxDesc                    Tensor descriptor for output data tensor dx (input)
+ * @param dx                        Data delta tensor dx (output)
+ * @param scaleDesc                 Tensor descriptor for scaling descriptor (input)
+ * @param biasDesc                  Tensor descriptor for bias/shift descriptor (input)
+ * @param savedMeanDesc             Tensor descriptor for saved Mean  descriptor (input)
+ * @param savedVarDesc              Tensor descriptor for saved Variance descriptor (input)
+ * , shifting, saved variance and
+ * mean (input)
+ * @param bnScale                   Batch norm scaling, gamma, tensor (input)
+ * @param resultBnScaleDiff         Tensor for dscale (output)
+ * @param resultBnBiasDiff          Tensor for dbias (output)
+ * @param epsilon                   Value to stabilize inverse variance calculation (input)
+ * @param savedMean                 Saved mini-batch mean for backwards pass (input)
+ * @param savedInvVariance          Saved mini-bathc inverse variance for backwards pass (input)
+ * @return                          miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t
+miopenBatchNormalizationBackward_V2(miopenHandle_t handle,
+                                    miopenBatchNormMode_t bn_mode,
+                                    const void* alphaDataDiff,
+                                    const void* betaDataDiff,
+                                    const void* alphaParamDiff,
+                                    const void* betaParamDiff,
+                                    const miopenTensorDescriptor_t xDesc,
+                                    const void* x,
+                                    const miopenTensorDescriptor_t dyDesc,
+                                    const void* dy,
+                                    const miopenTensorDescriptor_t dxDesc,
+                                    void* dx,
+                                    const miopenTensorDescriptor_t scaleDesc,
+                                    const miopenTensorDescriptor_t biasDesc,
+                                    const miopenTensorDescriptor_t savedMeanDesc,
+                                    const miopenTensorDescriptor_t savedVarDesc,
+                                    const void* bnScale,
+                                    void* resultBnScaleDiff,
+                                    void* resultBnBiasDiff,
+                                    double epsilon,
+                                    const void* savedMean,
+                                    const void* savedInvVariance);
 
 /** @} */
 // CLOSEOUT BATCHNORM DOXYGEN GROUP
@@ -8002,6 +8175,88 @@ MIOPEN_EXPORT miopenStatus_t miopenSmoothL1LossBackward(miopenHandle_t handle,
                                                         void* dtarget,
                                                         float beta,
                                                         miopenLossReductionMode_t reduction);
+
+/** @} */
+// CLOSEOUT LossFunction DOXYGEN GROUP
+#endif // MIOPEN_BETA_API
+
+#ifdef MIOPEN_BETA_API
+// MultiMarginLoss APIs
+/** @addtogroup LossFunction
+ *
+ *  @{
+ */
+
+/*! @brief Helper function to query the minimum workspace size required by the
+MultiMarginLossForward call
+ *
+ * @param [in]  handle              MIOpen Handle
+ * @param [in]  inputDesc           Tensor descriptor for input tensor (N, C) where N is the batch
+size and C is the number of classes
+ * @param [in]  targetDesc          Tensor descriptor for target tensor, must have shape (N). Each
+value is between 0 and C - 1
+ * @param [in]  weightDesc          Tensor descriptor for weight tensor. It is a manual rescaling
+weight given to each class. It has to be a Tensor of size C
+ * @param [in]  outputDesc          Tensor descriptor for output tensor. If reduction is 'none,
+then it must have shape (N). Otherwise, it is a scalar
+ * @param [in]  p                   Has a default value of 1. The only supported values are 1 and 2
+ * @param [in]  margin              Has a default value of 1
+ * @param [in]  reduction           Reduction mode (sum, mean)
+ * @param [out] sizeInBytes         Pointer to data to return the minimum workspace size
+ * @return                          miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t
+miopenGetMultiMarginLossForwardWorkspaceSize(miopenHandle_t handle,
+                                             miopenTensorDescriptor_t inputDesc,
+                                             miopenTensorDescriptor_t targetDesc,
+                                             miopenTensorDescriptor_t weightDesc,
+                                             miopenTensorDescriptor_t outputDesc,
+                                             long p,
+                                             float margin,
+                                             miopenLossReductionMode_t reduction,
+                                             size_t* sizeInBytes);
+
+/*! @brief Execute a MultiMarginLoss forward layer
+ *
+ * @param [in]  handle                  MIOpen handle
+ * @param [in]  inputDesc               Tensor descriptor for input tensor (N, C) where N is the
+batch size and C is the number of classes.
+ * @param [in]  input                   Data tensor input
+ * @param [in]  targetDesc              Tensor descriptor for target tensor, must have shape (N).
+Each value is between 0 and C - 1
+ * @param [in]  target                  Data tensor target
+ * @param [in]  weightDesc              Tensor descriptor for weight tensor. It is a manual
+rescaling weight given to each class. It has to be a Tensor of size C
+ * @param [in]  weight                  Data tensor weight
+ * @param [in]  outputDesc              Tensor descriptor for output tensor. If reduction is 'none,
+then it must have shape (N). Otherwise, it is a scalar.
+ * @param [out] output                  Data tensor output
+ * @param [in]  p                       Has a default value of 1. The only supported values are 1
+and 2
+ * @param [in]  margin                  Has a default value of 1
+ * @param [in]  reduction               Reduction mode. If reduction mode is mean or sum, you must
+ * provide param workspace and workspaceSizeInBytes. Call
+ * miopenGetMultiMarginLossForwardWorkspaceSize to get workspaceSizeInBytes
+ * @param [in]  workspace               Address of the allocated workspace data. Set = nullptr if
+reduction = 'none'
+ * @param [in]  workspaceSizeInBytes    Size in bytes of the allocated workspace data. Set = 0 if
+reduction = 'none
+ * @return                              miopenStatus_t
+ */
+MIOPEN_EXPORT miopenStatus_t miopenMultiMarginLossForward(miopenHandle_t handle,
+                                                          miopenTensorDescriptor_t inputDesc,
+                                                          const void* input,
+                                                          miopenTensorDescriptor_t targetDesc,
+                                                          const void* target,
+                                                          miopenTensorDescriptor_t weightDesc,
+                                                          const void* weight,
+                                                          miopenTensorDescriptor_t outputDesc,
+                                                          void* output,
+                                                          long p,
+                                                          float margin,
+                                                          miopenLossReductionMode_t reduction,
+                                                          void* workspace,
+                                                          size_t workspaceSizeInBytes);
 
 /** @} */
 // CLOSEOUT LossFunction DOXYGEN GROUP
