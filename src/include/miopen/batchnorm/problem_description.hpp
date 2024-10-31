@@ -154,7 +154,6 @@ struct MIOPEN_INTERNALS_EXPORT ProblemDescription : ProblemDescriptionBase,
     Direction GetDirection() const { return direction; }
     miopenBatchNormMode_t GetMode() const { return bn_mode; }
     std::string GetInLayout() const { return in_layout; }
-    miopenDataType_t GetInDataType() const { return in.GetType(); }
     const TensorDescriptor& GetXDesc() const { return xDesc; }
 
     const TensorDescriptor& GetYDesc() const
