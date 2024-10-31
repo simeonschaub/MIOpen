@@ -73,6 +73,20 @@ std::tuple<size_t, size_t> RNNDescriptor::GetTmpSpaceSizeDynamicAlgo(
     return rnn_base::RNNDynamicModularSingleStreamFWD::getTempBuffersSize(*this, xDesc);
 }
 
+bool RNNDescriptor::CheckDynamicAlgoSelection(Handle& /*handle*/,
+                                              const SeqTensorDescriptor& xDesc,
+                                              miopenRNNFWDMode_t /*fwdMode*/) const
+{
+    bool use_dropout      = !float_equal(miopen::deref(dropoutDesc).dropout, 0);
+    bool rnn_config_match = (dirMode == 0 && inputMode == miopenRNNlinear &&
+                             rnnMode == miopenLSTM && !use_dropout && algoMode == miopenRNNdefault);
+    if(rnn_config_match && env::enabled(MIOPEN_RNN_DYNAMIC_EXP))
+    {
+        return true;
+    }
+    return false;
+}
+
 void RNNDescriptor::ModularForward(Handle& handle,
                                    miopenRNNFWDMode_t fwdMode,
                                    ConstData_t w,
@@ -91,7 +105,7 @@ void RNNDescriptor::ModularForward(Handle& handle,
                                    Data_t reserveSpace,
                                    size_t /*reserveSpaceSize*/) const
 {
-    if(env::enabled(MIOPEN_RNN_DYNAMIC_EXP))
+    if(CheckDynamicAlgoSelection(handle, xDesc, fwdMode))
     {
         rnn_base::RNNDynamicModularSingleStreamFWD single_stream{
             *this, xDesc, yDesc, hDesc, fwdMode};

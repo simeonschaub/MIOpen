@@ -63,6 +63,9 @@ struct rnn_seq_driver : rnn_seq_api_test_driver<T>
         this->add(this->nocy, "nocy", this->generate_data({false, true}));
 
         this->add(this->pytorchTensorDescriptorFormat, "pyDescFormat", this->generate_data(modes));
+        this->add(this->skip_backward_data, "disable-backward-data", this->generate_data({false}));
+        this->add(
+            this->skip_backward_weights, "disable-backward-weights", this->generate_data({false}));
     }
 
     rnn_seq_driver(bool) : rnn_seq_api_test_driver<T>() {}
