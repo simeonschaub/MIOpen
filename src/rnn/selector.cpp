@@ -74,7 +74,7 @@ std::tuple<size_t, size_t> RNNDescriptor::GetTmpSpaceSizeDynamicAlgo(
 }
 
 bool RNNDescriptor::CheckDynamicAlgoSelection(Handle& /*handle*/,
-                                              const SeqTensorDescriptor& xDesc,
+                                              const SeqTensorDescriptor& /*xDesc*/,
                                               miopenRNNFWDMode_t /*fwdMode*/) const
 {
     bool use_dropout      = !float_equal(miopen::deref(dropoutDesc).dropout, 0);
