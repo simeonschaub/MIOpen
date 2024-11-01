@@ -30,8 +30,9 @@
 
 #include "float_types.h"
 #include "tensor_view.hpp"
+#include "MIOpenLossReductionMode.hpp"
 
-template <typename DTYPE, int REDUCTION_T>
+template <typename DTYPE, LossReductionMode_t REDUCTION_T>
 __device__ void multimarginlossforward2d(const DTYPE* __restrict__ I,
                                          const uint64_t* __restrict__ T,
                                          const DTYPE* __restrict__ W,
@@ -76,9 +77,11 @@ __device__ void multimarginlossforward2d(const DTYPE* __restrict__ I,
     loss /= C;
     switch(REDUCTION_T)
     {
-    case 0: static_cast<DTYPE*>(O)[O_tv.get_tensor_view_idx({n})] = CVT_ACCUM2FLOAT(loss); break;
-    case 1: static_cast<FLOAT_ACCUM*>(O)[n] = loss; break;
-    case 2: static_cast<FLOAT_ACCUM*>(O)[n] = loss / N; break;
+    case LossReductionMode_t::NONE:
+        static_cast<DTYPE*>(O)[O_tv.get_tensor_view_idx({n})] = CVT_ACCUM2FLOAT(loss);
+        break;
+    case LossReductionMode_t::SUM: static_cast<FLOAT_ACCUM*>(O)[n] = loss; break;
+    case LossReductionMode_t::MEAN: static_cast<FLOAT_ACCUM*>(O)[n] = loss / N; break;
     default: break;
     }
 }
@@ -95,5 +98,6 @@ extern "C" __global__ void MultiMarginLossForward2d(const FLOAT* __restrict__ I,
                                                     tensor_view_t<1> O_tv)
 {
     // instantiate the kernel
-    multimarginlossforward2d<FLOAT, REDUCTION_TYPE>(I, T, W, O, p, margin, I_tv, T_tv, W_tv, O_tv);
+    multimarginlossforward2d<FLOAT, static_cast<LossReductionMode_t>(REDUCTION_TYPE)>(
+        I, T, W, O, p, margin, I_tv, T_tv, W_tv, O_tv);
 }

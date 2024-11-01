@@ -45,13 +45,15 @@ void cpu_multimarginloss_forward(const tensor<T>& input,
     auto O_tv = miopen::get_inner_expanded_tv<1>(ref_output.desc);
     auto N = I_tv.size[0], C = I_tv.size[1];
 
-    double sum = 0;
-    for(size_t n = 0; n < N; n++)
-    {
+    std::vector<double> buffer;
+    if(reduction_mode != MIOPEN_LOSS_REDUCTION_NONE)
+        buffer.assign(N, 0);
+
+    par_ford(N)([&](size_t n) {
         double loss = 0;
         uint64_t y  = target[T_tv.get_tensor_view_idx({n})];
         if(y >= C)
-            continue;
+            return;
         for(size_t c = 0; c < C; c++)
         {
             if(y == c)
@@ -69,14 +71,13 @@ void cpu_multimarginloss_forward(const tensor<T>& input,
         if(reduction_mode == MIOPEN_LOSS_REDUCTION_NONE)
             ref_output[O_tv.get_tensor_view_idx({n})] = loss;
         else
-            sum += loss;
-    }
+            buffer[n] = loss;
+    });
+
+    auto sum = std::accumulate(buffer.begin(), buffer.end(), 0.0);
+
     if(reduction_mode == MIOPEN_LOSS_REDUCTION_MEAN)
-    {
-        ref_output[0] = static_cast<T>(sum / N);
-    }
-    else if(reduction_mode == MIOPEN_LOSS_REDUCTION_SUM)
-    {
+        sum /= N;
+    if(reduction_mode != MIOPEN_LOSS_REDUCTION_NONE)
         ref_output[0] = static_cast<T>(sum);
-    }
 }

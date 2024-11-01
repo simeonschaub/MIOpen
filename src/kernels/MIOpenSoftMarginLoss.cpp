@@ -30,8 +30,9 @@
 
 #include "float_types.h"
 #include "tensor_view.hpp"
+#include "MIOpenLossReductionMode.hpp"
 
-template <typename DTYPE, int REDUCTION_T>
+template <typename DTYPE, LossReductionMode_t REDUCTION_T>
 __device__ void softmarginlossforward5d(const DTYPE* __restrict__ I,
                                         const DTYPE* __restrict__ T,
                                         void* __restrict__ O,
@@ -52,13 +53,15 @@ __device__ void softmarginlossforward5d(const DTYPE* __restrict__ I,
     switch(REDUCTION_T)
     {
     // If reduction = None, O is DTYPE*
-    case 0: static_cast<DTYPE*>(O)[O_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(loss); break;
+    case LossReductionMode_t::NONE:
+        static_cast<DTYPE*>(O)[O_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(loss);
+        break;
     // If reduction = Sum, O is FLOAT_ACCUM* and then all elements will be sum up in the next
     // kernel
-    case 1: static_cast<FLOAT_ACCUM*>(O)[gid] = loss; break;
+    case LossReductionMode_t::SUM: static_cast<FLOAT_ACCUM*>(O)[gid] = loss; break;
     // If reduction = Mean, same as Sum but O will be divided by num_elem, then the next kernel sum
     // up will return mean of all elements
-    case 2: static_cast<FLOAT_ACCUM*>(O)[gid] = loss / num_elem; break;
+    case LossReductionMode_t::MEAN: static_cast<FLOAT_ACCUM*>(O)[gid] = loss / num_elem; break;
     default: break;
     }
 }
@@ -72,10 +75,11 @@ extern "C" __global__ void SoftMarginLossForward5d(const FLOAT* __restrict__ I,
                                                    tensor_view_t<5> O_tv)
 {
     // instantiate the kernel
-    softmarginlossforward5d<FLOAT, REDUCTION_TYPE>(I, T, O, num_elem, I_tv, T_tv, O_tv);
+    softmarginlossforward5d<FLOAT, static_cast<LossReductionMode_t>(REDUCTION_TYPE)>(
+        I, T, O, num_elem, I_tv, T_tv, O_tv);
 }
 
-template <typename DTYPE, int REDUCTION_T>
+template <typename DTYPE, LossReductionMode_t REDUCTION_T>
 __device__ void softmarginlossbackward5d(const DTYPE* __restrict__ I,
                                          const DTYPE* __restrict__ T,
                                          const DTYPE* __restrict__ dO,
@@ -98,9 +102,13 @@ __device__ void softmarginlossbackward5d(const DTYPE* __restrict__ I,
     FLOAT_ACCUM loss     = -t / (exp(i * t) + 1) * dO_accum;
     switch(REDUCTION_T)
     {
-    case 0:
-    case 1: dI[dI_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(loss); break;
-    case 2: dI[dI_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(loss / num_elem); break;
+    case LossReductionMode_t::NONE:
+    case LossReductionMode_t::SUM:
+        dI[dI_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(loss);
+        break;
+    case LossReductionMode_t::MEAN:
+        dI[dI_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(loss / num_elem);
+        break;
     default: break;
     }
 }
@@ -116,6 +124,6 @@ extern "C" __global__ void SoftMarginLossBackward5d(const FLOAT* __restrict__ I,
                                                     tensor_view_t<5> dI_tv)
 {
     // instantiate the kernel
-    softmarginlossbackward5d<FLOAT, REDUCTION_TYPE>(
+    softmarginlossbackward5d<FLOAT, static_cast<LossReductionMode_t>(REDUCTION_TYPE)>(
         I, T, dO, dI, num_elem, I_tv, T_tv, dO_tv, dI_tv);
 }

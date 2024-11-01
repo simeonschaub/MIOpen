@@ -41,10 +41,13 @@ void cpu_smoothl1loss_forward(const tensor<T> input,
     auto T_tv = get_inner_expanded_tv<5>(target.desc);
     auto O_tv = get_inner_expanded_tv<5>(ref_output.desc);
 
-    auto size       = input.desc.GetElementSize();
-    double loss_sum = 0.0;
+    auto size = input.desc.GetElementSize();
 
-    ford(size)([&](size_t i) {
+    std::vector<double> buffer;
+    if(reduction != MIOPEN_LOSS_REDUCTION_NONE)
+        buffer.assign(size, 0);
+
+    par_ford(size)([&](size_t i) {
         const auto tensor_layout = tensor_layout_t<5>(I_tv, i);
         const uint64_t Iidx      = I_tv.get_tensor_view_idx(tensor_layout);
         const uint64_t Tidx      = T_tv.get_tensor_view_idx(tensor_layout);
@@ -53,8 +56,11 @@ void cpu_smoothl1loss_forward(const tensor<T> input,
         if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
             ref_output[O_tv.get_tensor_view_idx(tensor_layout)] = static_cast<T>(loss);
         else
-            loss_sum += loss;
+            buffer[i] = loss;
     });
+
+    auto loss_sum = std::accumulate(buffer.begin(), buffer.end(), 0.0);
+
     if(reduction == MIOPEN_LOSS_REDUCTION_MEAN)
         loss_sum /= size;
     if(reduction != MIOPEN_LOSS_REDUCTION_NONE)

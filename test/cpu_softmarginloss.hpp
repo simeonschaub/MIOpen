@@ -28,6 +28,7 @@
 #include "miopen/miopen.h"
 #include "tensor_holder.hpp"
 #include <miopen/tensor_view_utils.hpp>
+#include <numeric>
 
 template <class T>
 void cpu_softmarginloss_forward(const tensor<T>& input,
@@ -40,23 +41,26 @@ void cpu_softmarginloss_forward(const tensor<T>& input,
     auto t_tv        = miopen::get_inner_expanded_tv<5>(target.desc);
     auto o_tv        = miopen::get_inner_expanded_tv<5>(ref_output.desc);
 
-    double sum_loss = 0;
-    for(size_t gid = 0; gid < input_numel; gid++)
-    {
+    std::vector<double> buffer;
+    if(reduction_mode != MIOPEN_LOSS_REDUCTION_NONE)
+        buffer.assign(input_numel, 0);
+
+    par_ford(input_numel)([&](size_t gid) {
         tensor_layout_t<5> idx(i_tv, gid);
-        // Convert to double for better precision
         double i = input[i_tv.get_tensor_view_idx(idx)];
         double t = target[t_tv.get_tensor_view_idx(idx)];
         if(reduction_mode == MIOPEN_LOSS_REDUCTION_NONE)
             ref_output[o_tv.get_tensor_view_idx(idx)] = log1p(exp(-i * t));
         else
-            sum_loss += log1p(exp(-i * t));
-    };
+            buffer[gid] = log1p(exp(-i * t));
+    });
+
+    auto sum_loss = std::accumulate(buffer.begin(), buffer.end(), 0.0);
 
     if(reduction_mode == MIOPEN_LOSS_REDUCTION_MEAN)
-        ref_output[0] = sum_loss / input_numel;
-    else if(reduction_mode == MIOPEN_LOSS_REDUCTION_SUM)
-        ref_output[0] = sum_loss;
+        sum_loss /= input_numel;
+    if(reduction_mode != MIOPEN_LOSS_REDUCTION_NONE)
+        ref_output[0] = static_cast<T>(sum_loss);
 }
 
 template <class T>
