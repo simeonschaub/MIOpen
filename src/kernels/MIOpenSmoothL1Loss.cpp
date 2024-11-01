@@ -97,32 +97,30 @@ __device__ void SmoothL1LossBackward(const TIO* I,
     if(tensor_layout.layout[0] >= I_tv.size[0])
         return;
 
-    FLOAT_ACCUM i = CVT_FLOAT2ACCUM(I[I_tv.get_tensor_view_idx(tensor_layout)]);
-    FLOAT_ACCUM t = CVT_FLOAT2ACCUM(T[T_tv.get_tensor_view_idx(tensor_layout)]);
-
-    FLOAT_ACCUM sub = i - t;
-    FLOAT_ACCUM grad;
-
+    FLOAT_ACCUM o_grad;
     switch(REDUCTION_T)
     {
-    case LossReductionMode_t::MEAN:
-        if(fabs(sub) < beta)
-            grad = sub / beta * CVT_FLOAT2ACCUM(dO[0]) / size;
-        else
-            grad = (sub >= 0 ? 1.0f : -1.0f) * CVT_FLOAT2ACCUM(dO[0]) / size;
+    case LossReductionMode_t::NONE:
+        o_grad = CVT_FLOAT2ACCUM(dO[dO_tv.get_tensor_view_idx(tensor_layout)]);
         break;
-    default:
-        if(fabs(sub) < beta)
-            grad = sub / beta * CVT_FLOAT2ACCUM(dO[0]);
-        else
-            grad = (sub >= 0 ? 1.0f : -1.0f) * CVT_FLOAT2ACCUM(dO[0]);
-        break;
+    case LossReductionMode_t::SUM: o_grad = CVT_FLOAT2ACCUM(dO[0]); break;
+    case LossReductionMode_t::MEAN: o_grad = CVT_FLOAT2ACCUM(dO[0]) / size; break;
+    default: break;
     }
+
+    FLOAT_ACCUM i   = CVT_FLOAT2ACCUM(I[I_tv.get_tensor_view_idx(tensor_layout)]);
+    FLOAT_ACCUM t   = CVT_FLOAT2ACCUM(T[T_tv.get_tensor_view_idx(tensor_layout)]);
+    FLOAT_ACCUM sub = i - t;
+    FLOAT_ACCUM grad;
+    if(fabs(sub) < beta)
+        grad = sub / beta * o_grad;
+    else
+        grad = (sub >= 0 ? 1.0f : -1.0f) * o_grad;
 
     if(dI)
         dI[dI_tv.get_tensor_view_idx(tensor_layout)] = CVT_ACCUM2FLOAT(grad);
     if(dT)
-        dT[dI_tv.get_tensor_view_idx(tensor_layout)] = CVT_ACCUM2FLOAT(-grad);
+        dT[dT_tv.get_tensor_view_idx(tensor_layout)] = CVT_ACCUM2FLOAT(-grad);
 }
 
 extern "C" __global__ void SmoothL1LossBackward(const FLOAT* __restrict__ I,
