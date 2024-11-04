@@ -82,7 +82,7 @@ struct ForwardProblemDescription : ProblemDescriptionBase
     {
         if(indicesDesc.GetElementSize() > 0 && indicesDesc.GetType() != miopenInt64)
             MIOPEN_THROW(miopenStatusBadParm,
-                         "Cumulative Reduction: Indices tensor type must be int32.");
+                         "Cumulative Reduction: Indices tensor type must be int64.");
         return true;
     }
 
