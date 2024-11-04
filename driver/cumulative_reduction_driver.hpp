@@ -175,7 +175,7 @@ int CumulativeReductionDriver<Tgpu, Tref>::GetandSetData()
     if(SetTensorNd(outputDesc, lengths, data_type) != miopenStatusSuccess)
         MIOPEN_THROW("Error parsing output tensor");
 
-    if(SetTensorNd(indicesDesc, lengths, miopen_type<int>{}) != miopenStatusSuccess)
+    if(SetTensorNd(indicesDesc, lengths, miopenInt64) != miopenStatusSuccess)
         MIOPEN_THROW("Error parsing indices tensor");
 
     return miopenStatusSuccess;
