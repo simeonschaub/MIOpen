@@ -26,7 +26,6 @@
 
 #include "smoothl1loss.hpp"
 #include <miopen/bfloat16.hpp>
-#include <miopen/env.hpp>
 
 namespace smoothl1loss {
 
