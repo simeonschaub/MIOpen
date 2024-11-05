@@ -44,6 +44,7 @@
 #include <miopen/sigmoidfocalloss/solvers.hpp>
 #include <miopen/softmarginloss/solvers.hpp>
 #include <miopen/softmax/solvers.hpp>
+#include <miopen/multimarginloss/solvers.hpp>
 
 #include <miopen/conv_algo_name.hpp>
 #include <miopen/db.hpp>
