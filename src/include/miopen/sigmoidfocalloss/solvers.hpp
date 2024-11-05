@@ -27,6 +27,7 @@
 
 #include <miopen/sigmoidfocalloss/problem_description.hpp>
 #include <miopen/solver.hpp>
+#include <miopen/buffer_info.hpp>
 
 namespace miopen {
 

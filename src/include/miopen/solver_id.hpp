@@ -32,7 +32,6 @@
 #include <miopen/conv_algo_name.hpp>
 
 #include <cstdint>
-#include <unordered_map>
 
 namespace miopen {
 
@@ -62,6 +61,7 @@ enum class Primitive
     Item,
     RoPE,
     ReLU,
+    Kthvalue,
     Loss
 };
 
