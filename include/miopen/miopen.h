@@ -8094,8 +8094,8 @@ MIOPEN_EXPORT miopenStatus_t miopenSoftMarginLossBackward(miopenHandle_t handle,
 // CLOSEOUT LossFunction DOXYGEN GROUP
 #endif // MIOPEN_BETA_API
 
-#ifdef MIOPEN_BETA_API
 // MultiMarginLoss APIs
+#ifdef MIOPEN_BETA_API
 /** @addtogroup LossFunction
  *
  *  @{
@@ -8176,8 +8176,8 @@ MIOPEN_EXPORT miopenStatus_t miopenMultiMarginLossForward(miopenHandle_t handle,
 // CLOSEOUT LossFunction DOXYGEN GROUP
 #endif // MIOPEN_BETA_API
 
-#ifdef MIOPEN_BETA_API
 // SigmoidFocalLoss APIs
+#ifdef MIOPEN_BETA_API
 /** @addtogroup LossFunction
  *
  *  @{
