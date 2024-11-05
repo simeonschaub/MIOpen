@@ -464,7 +464,6 @@ int AdaptiveAvgPoolDriver<Tgpu, Tref>::VerifyForward()
         std::cout << "Forward AdaptiveAvgPool Verifies on CPU and GPU (err=" << error << ")"
                   << std::endl;
     }
-
     return miopenStatusSuccess;
 }
 
