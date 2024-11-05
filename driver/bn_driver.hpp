@@ -232,8 +232,8 @@ int BatchNormDriver<TInput, Tref, TAcc, TScaleBias, TOut>::GetandSetData()
 
         for(int i = 0; i < runVariance.GetVector().size(); i++)
         {
-            runMean.GetVector()[i]     = 0.0f;
-            runVariance.GetVector()[i] = 0.0f;
+            runMean.GetVector()[i]     = prng::gen_canonical<TAcc>();
+            runVariance.GetVector()[i] = prng::gen_canonical<TAcc>();
         }
     }
     else if(isBwd)
