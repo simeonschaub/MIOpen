@@ -115,7 +115,6 @@ ConvSolution FoldBwd::GetSolution([[maybe_unused]] const ExecutionContext& conte
             auto input_grad_dims  = deref(params.dinputDesc).GetLengths();
             auto output_grad_dims = deref(params.doutputDesc).GetLengths();
 
-            uint64_t kernel_size_h = params.kernel_size[0];
             uint64_t kernel_size_w = params.kernel_size[1];
             uint64_t stride_h      = params.stride[0];
             uint64_t stride_w      = params.stride[1];
@@ -123,7 +122,6 @@ ConvSolution FoldBwd::GetSolution([[maybe_unused]] const ExecutionContext& conte
             uint64_t padding_w     = params.padding[1];
             uint64_t dilation_h    = params.dilation[0];
             uint64_t dilation_w    = params.dilation[1];
-            uint64_t LH            = ls[0];
             uint64_t LW            = ls[1];
             uint64_t H             = static_cast<uint64_t>(output_grad_dims[2]);
             uint64_t W             = static_cast<uint64_t>(output_grad_dims[3]);
@@ -136,9 +134,7 @@ ConvSolution FoldBwd::GetSolution([[maybe_unused]] const ExecutionContext& conte
                    W,
                    P,
                    L,
-                   LH,
                    LW,
-                   kernel_size_h,
                    kernel_size_w,
                    stride_h,
                    stride_w,

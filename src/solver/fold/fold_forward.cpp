@@ -140,7 +140,6 @@ ConvSolution FoldFwd::GetSolution([[maybe_unused]] const ExecutionContext& conte
                    H,
                    W,
                    P,
-                   L,
                    LH,
                    LW,
                    kernel_size_h,

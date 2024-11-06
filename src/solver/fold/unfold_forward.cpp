@@ -115,7 +115,6 @@ ConvSolution UnfoldFwd::GetSolution([[maybe_unused]] const ExecutionContext& con
             auto input_dims  = deref(params.inputDesc).GetLengths();
             auto output_dims = deref(params.outputDesc).GetLengths();
 
-            uint64_t kernel_size_h = params.kernel_size[0];
             uint64_t kernel_size_w = params.kernel_size[1];
             uint64_t stride_h      = params.stride[0];
             uint64_t stride_w      = params.stride[1];
@@ -123,7 +122,6 @@ ConvSolution UnfoldFwd::GetSolution([[maybe_unused]] const ExecutionContext& con
             uint64_t padding_w     = params.padding[1];
             uint64_t dilation_h    = params.dilation[0];
             uint64_t dilation_w    = params.dilation[1];
-            uint64_t LH            = ls[0];
             uint64_t LW            = ls[1];
             uint64_t H             = static_cast<uint64_t>(input_dims[2]);
             uint64_t W             = static_cast<uint64_t>(input_dims[3]);
@@ -136,9 +134,7 @@ ConvSolution UnfoldFwd::GetSolution([[maybe_unused]] const ExecutionContext& con
                    W,
                    P,
                    L,
-                   LH,
                    LW,
-                   kernel_size_h,
                    kernel_size_w,
                    stride_h,
                    stride_w,

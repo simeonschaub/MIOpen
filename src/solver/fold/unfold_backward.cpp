@@ -139,7 +139,6 @@ ConvSolution UnfoldBwd::GetSolution([[maybe_unused]] const ExecutionContext& con
                    H,
                    W,
                    P,
-                   L,
                    LH,
                    LW,
                    kernel_size_h,
