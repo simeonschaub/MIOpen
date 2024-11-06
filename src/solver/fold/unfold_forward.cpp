@@ -59,8 +59,8 @@ ConvSolution UnfoldFwd::GetSolution([[maybe_unused]] const ExecutionContext& con
     auto in_dtype   = miopen::GetDataType(problem.GetInputDesc().GetType());
     auto dtype      = problem.GetOutputDesc().GetType();
     auto input_dims = problem.GetInputDesc().GetLengths();
-
     auto output_dims     = problem.GetOutputDesc().GetLengths();
+    
     const uint64_t N     = static_cast<uint64_t>(input_dims[0]);
     const uint64_t C     = static_cast<uint64_t>(input_dims[1]);
     int spatial_dim_size = input_dims.size() - 2;
