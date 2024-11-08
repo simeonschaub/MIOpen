@@ -34,7 +34,7 @@
 #include <miopen/adam.hpp>
 #include <miopen/miopen.h>
 
-//testing change
+// testing change
 struct AdamTestCase
 {
     std::vector<int> input;
