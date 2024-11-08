@@ -622,7 +622,7 @@ pipeline {
                         }
 
                     environment{
-                        execute_cmd = 'test/utils/check_gtests.sh'
+                        execute_cmd = './test/utils/check_gtests.sh'
                     }
                     steps{
                         buildHipClangJobAndReboot(setup_cmd: "", build_cmd: "", execute_cmd: execute_cmd, needs_gpu:false, needs_reboot:false)
