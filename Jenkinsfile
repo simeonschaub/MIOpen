@@ -616,7 +616,7 @@ pipeline {
                     }
                 }
                 stage('Check GTest Format') {
-                agent { label 'rocmnode && nogpu' }
+                agent { label rocmnode("nogpu") }
                 environment {
                     execute_cmd = './test/utils/check_gtests.sh'
                             }
