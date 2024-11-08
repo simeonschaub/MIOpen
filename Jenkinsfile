@@ -616,18 +616,18 @@ pipeline {
                     }
                 }
                 stage('Check GTest Format') {
-                    agent{ label rocmnode("nogpu") }
-                    when {
-                        changeset "test/gtest/**"
+                agent { label 'rocmnode && nogpu' }
+                environment {
+                    execute_cmd = './test/utils/check_gtests.sh'
+                            }
+                steps {
+                script {
+                    checkout scm
                         }
+                buildHipClangJobAndReboot(setup_cmd: "", build_cmd: "", execute_cmd: execute_cmd, needs_gpu: false, needs_reboot: false)
+    }
+}
 
-                    environment{
-                        execute_cmd = './test/utils/check_gtests.sh'
-                    }
-                    steps{
-                        buildHipClangJobAndReboot(setup_cmd: "", build_cmd: "", execute_cmd: execute_cmd, needs_gpu:false, needs_reboot:false)
-                    }
-                }
                 stage('HipNoGPU Debug Build Test') {
                     when {
                         beforeAgent true
