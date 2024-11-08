@@ -147,10 +147,22 @@ void RNNDescriptor::ModularBackward(Handle& handle,
     }
     else
     {
-        rnn_base::RNNModularSingleStreamBWD single_stream{
-            *this, xDesc, yDesc, hDesc, miopenRNNFWDMode_t::miopenRNNTraining};
-        single_stream.ComputeBWD(
-            handle, dy, dhy, dhx, cx, dcy, dcx, dx, w, workSpace, reserveSpace);
+        if(CheckDynamicAlgoSelection(handle, xDesc, miopenRNNFWDMode_t::miopenRNNTraining))
+        {
+            rnn_base::RNNDynamicModularSingleStreamBWD single_stream{
+                *this, xDesc, yDesc, hDesc, miopenRNNFWDMode_t::miopenRNNTraining};
+            single_stream.ComputeBWD(
+                handle,
+                rnn_base::runtimeArgsBwd{
+                    &handle, dy, dhy, dhx, cx, dcy, dcx, dx, w, workSpace, reserveSpace});
+        }
+        else
+        {
+            rnn_base::RNNModularSingleStreamBWD single_stream{
+                *this, xDesc, yDesc, hDesc, miopenRNNFWDMode_t::miopenRNNTraining};
+            single_stream.ComputeBWD(
+                handle, dy, dhy, dhx, cx, dcy, dcx, dx, w, workSpace, reserveSpace);
+        }
     }
 }
 
