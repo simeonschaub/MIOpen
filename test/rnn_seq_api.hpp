@@ -1233,7 +1233,7 @@ struct verify_train_rnn : verify_rnn_api_base<T>
         const auto bwd_dhx = readTFromGPUOrEmpty(handle, dhx_dev, xHiddenState, nodhx);
         const auto bwd_dcx = readTFromGPUOrEmpty(handle, dcx_dev, xCellState, nodcx);
 
-        if(skip_backward_data)
+        if(skip_backward_weights)
             return result_tuple(fwd_y, fwd_hy, fwd_cy, bwd_din, bwd_dhx, bwd_dcx, {});
 
         std::vector<T> workSpace_bwd_out(workSpace_TCnt);
