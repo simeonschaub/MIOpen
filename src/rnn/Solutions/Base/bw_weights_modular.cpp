@@ -323,7 +323,46 @@ void RNNBackwardWeightsModularAlgo::PhisHStateWeights(const Handle& handle,
                                                       size_t layer,
                                                       SequenceDirection direction) const
 {
-    const size_t gemm_batch_size = getHxBatchSizeReadAtTime(seq, direction);
+    const size_t gemm_batch_size = getHxBatchSizeReadAtTime(seq, batchController, direction);
+
+    if(gemm_batch_size == 0 || hx == nullptr)
+        return;
+
+    const size_t batch_shift = batchController.getBatchSum(seq.getPhisVal()) +
+                               (batchController.getBatchSize(seq.getPhisVal()) - gemm_batch_size);
+
+    const auto virt_layer = getVirtualLayer(layer, direction);
+
+    const size_t block_offset  = workspaceInfo.getGateBlockOffset(layer, batch_shift, direction);
+    const size_t hx_offset     = hiddenHxCxInfo.getOffset(virt_layer, batch_shift);
+    const size_t filter_offset = weightsLayout.getMatrixHidOff(layer, static_cast<int>(direction));
+
+    const TensorDescriptor block_dsc  = BuildLstmTmpBlockDesc2D(workspaceInfo, gemm_batch_size);
+    const TensorDescriptor hx_desc    = BuildHxCxDesc2D(gemm_batch_size);
+    const TensorDescriptor filter_dsc = BuildLstmFilterHidDesc2D();
+
+    RnnBaseFunctions::BWWei_GEMM(handle,
+                                 workSpace,
+                                 block_offset,
+                                 block_dsc,
+                                 hx,
+                                 hx_offset,
+                                 hx_desc,
+                                 dw,
+                                 filter_offset,
+                                 filter_dsc,
+                                 true);
+}
+
+void RNNBackwardWeiModuleAlgoDynamic::PhisHStateWeights(const Handle& handle,
+                                                      Data_t dw,
+                                                      ConstData_t workSpace,
+                                                      ConstData_t hx,
+                                                      const SequenceIterator& seq,
+                                                      size_t layer,
+                                                      SequenceDirection direction) const
+{
+    const size_t gemm_batch_size = getHxBatchSizeReadAtTime(seq, realBatchController, direction);
 
     if(gemm_batch_size == 0 || hx == nullptr)
         return;

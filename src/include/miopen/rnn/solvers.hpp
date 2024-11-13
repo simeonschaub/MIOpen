@@ -258,49 +258,10 @@ class RNNModularSingleStreamBWWeights
 {
 public:
     RNNModularSingleStreamBWWeights(const RNNDescriptor& rnn,
-                                                const SeqTensorDescriptor& xDesc,
-                                                const SeqTensorDescriptor& yDesc,
-                                                const TensorDescriptor& hDesc)
-        : rnnAlgoModules(RNNModuleAlgoBase::create(rnn, xDesc, yDesc, hDesc, miopenRNNTraining)),
-          rnnDesc(rnn),
-          max_seq_len(xDesc.GetMaxSequenceLength())
-    {
-    }
-
-    static bool IsApplicable()
-    {
-#if MIOPEN_USE_GEMM && MIOPEN_BACKEND_HIP
-        return true;
-#else
-        return false;
-#endif // MIOPEN_USE_GEMM&& MIOPEN_BACKEND_HIP
-    }
-
-    // TODO
-    static size_t GetWsSize() { return 0; };
-
-    void Compute(const Handle& handle,
-                 ConstData_t x,
-                 ConstData_t hx,
-                                       Data_t dw,
-                 Data_t workSpace,
-                 size_t /*workSpaceSize*/,
-                                       ConstData_t reserveSpace,
-                 size_t /*reserveSpaceSize*/) const;
-
-    const rnn_base::RNNBackwardWeightsModularAlgo rnnAlgoModules;
-    const RNNDescriptor& rnnDesc;
-    const size_t max_seq_len;
-};
-
-class RNNModularSingleStreamBWWeights
-{
-public:
-    RNNModularSingleStreamBWWeights(const RNNDescriptor& rnn,
                                     const SeqTensorDescriptor& xDesc,
                                     const SeqTensorDescriptor& yDesc,
                                     const TensorDescriptor& hDesc)
-        : rnnAlgoModules(RNNBackwardWeightsModularAlgo::create(rnn, xDesc, yDesc, hDesc)),
+        : rnnAlgoModules(RNNModuleAlgoBase::create(rnn, xDesc, yDesc, hDesc, miopenRNNTraining)),
           rnnDesc(rnn),
           max_seq_len(xDesc.GetMaxSequenceLength())
     {
@@ -328,6 +289,52 @@ public:
                  size_t /*reserveSpaceSize*/) const;
 
     const rnn_base::RNNBackwardWeightsModularAlgo rnnAlgoModules;
+    const RNNDescriptor& rnnDesc;
+    const size_t max_seq_len;
+};
+
+class RNNDynamicModularSingleStreamBWWeights
+{
+private:
+public:
+    RNNDynamicModularSingleStreamBWWeights(const RNNDescriptor& rnn,
+                                     const SeqTensorDescriptor& xDesc,
+                                     const SeqTensorDescriptor& yDesc,
+                                     const TensorDescriptor& hDesc,
+                                     miopenRNNFWDMode_t mode)
+        : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode),
+          rnnDesc(rnn),
+          max_seq_len(xDesc.GetMaxSequenceLength())
+    {
+    }
+
+    static bool IsApplicable()
+    {
+#if MIOPEN_USE_GEMM && MIOPEN_BACKEND_HIP
+        return true;
+#else
+        return false;
+#endif // MIOPEN_USE_GEMM&& MIOPEN_BACKEND_HIP
+    }
+
+    auto getTempBuffersSize() const { return rnnAlgoModules.getTempBuffersSize(); }
+
+    static auto getTempBuffersSize(const RNNDescriptor& rnn, const SeqTensorDescriptor& xDesc)
+    {
+        return decltype(rnnAlgoModules)::getTempBuffersSize(rnn, xDesc);
+    }
+
+
+    void Compute(const Handle& handle,
+                 ConstData_t x,
+                 ConstData_t hx,
+                 Data_t dw,
+                 Data_t workSpace,
+                 size_t /*workSpaceSize*/,
+                 ConstData_t reserveSpace,
+                 size_t /*reserveSpaceSize*/) const;
+
+    const rnn_base::RNNBackwardWeiModuleAlgoDynamic rnnAlgoModules;
     const RNNDescriptor& rnnDesc;
     const size_t max_seq_len;
 };

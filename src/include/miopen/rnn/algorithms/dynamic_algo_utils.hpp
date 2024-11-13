@@ -308,5 +308,142 @@ private:
 };
 
 
+class RNNBackwardWeiModuleAlgoDynamic : public RNNBackwardWeightsModularAlgo
+{
+    using BaseBWDModuleT = rnn_base::RNNBackwardWeightsModularAlgo;
+
+    static SeqTensorDescriptor buildDynamicVirtual(const SeqTensorDescriptor& desc)
+    {
+        std::vector<unsigned int> def_layout{1, 0, 2};
+        return {desc.GetType(), def_layout, desc.GetLengths(), false};
+    }
+
+    static SeqTensorDescriptor buildRealToDynamicMapTmp(const SeqTensorDescriptor& desc)
+    {
+        std::vector<unsigned int> def_layout{1, 0, 2};
+        return {desc.GetType(),
+                def_layout,
+                desc.GetLengths(),
+                desc.GetSequenceLengthsVector(),
+                std::vector<char>{},
+                true,
+                true};
+    }
+
+public:
+    RNNBackwardWeiModuleAlgoDynamic(const RNNDescriptor& rnnD,
+                                 const SeqTensorDescriptor& xTDesc,
+                                 const SeqTensorDescriptor& yTDesc,
+                                 const TensorDescriptor& hDesc,
+                                 miopenRNNFWDMode_t mode)
+        : BaseBWDModuleT(RNNModuleAlgoBase::create(
+              rnnD, buildDynamicVirtual(xTDesc), buildDynamicVirtual(yTDesc), hDesc, mode)),
+          realBatchController(BatchController::Create(xTDesc)),
+          realXDesc(xTDesc),
+          tmpMapXDesc(buildRealToDynamicMapTmp(xTDesc))
+
+    {
+    }
+
+    struct runtimeArgsBwWeiDynamicExt
+    {
+        const ConstData_t realX;
+        const Data_t tempX;
+        const ConstData_t hx;
+        const Data_t dw;
+        const Data_t workSpace;
+        const ConstData_t reserveSpace;
+    };
+
+    runtimeArgsBwWeiDynamicExt createRuntimeArgsExt(const runtimeArgsBWWeights& runtimeArgs) const
+    {
+        const Data_t temp_x =
+            moveDataPtr(runtimeArgs.workSpace, workspaceInfo.getBufferSizeImpl(), rnnDesc.dataType);
+
+        return {
+            runtimeArgs.x,
+            temp_x,
+            runtimeArgs.hx,
+            runtimeArgs.dw,
+            runtimeArgs.workSpace,
+            runtimeArgs.reserveSpace,
+        };
+    }
+
+    auto getTempBuffersSize() const
+    {
+        auto [ws_size, reserve_size] = BaseBWDModuleT::getTempBuffersSize();
+
+        return std::make_tuple(ws_size + tmpMapXDesc.GetTensorMaxByteSpace() +
+                               reserve_size);
+    }
+
+    static auto getTempBuffersSize(const RNNDescriptor& rnnD, const SeqTensorDescriptor& xDesc)
+    {
+        auto y_desc = [](const RNNDescriptor& rnnD, const SeqTensorDescriptor& xDesc) {
+            std::vector<size_t> y_lenghts{xDesc.GetLengths()};
+            y_lenghts[2] = rnnD.hsize * (rnnD.dirMode == miopenRNNbidirection ? 2 : 1);
+            return SeqTensorDescriptor{xDesc.GetType(), y_lenghts};
+        }(rnnD, xDesc);
+
+        auto temp_x_desc = buildDynamicVirtual(xDesc);
+        auto temp_y_desc = buildDynamicVirtual(y_desc);
+
+        auto [ws_size, reserve_size] =
+            RNNForwardDataModularAlgo::getTempBuffersSize(rnnD, temp_x_desc);
+
+        return std::make_tuple(ws_size + temp_x_desc.GetTensorMaxByteSpace() +
+                                   temp_y_desc.GetTensorMaxByteSpace(),
+                               reserve_size);
+    }
+
+    void PhisHStateWeights(const Handle& handle,
+                      Data_t dw,
+                      ConstData_t workSpace,
+                      ConstData_t hx,
+                      const SequenceIterator& seq,
+                      size_t layer,
+                      SequenceDirection direction) const;
+
+    void PhisHStateWeights(const Handle& handle,
+                           Data_t dw,
+                           ConstData_t workSpace,
+                           ConstData_t hx,
+                           size_t layer,
+                           size_t max_seq_len,
+                           SequenceDirection direction) const
+    {
+        if(hx == nullptr)
+            return;
+    
+        for(auto i = max_seq_len; i > 0; i--)
+        {
+            const auto seq = SequenceIterator(i - 1, direction, max_seq_len, false);
+    
+            PhisHStateWeights(handle, dw, workSpace, hx, seq, layer, direction);
+        }
+    }
+
+    void realXProp(const Handle& handle,
+                                         const runtimeArgsBwWeiDynamicExt& runtimeArgsExt) const
+    {
+
+        RNNTensorBaseLayoutConverter::ConvertInputTensorGPUData(handle,
+                                                                realXDesc,
+                                                                runtimeArgsExt.realX,
+                                                                tmpMapXDesc,
+                                                                runtimeArgsExt.tempX,
+                                                                nullptr,
+                                                                false);
+    }
+
+private:
+    BatchController realBatchController;
+
+    SeqTensorDescriptor realXDesc;
+    SeqTensorDescriptor tmpMapXDesc;
+};
+
+
 } // namespace rnn_base
 } // namespace miopen

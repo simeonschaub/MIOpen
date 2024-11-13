@@ -186,9 +186,19 @@ void RNNDescriptor::ModularBackwardWeights(Handle& handle,
     }
     else
     {
-        rnn_base::RNNModularSingleStreamBWWeights single_stream{*this, xDesc, yDesc, hDesc};
-        single_stream.Compute(
-            handle, x, hx, dw, workSpace, workSpaceSize, reserveSpace, reserveSpaceSize);
+        if(CheckDynamicAlgoSelection(handle, xDesc, miopenRNNFWDMode_t::miopenRNNTraining))
+        {
+            rnn_base::RNNDynamicModularSingleStreamBWWeights single_stream{
+                *this, xDesc, yDesc, hDesc, miopenRNNFWDMode_t::miopenRNNTraining};
+            single_stream.Compute(
+                handle, x, hx, dw, workSpace, workSpaceSize, reserveSpace, reserveSpaceSize);
+        }
+        else
+        {
+            rnn_base::RNNModularSingleStreamBWWeights single_stream{*this, xDesc, yDesc, hDesc};
+            single_stream.Compute(
+                handle, x, hx, dw, workSpace, workSpaceSize, reserveSpace, reserveSpaceSize);
+        }
     }
 }
 
