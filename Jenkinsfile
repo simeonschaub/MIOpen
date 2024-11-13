@@ -623,6 +623,7 @@ pipeline {
                 steps {
                 script {
                     checkout scm
+                    dir('..')
                         }
                 buildHipClangJobAndReboot(setup_cmd: "", build_cmd: "", execute_cmd: execute_cmd, needs_gpu: false, needs_reboot: false)
     }
