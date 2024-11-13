@@ -40,7 +40,9 @@ namespace miopen {
 namespace fin_interface {
 
 // ================== AnySolver ==================
-// This class is an ugly trick. The only reason for it is that each tunable solver has its own PerformanceConfig. Needs to be refactored in the future. Although, it might be worth leaving it as is to be able to add things needed for tuning infrastructure.
+// This class is an ugly trick. The only reason for it is that each tunable solver has its own
+// PerformanceConfig. Needs to be refactored in the future. Although, it might be worth leaving it
+// as is to be able to add things needed for tuning infrastructure.
 template <class Context, class Problem>
 class AnySolver
 {
@@ -58,23 +60,22 @@ public:
         return obj->FindSolution(sbase, ctx, problem, db, invoke_ctx, perf_cfg);
     }
 
-    std::vector<miopen::solver::ConvSolution> GetAllSolutions(const Context& ctx, const Problem& problem) const
+    std::vector<miopen::solver::ConvSolution> GetAllSolutions(const Context& ctx,
+                                                              const Problem& problem) const
     {
         assert(obj != nullptr);
         return obj->GetAllSolutions(sbase, ctx, problem);
     }
 
-    std::string GetPerfCfgParams(const Context& ctx,
-                                 const Problem& problem,
-                                 miopen::PerformanceDb& db) const
+    std::string
+    GetPerfCfgParams(const Context& ctx, const Problem& problem, miopen::PerformanceDb& db) const
     {
         assert(obj != nullptr);
         return obj->GetPerfCfgParams(sbase, ctx, problem, db);
     }
 
-    bool TestPerfCfgParams(const Context& ctx,
-                           const Problem& problem,
-                           const std::string& params) const
+    bool
+    TestPerfCfgParams(const Context& ctx, const Problem& problem, const std::string& params) const
     {
         assert(obj != nullptr);
         return obj->TestPerfCfgParams(sbase, ctx, problem, params);
@@ -88,15 +89,17 @@ private:
     {
     public:
         virtual ~AnySolver_base() = default;
-        virtual miopen::solver::ConvSolution FindSolution(const miopen::solver::SolverBase* solver_base,
-                                                          const Context& ctx,
-                                                          const Problem& problem,
-                                                          miopen::PerformanceDb& db,
-                                                          const miopen::AnyInvokeParams& invoke_ctx,
-                                                          const std::string& perf_cfg) const = 0;
-        virtual std::vector<miopen::solver::ConvSolution> GetAllSolutions(const miopen::solver::SolverBase* solver_base,
-                                                                          const Context& ctx,
-                                                                          const Problem& problem) const = 0;
+        virtual miopen::solver::ConvSolution
+        FindSolution(const miopen::solver::SolverBase* solver_base,
+                     const Context& ctx,
+                     const Problem& problem,
+                     miopen::PerformanceDb& db,
+                     const miopen::AnyInvokeParams& invoke_ctx,
+                     const std::string& perf_cfg) const = 0;
+        virtual std::vector<miopen::solver::ConvSolution>
+        GetAllSolutions(const miopen::solver::SolverBase* solver_base,
+                        const Context& ctx,
+                        const Problem& problem) const                         = 0;
         virtual std::string GetPerfCfgParams(const miopen::solver::SolverBase* solver_base,
                                              const Context& ctx,
                                              const Problem& problem,
@@ -104,7 +107,7 @@ private:
         virtual bool TestPerfCfgParams(const miopen::solver::SolverBase* solver_base,
                                        const Context& ctx,
                                        const Problem& problem,
-                                       const std::string& params) const = 0;
+                                       const std::string& params) const       = 0;
     };
 
     // Templated derived class
@@ -122,9 +125,10 @@ private:
             return miopen::solver::FindSolution(solver, ctx, problem, db, invoke_ctx, perf_cfg);
         }
 
-        std::vector<miopen::solver::ConvSolution> GetAllSolutions(const miopen::solver::SolverBase* solver_base,
-                                                                  const Context& ctx,
-                                                                  const Problem& problem) const override
+        std::vector<miopen::solver::ConvSolution>
+        GetAllSolutions(const miopen::solver::SolverBase* solver_base,
+                        const Context& ctx,
+                        const Problem& problem) const override
         {
             const auto& solver = GetSolver(solver_base);
             if constexpr(std::is_same_v<T, NonTunableSolver>)
@@ -135,8 +139,10 @@ private:
             else
             {
                 // Tunable solver
-                using PerformanceConfig = decltype(solver.GetDefaultPerformanceConfig(ctx, problem));
-                if constexpr(std::is_same_v<PerformanceConfig, miopen::solver::LegacyPerformanceConfig>)
+                using PerformanceConfig =
+                    decltype(solver.GetDefaultPerformanceConfig(ctx, problem));
+                if constexpr(std::is_same_v<PerformanceConfig,
+                                            miopen::solver::LegacyPerformanceConfig>)
                 {
                     // Legacy tunable solver
                     MIOPEN_THROW("No solutions returned for Legacy Solvers.");
@@ -164,7 +170,8 @@ private:
             else
             {
                 // Tunable solver
-                using PerformanceConfig = decltype(solver.GetDefaultPerformanceConfig(ctx, problem));
+                using PerformanceConfig =
+                    decltype(solver.GetDefaultPerformanceConfig(ctx, problem));
                 PerformanceConfig config;
 
                 if(db.Load(problem, solver.SolverDbId(), config))
@@ -179,16 +186,18 @@ private:
                 else if(!solver.AltSolverDbId().empty() &&
                         db.Load(problem, solver.AltSolverDbId(), config))
                 {
-                    MIOPEN_LOG_I("PerformanceDb: alternate record loaded: " << solver.AltSolverDbId());
+                    MIOPEN_LOG_I(
+                        "PerformanceDb: alternate record loaded: " << solver.AltSolverDbId());
                     if(solver.IsValidPerformanceConfig(ctx, problem, config))
                     {
                         return config.ToString();
                     }
-                    MIOPEN_LOG_I2("PerformanceDb: Invalid alternate record: " << solver.AltSolverDbId()
-                                                                            << ": " << config);
+                    MIOPEN_LOG_I2("PerformanceDb: Invalid alternate record: "
+                                  << solver.AltSolverDbId() << ": " << config);
                 }
 
-                MIOPEN_LOG_I2("PerformanceDb: Failed Loading, Using Default: " << solver.SolverDbId());
+                MIOPEN_LOG_I2(
+                    "PerformanceDb: Failed Loading, Using Default: " << solver.SolverDbId());
                 config = solver.GetDefaultPerformanceConfig(ctx, problem);
                 return config.ToString();
             }
@@ -208,13 +217,14 @@ private:
             {
                 // Tunable solver
                 const auto& solver = GetSolver(solver_base);
-                using PerformanceConfig = decltype(solver.GetDefaultPerformanceConfig(ctx, problem));
+                using PerformanceConfig =
+                    decltype(solver.GetDefaultPerformanceConfig(ctx, problem));
                 PerformanceConfig config;
 
                 if(!config.Deserialize(params))
                 {
                     MIOPEN_LOG_WE("Perf params are obsolete or corrupt: "
-                                << params << ". Performance may degrade.");
+                                  << params << ". Performance may degrade.");
                     return false;
                 }
 
@@ -240,17 +250,16 @@ private:
         obj = &impl;
     }
 
-    void SetObjectNonTunable()
-    {
-        SetObject<NonTunableSolver>();
-    }
+    void SetObjectNonTunable() { SetObject<NonTunableSolver>(); }
 
     const AnySolver_base* obj = nullptr;
     const miopen::solver::SolverBase* const sbase;
 };
 
 template <>
-AnySolver<miopen::ExecutionContext, miopen::conv::ProblemDescription>::AnySolver(const miopen::solver::SolverBase* solver_base, uint64_t id) : sbase(solver_base)
+AnySolver<miopen::ExecutionContext, miopen::conv::ProblemDescription>::AnySolver(
+    const miopen::solver::SolverBase* solver_base, uint64_t id)
+    : sbase(solver_base)
 {
     if(!sbase->IsTunable())
     {
@@ -260,175 +269,70 @@ AnySolver<miopen::ExecutionContext, miopen::conv::ProblemDescription>::AnySolver
 
     switch(id)
     {
-    case 1:
-        SetObject<miopen::solver::conv::ConvAsm3x3U>();
-        break;
-    case 2:
-        SetObject<miopen::solver::conv::ConvAsm1x1U>();
-        break;
-    case 3:
-        SetObject<miopen::solver::conv::ConvAsm1x1UV2>();
-        break;
-    case 11:
-        SetObject<miopen::solver::conv::ConvOclDirectFwd>();
-        break;
-    case 13:
-        SetObject<miopen::solver::conv::ConvOclDirectFwd1x1>();
-        break;
-    case 16:
-        SetObject<miopen::solver::conv::ConvAsmBwdWrW3x3>();
-        break;
-    case 17:
-        SetObject<miopen::solver::conv::ConvAsmBwdWrW1x1>();
-        break;
-    case 18:
-        SetObject<miopen::solver::conv::ConvOclBwdWrW2<1>>();
-        break;
-    case 19:
-        SetObject<miopen::solver::conv::ConvOclBwdWrW2<2>>();
-        break;
-    case 20:
-        SetObject<miopen::solver::conv::ConvOclBwdWrW2<4>>();
-        break;
-    case 21:
-        SetObject<miopen::solver::conv::ConvOclBwdWrW2<8>>();
-        break;
-    case 22:
-        SetObject<miopen::solver::conv::ConvOclBwdWrW2<16>>();
-        break;
-    case 26:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmV4R1Fwd>();
-        break;
-    case 31:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmV4R1WrW>();
-        break;
-    case 37:
-        SetObject<miopen::solver::conv::ConvBinWinoRxS<3,2>>();
-        break;
-    case 53:
-        SetObject<miopen::solver::conv::ConvBinWinoRxS<2,3>>();
-        break;
-    case 54:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmV4R4Fwd>();
-        break;
-    case 55:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdDataV1R1>();
-        break;
-    case 56:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdDataV4R1>();
-        break;
-    case 57:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdDataV1R1Xdlops>();
-        break;
-    case 60:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdDataV4R1Xdlops>();
-        break;
-    case 61:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmV4R4WrW>();
-        break;
-    case 64:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmForwardV4R4Xdlops>();
-        break;
-    case 73:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmWrwV4R4Xdlops>();
-        break;
-    case 75:
-        SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<2,3>>();
-        break;
-    case 76:
-        SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<3,3>>();
-        break;
-    case 77:
-        SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<4,3>>();
-        break;
-    case 78:
-        SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<5,3>>();
-        break;
-    case 79:
-        SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<6,3>>();
-        break;
-    case 80:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmForwardV4R5Xdlops>();
-        break;
+    case 1: SetObject<miopen::solver::conv::ConvAsm3x3U>(); break;
+    case 2: SetObject<miopen::solver::conv::ConvAsm1x1U>(); break;
+    case 3: SetObject<miopen::solver::conv::ConvAsm1x1UV2>(); break;
+    case 11: SetObject<miopen::solver::conv::ConvOclDirectFwd>(); break;
+    case 13: SetObject<miopen::solver::conv::ConvOclDirectFwd1x1>(); break;
+    case 16: SetObject<miopen::solver::conv::ConvAsmBwdWrW3x3>(); break;
+    case 17: SetObject<miopen::solver::conv::ConvAsmBwdWrW1x1>(); break;
+    case 18: SetObject<miopen::solver::conv::ConvOclBwdWrW2<1>>(); break;
+    case 19: SetObject<miopen::solver::conv::ConvOclBwdWrW2<2>>(); break;
+    case 20: SetObject<miopen::solver::conv::ConvOclBwdWrW2<4>>(); break;
+    case 21: SetObject<miopen::solver::conv::ConvOclBwdWrW2<8>>(); break;
+    case 22: SetObject<miopen::solver::conv::ConvOclBwdWrW2<16>>(); break;
+    case 26: SetObject<miopen::solver::conv::ConvHipImplicitGemmV4R1Fwd>(); break;
+    case 31: SetObject<miopen::solver::conv::ConvHipImplicitGemmV4R1WrW>(); break;
+    case 37: SetObject<miopen::solver::conv::ConvBinWinoRxS<3, 2>>(); break;
+    case 53: SetObject<miopen::solver::conv::ConvBinWinoRxS<2, 3>>(); break;
+    case 54: SetObject<miopen::solver::conv::ConvHipImplicitGemmV4R4Fwd>(); break;
+    case 55: SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdDataV1R1>(); break;
+    case 56: SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdDataV4R1>(); break;
+    case 57: SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdDataV1R1Xdlops>(); break;
+    case 60: SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdDataV4R1Xdlops>(); break;
+    case 61: SetObject<miopen::solver::conv::ConvHipImplicitGemmV4R4WrW>(); break;
+    case 64: SetObject<miopen::solver::conv::ConvHipImplicitGemmForwardV4R4Xdlops>(); break;
+    case 73: SetObject<miopen::solver::conv::ConvHipImplicitGemmWrwV4R4Xdlops>(); break;
+    case 75: SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<2, 3>>(); break;
+    case 76: SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<3, 3>>(); break;
+    case 77: SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<4, 3>>(); break;
+    case 78: SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<5, 3>>(); break;
+    case 79: SetObject<miopen::solver::conv::ConvMPBidirectWinograd_xdlops<6, 3>>(); break;
+    case 80: SetObject<miopen::solver::conv::ConvHipImplicitGemmForwardV4R5Xdlops>(); break;
     case 81:
         SetObject<miopen::solver::conv::ConvHipImplicitGemmForwardV4R4Xdlops_Padded_Gemm>();
         break;
-    case 83:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm>();
-        break;
-    case 98:
-        SetObject<miopen::solver::conv::ConvMlirIgemmFwd>();
-        break;
-    case 99:
-        SetObject<miopen::solver::conv::ConvMlirIgemmBwd>();
-        break;
-    case 100:
-        SetObject<miopen::solver::conv::ConvMlirIgemmWrW>();
-        break;
-    case 103:
-        SetObject<miopen::solver::conv::ConvMlirIgemmFwdXdlops>();
-        break;
-    case 104:
-        SetObject<miopen::solver::conv::ConvMlirIgemmBwdXdlops>();
-        break;
-    case 105:
-        SetObject<miopen::solver::conv::ConvMlirIgemmWrWXdlops>();
-        break;
-    case 107:
-        SetObject<miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC>();
-        break;
-    case 108:
-        SetObject<miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC>();
-        break;
-    case 110:
-        SetObject<miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicWrwXdlopsNHWC>();
-        break;
-    case 114:
-        SetObject<miopen::solver::conv::ConvCkIgemmFwdV6r1DlopsNchw>();
-        break;
-    case 127:
-        SetObject<miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicFwdDlopsNCHWC>();
-        break;
-    case 128:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmFwdXdlops>();
-        break;
-    case 129:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdXdlops>();
-        break;
-    case 137:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmGroupFwdXdlops>();
-        break;
-    case 138:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemm3DGroupFwdXdlops>();
-        break;
-    case 140:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemm3DGroupWrwXdlops>();
-        break;
-    case 141:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemm3DGroupBwdXdlops>();
-        break;
-    case 149:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmF16F8F16FwdXdlops>();
-        break;
-    case 150:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmF16F8F16BwdXdlops>();
-        break;
-    case 151:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmF16F8F16WrwXdlops>();
-        break;
-    case 155:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmGroupBwdXdlops>();
-        break;
-    case 156:
-        SetObject<miopen::solver::conv::ConvHipImplicitGemmGroupWrwXdlops>();
-        break;
-    default:
-        MIOPEN_THROW(miopenStatusInternalError, "Unknown solver ID");
+    case 83: SetObject<miopen::solver::conv::ConvHipImplicitGemmWrwV4R4Xdlops_Padded_Gemm>(); break;
+    case 98: SetObject<miopen::solver::conv::ConvMlirIgemmFwd>(); break;
+    case 99: SetObject<miopen::solver::conv::ConvMlirIgemmBwd>(); break;
+    case 100: SetObject<miopen::solver::conv::ConvMlirIgemmWrW>(); break;
+    case 103: SetObject<miopen::solver::conv::ConvMlirIgemmFwdXdlops>(); break;
+    case 104: SetObject<miopen::solver::conv::ConvMlirIgemmBwdXdlops>(); break;
+    case 105: SetObject<miopen::solver::conv::ConvMlirIgemmWrWXdlops>(); break;
+    case 107: SetObject<miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicFwdXdlopsNHWC>(); break;
+    case 108: SetObject<miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicBwdXdlopsNHWC>(); break;
+    case 110: SetObject<miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicWrwXdlopsNHWC>(); break;
+    case 114: SetObject<miopen::solver::conv::ConvCkIgemmFwdV6r1DlopsNchw>(); break;
+    case 127: SetObject<miopen::solver::conv::ConvAsmImplicitGemmGTCDynamicFwdDlopsNCHWC>(); break;
+    case 128: SetObject<miopen::solver::conv::ConvHipImplicitGemmFwdXdlops>(); break;
+    case 129: SetObject<miopen::solver::conv::ConvHipImplicitGemmBwdXdlops>(); break;
+    case 137: SetObject<miopen::solver::conv::ConvHipImplicitGemmGroupFwdXdlops>(); break;
+    case 138: SetObject<miopen::solver::conv::ConvHipImplicitGemm3DGroupFwdXdlops>(); break;
+    case 140: SetObject<miopen::solver::conv::ConvHipImplicitGemm3DGroupWrwXdlops>(); break;
+    case 141: SetObject<miopen::solver::conv::ConvHipImplicitGemm3DGroupBwdXdlops>(); break;
+    case 149: SetObject<miopen::solver::conv::ConvHipImplicitGemmF16F8F16FwdXdlops>(); break;
+    case 150: SetObject<miopen::solver::conv::ConvHipImplicitGemmF16F8F16BwdXdlops>(); break;
+    case 151: SetObject<miopen::solver::conv::ConvHipImplicitGemmF16F8F16WrwXdlops>(); break;
+    case 155: SetObject<miopen::solver::conv::ConvHipImplicitGemmGroupBwdXdlops>(); break;
+    case 156: SetObject<miopen::solver::conv::ConvHipImplicitGemmGroupWrwXdlops>(); break;
+    default: MIOPEN_THROW(miopenStatusInternalError, "Unknown solver ID");
     }
 }
 
 template <>
-AnySolver<miopen::ExecutionContext, miopen::batchnorm::ProblemDescription>::AnySolver(const miopen::solver::SolverBase* solver_base, uint64_t id) : sbase(solver_base)
+AnySolver<miopen::ExecutionContext, miopen::batchnorm::ProblemDescription>::AnySolver(
+    const miopen::solver::SolverBase* solver_base, uint64_t id)
+    : sbase(solver_base)
 {
     if(!sbase->IsTunable())
     {
@@ -438,17 +342,10 @@ AnySolver<miopen::ExecutionContext, miopen::batchnorm::ProblemDescription>::AnyS
 
     switch(id)
     {
-    case 142:
-        SetObject<miopen::solver::batchnorm::BnCKFwdInference>();
-        break;
-    case 143:
-        SetObject<miopen::solver::batchnorm::BnCKBwdBackward>();
-        break;
-    case 144:
-        SetObject<miopen::solver::batchnorm::BnCKFwdTraining>();
-        break;
-    default:
-        MIOPEN_THROW(miopenStatusInternalError, "Unknown solver ID");
+    case 142: SetObject<miopen::solver::batchnorm::BnCKFwdInference>(); break;
+    case 143: SetObject<miopen::solver::batchnorm::BnCKBwdBackward>(); break;
+    case 144: SetObject<miopen::solver::batchnorm::BnCKFwdTraining>(); break;
+    default: MIOPEN_THROW(miopenStatusInternalError, "Unknown solver ID");
     }
 }
 
