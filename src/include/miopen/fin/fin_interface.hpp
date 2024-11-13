@@ -107,7 +107,7 @@ public:
                                                               const Problem& problem) const;
 
     std::string
-    GetPerfCfgParams(const Context& ctx, const Problem& problem, const PerformanceDb& db) const;
+    GetPerfCfgParams(const Context& ctx, const Problem& problem, miopen::PerformanceDb& db) const;
 
     bool
     TestPerfCfgParams(const Context& ctx, const Problem& problem, const std::string& params) const;
