@@ -33,7 +33,7 @@ namespace miopen {
 
 namespace rnn_base {
 
-void RNNModularMultiStreamBWWeights::PrologueDispatch(const runtimeArgsBww& args) const
+void RNNModularMultiStreamBWWeights::PrologueDispatch(const runtimeArgsBWWeights& args) const
 {
     rnnAlgoModules.PrepareWriteBuffers(*args.handle, args.dw);
 }
@@ -51,7 +51,7 @@ void RNNModularMultiStreamBWWeights::Compute(const Handle& handle,
     if(rnnDesc.nLayers == 0 || max_seq_len == 0)
         return;
 
-    const runtimeArgsBww args{&handle, x, hx, dw, workSpace, reserveSpace};
+    const runtimeArgsBWWeights args{&handle, x, hx, dw, workSpace, reserveSpace};
 
     MultiStreamController ms_controller{handle, env::value_or(MIOPEN_RNN_MS_STREAM_CNT, 4)};
 

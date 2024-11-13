@@ -290,7 +290,7 @@ void RNNForwardDataModularAlgo::PropHiddenHt(const Handle& handle,
 
     const auto filter_offset = weightsLayout.getMatrixHidOff(layer, static_cast<int>(direction));
 
-    const miopen::TensorDescriptor& ht_dest_dsc = BuildWsHtDesc2D(gemm_batch_size);
+    const miopen::TensorDescriptor& ht_dest_dsc = BuildTmpHtDesc2D(workspaceInfo, gemm_batch_size);
 
     const miopen::TensorDescriptor tmp_block_src_dsc =
         BuildLstmTmpBlockDesc2D(workspaceInfo, gemm_batch_size);
@@ -437,7 +437,7 @@ void RNNForwardDataModularAlgo::PropHiddenY(const Handle& handle,
     const miopen::TensorDescriptor tmp_block_src_dsc =
         BuildLstmTmpBlockDesc2D(reservLayout, gemm_batch_size);
 
-    const auto tmp_ht_desc = BuildWsHtDesc2D(gemm_batch_size);
+    const auto tmp_ht_desc = BuildTmpHtDesc2D(reservLayout, gemm_batch_size);
 
     if(rnnDesc.rnnMode == miopenLSTM)
     {

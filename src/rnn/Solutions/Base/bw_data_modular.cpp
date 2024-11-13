@@ -145,7 +145,7 @@ void RNNBackwardDataModularAlgo::PropHiddenDht(const Handle& handle,
 
     const miopen::TensorDescriptor& filter_src_dsc = BuildLstmFilterHidDesc2D();
 
-    const miopen::TensorDescriptor& ht_dest_dsc = BuildWsHtDesc2D(gemm_batch_size);
+    const miopen::TensorDescriptor& ht_dest_dsc = BuildTmpHtDesc2D(workspaceInfo ,gemm_batch_size);
 
     RnnBaseFunctions::BWD_GEMM_Hidden_Prop(
         handle,
@@ -444,7 +444,7 @@ void RNNBackwardDataModularAlgo::PropHiddenDy(const Handle& handle,
 
         const auto filter_src_dsc = BuildLstmFilterXDesc2D(layer);
 
-        const auto ht_x_desc = BuildWsHtDesc2D(gemm_batch_size);
+        const auto ht_x_desc = BuildTmpHtDesc2D(workspaceInfo, gemm_batch_size);
 
         RnnBaseFunctions::BWD_GEMM_Hidden_Prop(handle,
                                                workSpace,
