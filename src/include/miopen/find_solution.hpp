@@ -52,7 +52,7 @@ namespace solver {
 
 template <class Solver, class Context, class Problem, class Db>
 auto FindSolutionImpl(rank<1>,
-                      Solver s,
+                      const Solver& s,
                       const Context& context,
                       const Problem& problem,
                       Db&& db,
@@ -148,7 +148,7 @@ auto FindSolutionImpl(rank<1>,
 
 template <class Solver, class Context, class Problem, class Db>
 auto FindSolutionImpl(rank<0>,
-                      Solver s,
+                      const Solver& s,
                       const Context& context,
                       const Problem& problem,
                       Db&&,
@@ -200,7 +200,7 @@ auto GetInvokeFactoryImpl(
 /// Could take long if an exhaustive search is requested/performed.
 /// May read/write perfDb.
 template <class Solver, class Context, class Problem, class Db>
-ConvSolution FindSolution(Solver s,
+ConvSolution FindSolution(const Solver& s,
                           const Context& context,
                           const Problem& problem,
                           Db&& db,
