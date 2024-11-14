@@ -141,7 +141,7 @@ struct IdRegistryEntry
     Primitive primitive            = Primitive::Convolution;
     miopenConvAlgorithm_t convAlgo = miopenConvolutionAlgoDirect;
     AnySolver solver;
-    std::unique_ptr<SolverBase> solver_base;
+    const SolverBase* solver_base = nullptr;
 };
 
 struct IdRegistryData
@@ -206,7 +206,7 @@ const SolverBase* Id::GetSolverBase() const
     const auto it = IdRegistry().value_to_entry.find(value);
     if(it == IdRegistry().value_to_entry.end())
         return nullptr;
-    return it->second.solver_base.get();
+    return it->second.solver_base;
 }
 
 std::string Id::GetAlgo(miopen::conv::Direction dir) const
@@ -294,21 +294,21 @@ template <class TSolver>
 inline void
 RegisterWithSolver(IdRegistryData& registry, uint64_t value, TSolver, miopenConvAlgorithm_t algo)
 {
-    auto solver_base = std::make_unique<TSolver>();
-    if(!Register(registry, value, solver_base->SolverDbId(), algo))
+    static const TSolver solver_base;
+    if(!Register(registry, value, solver_base.SolverDbId(), algo))
         return;
     auto& entry       = registry.value_to_entry.at(value);
     entry.solver      = TSolver{};
-    entry.solver_base = std::move(solver_base);
+    entry.solver_base = &solver_base;
 }
 
 template <class Solver>
 void RegisterWithSolver(IdRegistryData& registry, uint64_t value, Primitive primitive)
 {
-    auto solver_base = std::make_unique<Solver>();
-    if(!Register(registry, value, primitive, solver_base->SolverDbId()))
+    static const Solver solver_base;
+    if(!Register(registry, value, primitive, solver_base.SolverDbId()))
         return;
-    registry.value_to_entry.at(value).solver_base = std::move(solver_base);
+    registry.value_to_entry.at(value).solver_base = &solver_base;
 }
 
 inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
