@@ -154,7 +154,7 @@ void Solution::RunImpl(Handle& handle,
                        std::size_t workspace_size,
                        const ConvolutionDescriptor& conv_desc)
 {
-    const auto& problem_casted = std::get<Problem>(problem.item);
+    auto problem_ = std::get<Problem>(problem.item);
 
     const auto get_input_checked = [&](auto name, const std::string& name_str) {
         const auto& found = inputs.find(name);
@@ -165,7 +165,7 @@ void Solution::RunImpl(Handle& handle,
         }
         auto ret = found->second;
         if(!ret.descriptor.has_value())
-            ret.descriptor = problem_casted.GetTensorDescriptorChecked(name, name_str);
+            ret.descriptor = problem_.GetTensorDescriptorChecked(name, name_str);
         return ret;
     };
 
@@ -173,8 +173,12 @@ void Solution::RunImpl(Handle& handle,
     const auto w = get_input_checked(miopenTensorConvolutionW, "miopenTensorConvolutionW");
     auto y       = get_input_checked(miopenTensorConvolutionY, "miopenTensorConvolutionY");
 
-    const auto problem_ =
-        conv_desc.mode == miopenTranspose ? Transpose(problem_casted, &x, w, &y) : problem_casted;
+    if(x.descriptor)
+        problem_.RegisterTensorDescriptor(miopenTensorConvolutionX, *x.descriptor);
+    if(w.descriptor)
+        problem_.RegisterTensorDescriptor(miopenTensorConvolutionW, *w.descriptor);
+    if(y.descriptor)
+        problem_.RegisterTensorDescriptor(miopenTensorConvolutionY, *y.descriptor);
 
     if(problem_.GetDirection() == miopenProblemDirectionBackward &&
        y.descriptor->GetLengths()[1] != w.descriptor->GetLengths()[0])
@@ -641,22 +645,6 @@ AnyInvokeParams Solution::MakeInvokeParams(const Problem& problem_,
             conv_desc.attribute.gfx90aFp16alt.GetWrW()};
     default: MIOPEN_THROW(miopenStatusNotImplemented);
     }
-}
-
-Problem Solution::Transpose(const Problem& problem, RunInput* x, const RunInput& w, RunInput* y)
-{
-    auto transposed = problem.MakeTransposed();
-
-    std::swap(*x, *y);
-
-    if(x->descriptor)
-        transposed.RegisterTensorDescriptor(miopenTensorConvolutionX, *x->descriptor);
-    if(w.descriptor)
-        transposed.RegisterTensorDescriptor(miopenTensorConvolutionW, *w.descriptor);
-    if(y->descriptor)
-        transposed.RegisterTensorDescriptor(miopenTensorConvolutionY, *y->descriptor);
-
-    return transposed;
 }
 
 namespace fields {

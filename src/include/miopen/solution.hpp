@@ -189,8 +189,6 @@ private:
                                             Data_t workspace,
                                             size_t workspace_size);
 
-    static Problem Transpose(const Problem& problem, RunInput* x, const RunInput& w, RunInput* y);
-
     void LogDriverCommand(const ConvolutionDescriptor& desc) const;
     void LogDriverCommand(const ActivationDescriptor& desc) const;
     void LogDriverCommand(const BatchnormDescriptor& desc) const;
