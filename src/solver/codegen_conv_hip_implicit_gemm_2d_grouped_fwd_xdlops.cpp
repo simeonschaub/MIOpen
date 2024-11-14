@@ -47,11 +47,10 @@
 #include "ck/tensor_operation/gpu/device/helper.hpp"
 #include "ck/library/utility/host_tensor_generator.hpp"
 #include "ck/library/reference_tensor_operation/cpu/reference_conv_fwd.hpp"
-//#include "common.hpp"
 #include <fstream>
 #endif
 #include <miopen/solver/implicitgemm_ck_util.hpp>
-MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_FWD_XDLOPS)
+MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_GROUP_CONV_IMPLICIT_GEMM_HIP_FWD_XDLOPS)
 
 namespace miopen {
 namespace solver {
@@ -114,6 +113,15 @@ std::vector<src_file> get_headers_for_test()
             return {p.first, p.second};
         });
     return result;
+}
+void write_buffer(const std::string& filename, const char* buffer, std::size_t size)
+{
+    std::ofstream os(filename);
+    os.write(buffer, size);
+}
+void write_string(const std::string& filename, const std::string_view& buffer)
+{
+    write_buffer(filename, buffer.data(), buffer.size());
 }
 
 struct CKArgs
@@ -213,27 +221,59 @@ bool ConvHipImplicitGemmGroupFwdXdlopsCodegen::IsApplicable(
     [[maybe_unused]] const ProblemDescription& problem) const
 {
     // FIXME: rewrite this function
-    return true;
+    std::cout << "####### entered isApplicable #######" << std::endl;
+    // return true;
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
-    if(env::disabled(MIOPEN_DEBUG_3D_CONV_IMPLICIT_GEMM_HIP_FWD_XDLOPS))
+    std::cout << "----------- entered the header guard -----------" << std::endl;
+    if(env::disabled(MIOPEN_DEBUG_GROUP_CONV_IMPLICIT_GEMM_HIP_FWD_XDLOPS))
+    {
+        std::cout << "Check 1: false" << std::endl;
         return false;
-    // check if type float else return false
-    if(problem.GetConv().attribute.deterministic)
+    }
+    if(problem.HasNonPackedTensors())
+    {
+        std::cout << "Check 2: false" << std::endl;
         return false;
+    }
     if(!problem.AllTensorsDimsFitIntoInt())
+    {
+        std::cout << "Check 3: false" << std::endl;
         return false;
+    }
+    if(problem.IsTensorsCasted())
+    {
+        std::cout << "Check 4: false" << std::endl;
+        return false;
+    }
+    if(problem.GetConv().attribute.deterministic)
+    {
+        std::cout << "Check 5: false" << std::endl;
+        return false;
+    }
     if(problem.HasMixedDataTypes())
+    {
+        std::cout << "Check 6: false" << std::endl;
         return false;
+    }
     if(!problem.IsDirectionForward())
+    {
+        std::cout << "Check 7: false" << std::endl;
         return false;
-    if(!problem.Is3d())
+    }
+    if(!problem.Is2d())
+    {
+        std::cout << "Check 8: false" << std::endl;
         return false;
+    }
     if(!(problem.IsLayoutNHWC() || problem.IsLayoutDefault()))
+    {
+        std::cout << "Check 9: false" << std::endl;
         return false;
-    // needed because layout transpose kernel does not support non-packed tensors
-    if(problem.IsLayoutDefault() && problem.HasNonPackedTensors())
-        return false;
+    }
+    std::cout << "------ went through header guard checks ------" << std::endl;
+    return true;
 #endif
+    std::cout << "never entered the header guard" << std::endl;
     return false;
 }
 
@@ -243,10 +283,6 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
 {
     auto x = CKArgs(problem);
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
-    /**decltype(auto) conv = problem.GetConv();
-    decltype(auto) in   = problem.GetIn();
-    decltype(auto) wei  = problem.GetWeights();
-    decltype(auto) out  = problem.GetOut();**/
 
     const auto workspace_req = GetWorkspaceSize(ctx, problem);
 
@@ -262,21 +298,13 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     srcs.push_back({"main.cpp", src});
     auto name = solution[0].GetTemplateParameter<std::string>("name");
 
-    auto kernel        = KernelInfo{};
-    kernel.kernel_file = srcs[srcs.size() - 1].path.filename().string();
-    kernel.kernel_name = "run_" + name;
-    // rtc::compile_options options;
-    // auto name           = solution[0].GetTemplateParameter<std::string>("name");
-    // options.kernel_name = "run_" + name;
-    // TODO: MIOpen has it's own handlers for compilation
-    // auto k = rtc::compile_kernel(srcs, options);
-
-    /**auto pImpl     = std::make_shared<HIPOCProgramImpl>();
-    pImpl->program = program_name;
-    pImpl->target  = this->GetTargetProperties();
-    auto p           = HIPOCProgram{};
-    p.impl           = pImpl;
-    pImpl->BuildCodeObject(params, src);**/
+    auto kernel_info = KernelInfo{};
+    auto path        = std::strcat(std::getenv("HOME"), "/workspace/MIOpen/src/kernels/main.cpp");
+    // should write the generated code into the file
+    std::string path_name(path);
+    write_string(path_name, srcs[srcs.size() - 1].content);
+    kernel_info.kernel_file = path;
+    kernel_info.kernel_name = "run_" + name;
 
     // Grid size calculation
     auto block_size = solution[0].GetTemplateParameter<ck::index_t>("BlockSize");
@@ -285,23 +313,40 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
 
     auto grid_size = tmp * x.in_lengths[1];
 
-    kernel.l_wk = {block_size, 1, 1};
-    kernel.g_wk = {block_size * grid_size, 1, 1};
+    kernel_info.l_wk = {block_size, 1, 1};
+    kernel_info.g_wk = {block_size * grid_size, 1, 1};
 
     bool bfp16parm = true;
     const auto build_params =
         KernelBuildParameters{{"MIOPEN_USE_FP16", static_cast<int>(bfp16parm)}};
-    kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
-    kernel.comp_options += " -DCK_DONT_USE_HIP_RUNTIME_HEADERS";
-    kernel.comp_options += " -DCK_CODE_GEN_RTC";
+    kernel_info.comp_options = build_params.GenerateFor(kbp::HIP{});
+    kernel_info.comp_options += " -DCK_DONT_USE_HIP_RUNTIME_HEADERS";
+    kernel_info.comp_options += " -DCK_CODE_GEN_RTC";
+    // soln.construction_params.push_back(kernel_info);
 
-    soln.construction_params.push_back(kernel);
-
+    std::cout << "============== does it get here? =============" << std::endl;
     soln.invoker_factory = [=](const std::vector<Kernel>& kernels) {
+        std::cout << " ------------- outer lambda --------------------" << std::endl;
         return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
-            decltype(auto) kernel = handle_.Run(kernels.front());
+            std::cout << "----------- into inner lambda -----------" << std::endl;
+            // decltype(auto) kernel = handle_.Run(kernels.front());
             decltype(auto) params = raw_params.CastTo<miopen::conv::DataInvokeParams>();
+            std::cout << " ------------- past param assignment -------------" << std::endl;
 
+            std::cout << "=========== invoker factory ===============" << std::endl;
+            std::cout << "name of kernel: " << name << std::endl;
+            auto kernel = handle_.AddKernel("tmp",
+                                            "tmp",
+                                            "cg_main.cpp",
+                                            kernel_info.kernel_name,
+                                            kernel_info.l_wk,
+                                            kernel_info.g_wk,
+                                            kernel_info.comp_options,
+                                            0,
+                                            src);
+            std::cout << "in: " << *params.tensors.in << std::endl;
+            std::cout << "w: " << *params.tensors.w << std::endl;
+            std::cout << "out: " << *params.tensors.out << std::endl;
             kernel(params.tensors.in,
                    params.tensors.w,
                    params.tensors.out,
