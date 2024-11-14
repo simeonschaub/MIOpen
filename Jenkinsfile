@@ -625,11 +625,10 @@ pipeline {
                     checkout scm
                     sh 'pwd'
                     sh 'ls -l'
-
+                    sh 'cd ./test/utils && ./check_gtests.sh'
+                    }
                         }
-                buildHipClangJobAndReboot(setup_cmd: "", build_cmd: "", execute_cmd: execute_cmd, needs_gpu: false, needs_reboot: false)
-    }
-}
+                    }
 
                 stage('HipNoGPU Debug Build Test') {
                     when {
