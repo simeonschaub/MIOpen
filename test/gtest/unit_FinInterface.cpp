@@ -337,9 +337,13 @@ const auto& GetSolverConfigs<ConvSolverConfig>()
 {
     static const std::unordered_map<std::string, ConvSolverConfig> configs = {
         // clang-format off
+        // Non-tunable solvers
         {"ConvDirectNaiveConvFwd", {miopen::conv::Direction::Forward,           {miopenFloat, {1, 16, 14, 14}}, {miopenFloat, {48, 16, 5, 5}}, miopenFloat, {{2, 2}, {1, 1}, {1, 1}}}},
         {"ConvDirectNaiveConvBwd", {miopen::conv::Direction::BackwardData,      {miopenFloat, {1, 16, 14, 14}}, {miopenFloat, {48, 16, 5, 5}}, miopenFloat, {{2, 2}, {1, 1}, {1, 1}}}},
         {"ConvDirectNaiveConvWrw", {miopen::conv::Direction::BackwardWeights,   {miopenFloat, {1, 16, 14, 14}}, {miopenFloat, {48, 16, 5, 5}}, miopenFloat, {{2, 2}, {1, 1}, {1, 1}}}},
+        // Tunable solvers
+        {"ConvBinWinogradRxSf3x2", {miopen::conv::Direction::Forward,           {miopenFloat, {1, 20, 20, 20}}, {miopenFloat, {20, 20, 3, 3}}, miopenFloat, {{1, 1}, {1, 1}, {1, 1}}}},
+        {"ConvBinWinogradRxSf2x3", {miopen::conv::Direction::BackwardWeights,   {miopenFloat, {1, 20, 20, 20}}, {miopenFloat, {20, 20, 3, 3}}, miopenFloat, {{1, 1}, {1, 1}, {1, 1}}}},
         // clang-format on
     };
 
@@ -430,9 +434,20 @@ void CheckSolverConfig(const Solver& solver, const SolverConfig& config)
     auto&& handle      = get_handle();
     const auto problem = config.GetProblemDescription();
     const auto ctx     = GetContext(&handle, problem);
+    auto db            = miopen::GetDb(ctx);
 
-    ASSERT_EQ(solver.IsApplicable(ctx, problem), true);
+    ASSERT_TRUE(solver.IsApplicable(ctx, problem));
     std::ignore = solver.GetWorkspaceSize(ctx, problem);
+
+    /// \todo test FindSolution()
+
+    const auto solutions = solver.GetAllSolutions(ctx, problem);
+    ASSERT_GT(solutions.size(), 0);
+
+    const auto pcfg_params = solver.GetPerfCfgParams(ctx, problem, db);
+    ASSERT_NE(pcfg_params.empty(), solver.IsTunable());
+
+    ASSERT_EQ(solver.TestPerfCfgParams(ctx, problem, pcfg_params), solver.IsTunable());
 }
 
 template <class Solver, class TestCase>
