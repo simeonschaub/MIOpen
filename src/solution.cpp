@@ -173,6 +173,9 @@ void Solution::RunImpl(Handle& handle,
     const auto w = get_input_checked(miopenTensorConvolutionW, "miopenTensorConvolutionW");
     auto y       = get_input_checked(miopenTensorConvolutionY, "miopenTensorConvolutionY");
 
+    if (conv_desc.mode == miopenTranspose)
+        std::swap(x, y);
+
     if(x.descriptor)
         problem_.RegisterTensorDescriptor(miopenTensorConvolutionX, *x.descriptor);
     if(w.descriptor)
