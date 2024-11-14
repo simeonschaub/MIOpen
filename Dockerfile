@@ -114,7 +114,7 @@ DEBIAN_FRONTEND=noninteractive apt-get purge -y --allow-unauthenticated \
     miopen-hip
 
 # TODO: it should be able to automatically get commit hash from requirements.txt
-ARG CK_COMMIT=7d3ee2660b10b3c95f944655a372f53ab16667cd
+ARG CK_COMMIT=c7b0b6e770f66a1bc3ee4524945c2519a1f978c3
 RUN wget -O ck.tar.gz https://www.github.com/ROCm/composable_kernel/archive/${CK_COMMIT}.tar.gz && \
     tar zxvf ck.tar.gz &&\
     cd composable_kernel-${CK_COMMIT} && \
