@@ -71,7 +71,6 @@ struct runtimeArgsBWWeights
     const size_t freeWorkSpaceSize;
 };
 
-
 class RNNModuleAlgoBase
 {
 protected:
@@ -259,7 +258,8 @@ public:
     }
 
     template <typename BufType>
-    inline miopen::TensorDescriptor BuildTmpHtDesc2D(const BufType& tmpSpace, size_t batch_size) const
+    inline miopen::TensorDescriptor BuildTmpHtDesc2D(const BufType& tmpSpace,
+                                                     size_t batch_size) const
     {
         auto& ht_stride = tmpSpace.getHiddenStateStride();
         auto& ht_size   = tmpSpace.hStateSizes;
@@ -304,7 +304,7 @@ public:
         return miopen::TensorDescriptor{rnnDesc.dataType, dy_dhy_accum_size, ws_dy_stride};
     }
 
-        // 3 dims layer, batch, vec
+    // 3 dims layer, batch, vec
     inline miopen::TensorDescriptor BuildWeiBiasDesc2D() const
     {
         const std::vector<size_t> bias_size = [](const auto& wei_4dim_size) -> std::vector<size_t> {

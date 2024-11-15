@@ -193,8 +193,8 @@ class GeneralRNNTempBufferTemplate : public BaseRnnWsBufferPacked<Derived>
 {
 protected:
     GeneralRNNTempBufferTemplate(const std::array<size_t, 4>& hstate_strides,
-                         const std::array<size_t, 4>& hstate_sizes,
-                         size_t total_element_cnt)
+                                 const std::array<size_t, 4>& hstate_sizes,
+                                 size_t total_element_cnt)
         : hStateStrides{hstate_strides},
           hStateSizes{hstate_sizes},
           totalElementCnt{total_element_cnt}
@@ -261,20 +261,20 @@ public:
  *}
  */
 
-
 template <typename Derived>
 class GeneralLstmInternalBuffTemplate : public GeneralRNNTempBufferTemplate<Derived>,
                                         public GeneralLstmWsExt<Derived>,
                                         public LstmWsGateBlockExt<Derived>
 {
     using RNNBufferTemplate = GeneralRNNTempBufferTemplate<Derived>;
+
 protected:
     GeneralLstmInternalBuffTemplate(const std::array<size_t, 4>& h_state_strides,
-                          const std::array<size_t, 4>& h_state_sizes,
-                          const std::array<size_t, 4>& lstm_gate_sizes,
-                          const std::array<size_t, 4>& lstm_gate_strides,
-                          const std::array<size_t, 4>& lstm_gates_block_sizes,
-                          size_t total_element_cnt)
+                                    const std::array<size_t, 4>& h_state_sizes,
+                                    const std::array<size_t, 4>& lstm_gate_sizes,
+                                    const std::array<size_t, 4>& lstm_gate_strides,
+                                    const std::array<size_t, 4>& lstm_gates_block_sizes,
+                                    size_t total_element_cnt)
         : RNNBufferTemplate{h_state_strides, h_state_sizes, total_element_cnt},
           gateSizes{lstm_gate_sizes},
           gateStride{lstm_gate_strides},
@@ -376,8 +376,7 @@ public:
 
         const std::array<size_t, 3> pos{layer_id, vector_id, static_cast<size_t>(direction)};
 
-        return start_ident +
-               std::inner_product(pos.cbegin(),
+        return start_ident + std::inner_product(pos.cbegin(),
                                                 pos.cend(),
                                                 RNNBufferTemplate::hStateStrides.cbegin(),
                                                 static_cast<size_t>(0));
@@ -415,12 +414,11 @@ private:
     }
 };
 
-
-// final 
+// final
 class GeneralLstmTempBuffer : public GeneralLstmInternalBuffTemplate<GeneralLstmTempBuffer>
 {
 public:
-    GeneralLstmTempBuffer(const GeneralLstmInternalBuffTemplate<GeneralLstmTempBuffer> base )
+    GeneralLstmTempBuffer(const GeneralLstmInternalBuffTemplate<GeneralLstmTempBuffer> base)
         : GeneralLstmInternalBuffTemplate<GeneralLstmTempBuffer>{base}
     {
     }

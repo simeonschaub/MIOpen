@@ -33,7 +33,6 @@
 #include "miopen/rnn/algorithms/default_algo_utils.hpp"
 #include "miopen/rnn/algorithms/dynamic_algo_utils.hpp"
 
-
 namespace miopen {
 
 namespace rnn_base {
@@ -251,7 +250,7 @@ private:
 };
 
 //
-//Backward Weights
+// Backward Weights
 //
 
 class RNNModularSingleStreamBWWeights
@@ -298,10 +297,10 @@ class RNNDynamicModularSingleStreamBWWeights
 private:
 public:
     RNNDynamicModularSingleStreamBWWeights(const RNNDescriptor& rnn,
-                                     const SeqTensorDescriptor& xDesc,
-                                     const SeqTensorDescriptor& yDesc,
-                                     const TensorDescriptor& hDesc,
-                                     miopenRNNFWDMode_t mode)
+                                           const SeqTensorDescriptor& xDesc,
+                                           const SeqTensorDescriptor& yDesc,
+                                           const TensorDescriptor& hDesc,
+                                           miopenRNNFWDMode_t mode)
         : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode),
           rnnDesc(rnn),
           max_seq_len(xDesc.GetMaxSequenceLength())
@@ -324,14 +323,14 @@ public:
         return decltype(rnnAlgoModules)::getTempBuffersSize(rnn, xDesc);
     }
 
-   runtimeArgsBWWeights createRuntimeArgsBase(const Handle& handle,
-                              ConstData_t x,
-                              ConstData_t hx,
-                              Data_t dw,
-                              Data_t workSpace,
-                              size_t workSpaceSize,
-                              ConstData_t reserveSpace,
-                              size_t reserveSpaceSize) const
+    runtimeArgsBWWeights createRuntimeArgsBase(const Handle& handle,
+                                               ConstData_t x,
+                                               ConstData_t hx,
+                                               Data_t dw,
+                                               Data_t workSpace,
+                                               size_t workSpaceSize,
+                                               ConstData_t reserveSpace,
+                                               size_t reserveSpaceSize) const
     {
         const ConstData_t back_data_space = workSpace;
         const auto back_data_byte_size =
@@ -382,8 +381,6 @@ public:
 
     // TODO
     static size_t GetWsSize() { return 0; };
-
-
 
     void Compute(const Handle& handle,
                  ConstData_t x,

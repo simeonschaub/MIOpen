@@ -44,7 +44,7 @@ inline SeqTensorDescriptor buildRealToDynamicMapTmp(const SeqTensorDescriptor& d
     std::vector<unsigned int> def_layout{1, 0, 2};
 
     auto zero_val_padding = [](miopenDataType_t type) {
-        std ::vector<char> padding_fill(GetTypeSize(type),0);
+        std ::vector<char> padding_fill(GetTypeSize(type), 0);
         return padding_fill;
     };
 
@@ -313,7 +313,6 @@ private:
     SeqTensorDescriptor tmpMapDyDesc;
 };
 
-
 class RNNBackwardWeiModuleAlgoDynamic : public RNNBackwardWeightsModularAlgo
 {
     using BaseBWDModuleT = rnn_base::RNNBackwardWeightsModularAlgo;
@@ -338,10 +337,10 @@ class RNNBackwardWeiModuleAlgoDynamic : public RNNBackwardWeightsModularAlgo
 
 public:
     RNNBackwardWeiModuleAlgoDynamic(const RNNDescriptor& rnnD,
-                                 const SeqTensorDescriptor& xTDesc,
-                                 const SeqTensorDescriptor& yTDesc,
-                                 const TensorDescriptor& hDesc,
-                                 miopenRNNFWDMode_t mode)
+                                    const SeqTensorDescriptor& xTDesc,
+                                    const SeqTensorDescriptor& yTDesc,
+                                    const TensorDescriptor& hDesc,
+                                    miopenRNNFWDMode_t mode)
         : BaseBWDModuleT(RNNModuleAlgoBase::create(
               rnnD, buildDynamicVirtual(xTDesc), buildDynamicVirtual(yTDesc), hDesc, mode)),
           realBatchController(BatchController::Create(xTDesc)),
@@ -365,7 +364,7 @@ public:
 
     runtimeArgsBwWeiDynamicExt createRuntimeArgsExt(const runtimeArgsBWWeights& runtimeArgs) const
     {
-        const Data_t temp_x = runtimeArgs.freeWorkSpace;
+        const Data_t temp_x         = runtimeArgs.freeWorkSpace;
         const auto temp_x_byte_size = tmpMapXDesc.GetTensorMaxByteSpace();
 
         const Data_t free_ws = moveDataPtrByte(temp_x, temp_x_byte_size);
@@ -384,8 +383,7 @@ public:
     {
         auto [ws_size, reserve_size] = BaseBWDModuleT::getTempBuffersSize();
 
-        return std::make_tuple(ws_size + tmpMapXDesc.GetTensorMaxByteSpace() +
-                               reserve_size);
+        return std::make_tuple(ws_size + tmpMapXDesc.GetTensorMaxByteSpace() + reserve_size);
     }
 
     static auto getTempBuffersSize(const RNNDescriptor& rnnD, const SeqTensorDescriptor& xDesc)
@@ -408,12 +406,12 @@ public:
     }
 
     void PhisHStateWeights(const Handle& handle,
-                      Data_t dw,
-                      ConstData_t workSpace,
-                      ConstData_t hx,
-                      const SequenceIterator& seq,
-                      size_t layer,
-                      SequenceDirection direction) const;
+                           Data_t dw,
+                           ConstData_t workSpace,
+                           ConstData_t hx,
+                           const SequenceIterator& seq,
+                           size_t layer,
+                           SequenceDirection direction) const;
 
     void PhisHStateWeights(const Handle& handle,
                            Data_t dw,
@@ -425,11 +423,11 @@ public:
     {
         if(hx == nullptr)
             return;
-    
+
         for(auto i = max_seq_len; i > 0; i--)
         {
             const auto seq = SequenceIterator(i - 1, direction, max_seq_len, false);
-    
+
             PhisHStateWeights(handle, dw, workSpace, hx, seq, layer, direction);
         }
     }
@@ -461,7 +459,6 @@ private:
     SeqTensorDescriptor realXDesc;
     SeqTensorDescriptor tmpMapXDesc;
 };
-
 
 } // namespace rnn_base
 } // namespace miopen

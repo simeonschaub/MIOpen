@@ -77,7 +77,6 @@ void RNNModularSingleStreamBWWeights::Compute(const Handle& handle,
     }
 }
 
-
 void RNNDynamicModularSingleStreamBWWeights::Compute(const Handle& handle,
                                                      ConstData_t x,
                                                      ConstData_t hx,
@@ -97,8 +96,8 @@ void RNNDynamicModularSingleStreamBWWeights::Compute(const Handle& handle,
     auto args_ext = rnnAlgoModules.createRuntimeArgsExt(createRuntimeArgsBase(
         handle, x, hx, dw, workSpace, workSpaceSize, reserveSpace, reserveSpaceSize));
 
-    const auto back_data_space = args_ext.backData;
-    const auto free_work_space = args_ext.freeWorkSpace;
+    const auto back_data_space      = args_ext.backData;
+    const auto free_work_space      = args_ext.freeWorkSpace;
     const auto free_work_space_size = args_ext.freeWorkSpaceSize;
 
     rnnAlgoModules.PrepareWriteBuffers(handle, dw);

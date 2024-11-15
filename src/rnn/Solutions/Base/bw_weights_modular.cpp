@@ -257,11 +257,11 @@ void RNNBackwardWeightsModularAlgo::BiasUpdate(const Handle& handle,
 
         const miopen::TensorDescriptor dw_desc = BuildWeiBiasDesc2D();
 
-        //size_t main_ws_size = workspaceInfo.getBufferSize() * GetTypeSize(rnnDesc.dataType);
+        // size_t main_ws_size = workspaceInfo.getBufferSize() * GetTypeSize(rnnDesc.dataType);
         //
-        //size_t reduction_ws_size = workSpaceSize - main_ws_size;
+        // size_t reduction_ws_size = workSpaceSize - main_ws_size;
 
-        //Data_t reduction_workSpace = static_cast<char*>(workSpace) + main_ws_size;
+        // Data_t reduction_workSpace = static_cast<char*>(workSpace) + main_ws_size;
         size_t dw_bias_offset =
             weightsLayout.getBiasXinOff(layer, static_cast<int>(SequenceDirection::Forward), 0);
 
@@ -359,12 +359,12 @@ void RNNBackwardWeightsModularAlgo::PhisHStateWeights(const Handle& handle,
 }
 
 void RNNBackwardWeiModuleAlgoDynamic::PhisHStateWeights(const Handle& handle,
-                                                      Data_t dw,
-                                                      ConstData_t workSpace,
-                                                      ConstData_t hx,
-                                                      const SequenceIterator& seq,
-                                                      size_t layer,
-                                                      SequenceDirection direction) const
+                                                        Data_t dw,
+                                                        ConstData_t workSpace,
+                                                        ConstData_t hx,
+                                                        const SequenceIterator& seq,
+                                                        size_t layer,
+                                                        SequenceDirection direction) const
 {
     const size_t gemm_batch_size = getHxBatchSizeReadAtTime(seq, realBatchController, direction);
 
