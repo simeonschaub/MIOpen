@@ -68,13 +68,18 @@ struct TestNameGenerator
         const testing::TestParamInfo<std::tuple<TestCase, miopenTensorLayout_t, BNApiType>>& info)
         const
     {
+        // Determine if TestCase is Gen2D or Gen3D using type traits
+        std::string dimension = std::is_same<TestCase, BN2DTestCase>::value   ? "2D"
+                                : std::is_same<TestCase, BN3DTestCase>::value ? "3D"
+                                                                              : "Unknown";
+
         const auto& layout_type = std::get<1>(info.param);
         const auto& api_type    = std::get<2>(info.param);
 
         std::string tensor_name = LayoutToString(layout_type);
         std::string api_name    = ApiVerisonToString(api_type);
 
-        return tensor_name + "_" + api_name + "_" + std::to_string(info.index);
+        return tensor_name + "_" + api_name + dimension + "_" + std::to_string(info.index);
     }
 };
 
