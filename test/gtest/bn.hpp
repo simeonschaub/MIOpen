@@ -61,10 +61,11 @@ static std::string ApiVerisonToString(int api_version)
 }
 
 // Custom test name generator to handle enums
+template <typename TestCase>
 struct TestNameGenerator
 {
     std::string operator()(
-        const testing::TestParamInfo<std::tuple<BNTestCase, miopenTensorLayout_t, BNApiType>>& info)
+        const testing::TestParamInfo<std::tuple<TestCase, miopenTensorLayout_t, BNApiType>>& info)
         const
     {
         const auto& layout_type = std::get<1>(info.param);
@@ -81,14 +82,15 @@ template <typename XDataType,
           typename YDataType,
           typename ScaleDataType,
           typename BiasDataType,
-          typename MeanVarDataType>
+          typename MeanVarDataType,
+          typename TestCase>
 struct BNInferTest
-    : public ::testing::TestWithParam<std::tuple<BNTestCase, miopenTensorLayout_t, BNApiType>>
+    : public ::testing::TestWithParam<std::tuple<TestCase, miopenTensorLayout_t, BNApiType>>
 {
 protected:
     void SetUp() override
     {
-        std::tie(bn_config, tensor_layout, api_type) = GetParam();
+        std::tie(bn_config, tensor_layout, api_type) = this->GetParam();
         bn_infer_test_data.SetUpImpl(bn_config, tensor_layout);
 
         auto&& handle = get_handle();
@@ -150,7 +152,7 @@ protected:
 
     void TearDown() override
     {
-        if(test_skipped || Test::HasFailure())
+        if(test_skipped || ::testing::Test::HasFailure())
         {
             return;
         }
@@ -163,9 +165,9 @@ protected:
         test::CompareTensor<YDataType>(bn_infer_test_data.output, bn_infer_test_data.ref_out, 4e-3);
     }
 
-    BNTestCase bn_config;
+    TestCase bn_config;
     bool test_skipped = false;
-    BNInferTestData<XDataType, YDataType, ScaleDataType, BiasDataType, MeanVarDataType, BNTestCase>
+    BNInferTestData<XDataType, YDataType, ScaleDataType, BiasDataType, MeanVarDataType, TestCase>
         bn_infer_test_data;
     miopenTensorLayout_t tensor_layout;
     BNApiType api_type;
@@ -177,14 +179,15 @@ template <typename XDataType,
           typename AccDataType,
           typename ScaleDataType,
           typename DscaleDbiasDataType,
-          typename MeanVarDataType>
+          typename MeanVarDataType,
+          typename TestCase>
 struct BNBwdTest
-    : public ::testing::TestWithParam<std::tuple<BNTestCase, miopenTensorLayout_t, BNApiType>>
+    : public ::testing::TestWithParam<std::tuple<TestCase, miopenTensorLayout_t, BNApiType>>
 {
 protected:
     void SetUp() override
     {
-        std::tie(bn_config, tensor_layout, api_type) = GetParam();
+        std::tie(bn_config, tensor_layout, api_type) = this->GetParam();
         bn_bwd_test_data.SetUpImpl(bn_config, tensor_layout);
 
         auto&& handle = get_handle();
@@ -255,7 +258,7 @@ protected:
 
     void TearDown() override
     {
-        if(test_skipped || Test::HasFailure())
+        if(test_skipped || ::testing::Test::HasFailure())
         {
             return;
         }
@@ -277,7 +280,7 @@ protected:
             bn_bwd_test_data.dBias, bn_bwd_test_data.dBias_ref, bwd_tol);
     }
 
-    BNTestCase bn_config;
+    TestCase bn_config;
     bool test_skipped = false;
     BNBwdTestData<XDataType,
                   DxDataType,
@@ -286,7 +289,7 @@ protected:
                   ScaleDataType,
                   DscaleDbiasDataType,
                   MeanVarDataType,
-                  BNTestCase>
+                  TestCase>
         bn_bwd_test_data;
     miopenTensorLayout_t tensor_layout;
     BNApiType api_type;
@@ -297,14 +300,15 @@ template <typename XDataType,
           typename YDataType,
           typename ScaleDataType,
           typename BiasDataType,
-          typename AccDataType>
+          typename AccDataType,
+          typename TestCase>
 struct BNFwdTrainTest
-    : public ::testing::TestWithParam<std::tuple<BNTestCase, miopenTensorLayout_t, BNApiType>>
+    : public ::testing::TestWithParam<std::tuple<TestCase, miopenTensorLayout_t, BNApiType>>
 {
 protected:
     void SetUp() override
     {
-        std::tie(bn_config, tensor_layout, api_type) = GetParam();
+        std::tie(bn_config, tensor_layout, api_type) = this->GetParam();
         bn_fwd_train_test_data.SetUpImpl(bn_config, tensor_layout);
 
         auto&& handle = get_handle();
@@ -379,7 +383,7 @@ protected:
 
     void TearDown() override
     {
-        if(test_skipped || Test::HasFailure())
+        if(test_skipped || ::testing::Test::HasFailure())
         {
             return;
         }
@@ -413,9 +417,9 @@ protected:
             bn_fwd_train_test_data.runVariance, bn_fwd_train_test_data.runVariance_ref, 4e-3);
     }
 
-    BNTestCase bn_config;
+    TestCase bn_config;
     bool test_skipped = false;
-    BNFwdTrainTestData<XDataType, YDataType, ScaleDataType, BiasDataType, AccDataType, BNTestCase>
+    BNFwdTrainTestData<XDataType, YDataType, ScaleDataType, BiasDataType, AccDataType, TestCase>
         bn_fwd_train_test_data;
     miopenTensorLayout_t tensor_layout;
     BNApiType api_type;
