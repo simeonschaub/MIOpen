@@ -625,7 +625,8 @@ pipeline {
                     checkout scm
                     sh 'pwd'
                     sh 'ls -l'
-                    sh 'cd ./test/utils && ./check_gtests.sh'
+                    sh 'python3 --version'
+                    sh 'cd ./test/utils && python3 gtest_formating_checks.py'
                     }
                         }
                     }

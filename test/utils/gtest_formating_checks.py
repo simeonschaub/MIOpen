@@ -18,7 +18,7 @@ TESTSUITE_REGEX = re.compile(
     r"^(CPU|GPU)_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*_(" + "|".join(VALID_DATATYPES) + r")$"
 )
 TEST_P_REGEX = re.compile(r"TEST_P\(([^,]+),\s*([^)]+)\)")
-INSTANTIATE_TEST_REGEX = re.compile(r"INSTANTIATE_TEST_SUITE_P\(([^,]+),\s*([^,]+),")
+INSTANTIATE_TEST_REGEX = re.compile(r"INSTANTIATE_TEST_SUITE_P\(\s*([^,]+),\s*([^,]+),")
 TEST_TYPE_REGEX = re.compile(r"^(Smoke|Full|Perf|Unit)([A-Za-z0-9]*)?$")
 
 
