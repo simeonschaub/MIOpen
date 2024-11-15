@@ -8,7 +8,7 @@ FOLDER_PATH = "../../test/gtest"
 #"../../test/gtest/ignore_this_test.cpp" or "graphapi_convolution.cpp"
 IGNORE_LIST = {
     "CPU_MIOpenDriverRegressionBigTensorTest_FP32",
-    "../../test/gtest/reduce_custom_fp32.cpp"# Exclude this specific test suite
+    "../../test/gtest/reduce_custom_fp32.cpp"
 }
 
 # Valid enums and Regex for validation
@@ -18,7 +18,7 @@ TESTSUITE_REGEX = re.compile(
     r"^(CPU|GPU)_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*_(" + "|".join(VALID_DATATYPES) + r")$"
 )
 TEST_P_REGEX = re.compile(r"TEST_P\(([^,]+),\s*([^)]+)\)")
-INSTANTIATE_TEST_REGEX = re.compile(r"INSTANTIATE_TEST_SUITE_P\(\s*([^,]+),\s*([^,]+),")
+INSTANTIATE_TEST_REGEX = re.compile(r"INSTANTIATE_TEST_SUITE_P\(\s*([^\n,]+),\s*([^\n,]+),")
 TEST_TYPE_REGEX = re.compile(r"^(Smoke|Full|Perf|Unit)([A-Za-z0-9]*)?$")
 
 
@@ -63,6 +63,9 @@ def analyze_tests(folder_path):
 
                 # Validate instantiated suites
                 for suite, test_type in instantiated_suites.items():
+                    
+                    normalized_test_type = test_type.replace("\\", "").strip()
+                    
                     if suite in IGNORE_LIST:
                         print(f"Skipping ignored instantiated suite: {suite}")
                         continue
@@ -71,7 +74,7 @@ def analyze_tests(folder_path):
                         unmatched_tests.append(
                             f"{file_path}: INSTANTIATE_TEST_SUITE_P references non-existent TESTSUITE_NAME '{suite}'."
                         )
-                    if not TEST_TYPE_REGEX.match(test_type):
+                    if not TEST_TYPE_REGEX.match(normalized_test_type):
                         invalid_tests.append(
                             f"{file_path}: Invalid TEST_TYPE '{test_type}' in INSTANTIATE_TEST_SUITE_P."
                         )
