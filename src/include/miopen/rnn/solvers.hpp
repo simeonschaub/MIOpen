@@ -324,6 +324,25 @@ public:
         return decltype(rnnAlgoModules)::getTempBuffersSize(rnn, xDesc);
     }
 
+   runtimeArgsBWWeights createRuntimeArgsBase(const Handle& handle,
+                              ConstData_t x,
+                              ConstData_t hx,
+                              Data_t dw,
+                              Data_t workSpace,
+                              size_t workSpaceSize,
+                              ConstData_t reserveSpace,
+                              size_t reserveSpaceSize) const
+    {
+        const ConstData_t back_data_space = workSpace;
+        const auto back_data_byte_size =
+            rnnAlgoModules.workspaceInfo.getBufferSizeImpl() * GetTypeSize(rnnDesc.dataType);
+
+        const Data_t free_ws    = moveDataPtrByte(workSpace, back_data_byte_size);
+        const auto free_ws_size = workSpaceSize - back_data_byte_size;
+
+        return runtimeArgsBWWeights{
+            &handle, x, hx, dw, back_data_space, reserveSpace, free_ws, free_ws_size};
+    }
 
     void Compute(const Handle& handle,
                  ConstData_t x,
@@ -334,7 +353,7 @@ public:
                  ConstData_t reserveSpace,
                  size_t /*reserveSpaceSize*/) const;
 
-    const rnn_base::RNNBackwardWeiModuleAlgoDynamic rnnAlgoModules;
+    const RNNBackwardWeiModuleAlgoDynamic rnnAlgoModules;
     const RNNDescriptor& rnnDesc;
     const size_t max_seq_len;
 };

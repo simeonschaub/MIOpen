@@ -42,11 +42,17 @@ inline SeqTensorDescriptor buildDynamicVirtual(const SeqTensorDescriptor& desc)
 inline SeqTensorDescriptor buildRealToDynamicMapTmp(const SeqTensorDescriptor& desc)
 {
     std::vector<unsigned int> def_layout{1, 0, 2};
+
+    auto zero_val_padding = [](miopenDataType_t type) {
+        std ::vector<char> padding_fill(GetTypeSize(type),0);
+        return padding_fill;
+    };
+
     return {desc.GetType(),
             def_layout,
             desc.GetLengths(),
             desc.GetSequenceLengthsVector(),
-            std::vector<char>{},
+            zero_val_padding(desc.GetType()),
             true,
             true};
 }
@@ -351,23 +357,27 @@ public:
         const Data_t tempX;
         const ConstData_t hx;
         const Data_t dw;
-        const Data_t workSpace;
-        const ConstData_t reserveSpace;
+        const ConstData_t backData;
+        const ConstData_t forwardData;
+        const Data_t freeWorkSpace;
+        const size_t freeWorkSpaceSize;
     };
 
     runtimeArgsBwWeiDynamicExt createRuntimeArgsExt(const runtimeArgsBWWeights& runtimeArgs) const
     {
-        const Data_t temp_x =
-            moveDataPtr(runtimeArgs.workSpace, workspaceInfo.getBufferSizeImpl(), rnnDesc.dataType);
+        const Data_t temp_x = runtimeArgs.freeWorkSpace;
+        const auto temp_x_byte_size = tmpMapXDesc.GetTensorMaxByteSpace();
 
-        return {
-            runtimeArgs.x,
-            temp_x,
-            runtimeArgs.hx,
-            runtimeArgs.dw,
-            runtimeArgs.workSpace,
-            runtimeArgs.reserveSpace,
-        };
+        const Data_t free_ws = moveDataPtrByte(temp_x, temp_x_byte_size);
+
+        return {runtimeArgs.x,
+                temp_x,
+                runtimeArgs.hx,
+                runtimeArgs.dw,
+                runtimeArgs.backData,
+                runtimeArgs.forwardData,
+                free_ws,
+                runtimeArgs.freeWorkSpaceSize - temp_x_byte_size};
     }
 
     auto getTempBuffersSize() const
@@ -424,9 +434,17 @@ public:
         }
     }
 
-    void realXProp(const Handle& handle,
-                                         const runtimeArgsBwWeiDynamicExt& runtimeArgsExt) const
+    void realXProp(const Handle& handle, const runtimeArgsBwWeiDynamicExt& runtimeArgsExt) const
     {
+        const auto normalized_tensor_size =
+            tmpMapXDesc.GetTensorMaxByteSpace() / GetTypeSize(rnnDesc.dataType);
+
+        const auto normalized_desc = miopen::TensorDescriptor(
+            rnnDesc.dataType, {1, normalized_tensor_size}, {normalized_tensor_size, 1});
+
+        const float beta = 0.;
+
+        SetTensor(handle, normalized_desc, runtimeArgsExt.tempX, &beta);
 
         RNNTensorBaseLayoutConverter::ConvertInputTensorGPUData(handle,
                                                                 realXDesc,

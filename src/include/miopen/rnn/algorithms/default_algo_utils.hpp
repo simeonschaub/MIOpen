@@ -65,8 +65,10 @@ struct runtimeArgsBWWeights
     const ConstData_t x;
     const ConstData_t hx;
     const Data_t dw;
-    const Data_t workSpace;
-    const ConstData_t reserveSpace;
+    const ConstData_t backData;
+    const ConstData_t forwardData;
+    const Data_t freeWorkSpace;
+    const size_t freeWorkSpaceSize;
 };
 
 
@@ -546,7 +548,8 @@ class RNNBackwardWeightsModularAlgo : public RNNModuleAlgoBase
 public:
     void PrepareWriteBuffers(const Handle& handle, Data_t w) const;
 
-    void PhisXInputWeights(const Handle& handle, Data_t dw, Data_t workSpace, ConstData_t x) const;
+    void
+    PhisXInputWeights(const Handle& handle, Data_t dw, ConstData_t workSpace, ConstData_t x) const;
 
     void HiddenXInputWeights(const Handle& handle,
                              Data_t dw,
@@ -556,6 +559,7 @@ public:
 
     void BiasUpdate(const Handle& handle,
                     Data_t dw,
+                    ConstData_t backData,
                     Data_t workSpace,
                     size_t layer,
                     size_t workSpaceSize) const;

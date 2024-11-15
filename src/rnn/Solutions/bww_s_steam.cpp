@@ -45,16 +45,23 @@ void RNNModularSingleStreamBWWeights::Compute(const Handle& handle,
     auto sequence_directions =
         rnnDesc.dirMode == miopenRNNDirectionMode_t::miopenRNNbidirection ? 2 : 1;
 
+    const ConstData_t back_data_space = workSpace;
+    const auto back_data_byte_size =
+        rnnAlgoModules.workspaceInfo.getBufferSizeImpl() * GetTypeSize(rnnDesc.dataType);
+
+    const Data_t free_ws    = moveDataPtrByte(workSpace, back_data_byte_size);
+    const auto free_ws_size = workSpaceSize - back_data_byte_size;
+
     rnnAlgoModules.PrepareWriteBuffers(handle, dw);
 
     for(int layer_i = 0; layer_i < rnnDesc.nLayers; layer_i++)
     {
         if(layer_i == 0)
-            rnnAlgoModules.PhisXInputWeights(handle, dw, workSpace, x);
+            rnnAlgoModules.PhisXInputWeights(handle, dw, back_data_space, x);
         else
-            rnnAlgoModules.HiddenXInputWeights(handle, dw, workSpace, reserveSpace, layer_i);
+            rnnAlgoModules.HiddenXInputWeights(handle, dw, back_data_space, reserveSpace, layer_i);
 
-        rnnAlgoModules.BiasUpdate(handle, dw, workSpace, layer_i, workSpaceSize);
+        rnnAlgoModules.BiasUpdate(handle, dw, back_data_space, free_ws, layer_i, free_ws_size);
 
         for(int dir = 0; dir < sequence_directions; dir++)
         {
@@ -62,10 +69,10 @@ void RNNModularSingleStreamBWWeights::Compute(const Handle& handle,
                                           : rnn_base::SequenceDirection::Reverse;
 
             rnnAlgoModules.PhisHStateWeights(
-                handle, dw, workSpace, hx, layer_i, max_seq_len, seq_dir);
+                handle, dw, back_data_space, hx, layer_i, max_seq_len, seq_dir);
 
             rnnAlgoModules.HiddenHStateWeights(
-                handle, dw, workSpace, reserveSpace, layer_i, max_seq_len, seq_dir);
+                handle, dw, back_data_space, reserveSpace, layer_i, max_seq_len, seq_dir);
         }
     }
 }
@@ -78,16 +85,21 @@ void RNNDynamicModularSingleStreamBWWeights::Compute(const Handle& handle,
                                                      Data_t workSpace,
                                                      size_t workSpaceSize,
                                                      ConstData_t reserveSpace,
-                                                     size_t /*reserveSpaceSize*/) const
+                                                     size_t reserveSpaceSize) const
 {
-    const auto args_ext = rnnAlgoModules.createRuntimeArgsExt(
-        runtimeArgsBWWeights{&handle, x, hx, dw, workSpace, reserveSpace});
 
     if(rnnDesc.nLayers == 0 || max_seq_len == 0)
         return;
 
     auto sequence_directions =
         rnnDesc.dirMode == miopenRNNDirectionMode_t::miopenRNNbidirection ? 2 : 1;
+
+    auto args_ext = rnnAlgoModules.createRuntimeArgsExt(createRuntimeArgsBase(
+        handle, x, hx, dw, workSpace, workSpaceSize, reserveSpace, reserveSpaceSize));
+
+    const auto back_data_space = args_ext.backData;
+    const auto free_work_space = args_ext.freeWorkSpace;
+    const auto free_work_space_size = args_ext.freeWorkSpaceSize;
 
     rnnAlgoModules.PrepareWriteBuffers(handle, dw);
 
@@ -96,11 +108,12 @@ void RNNDynamicModularSingleStreamBWWeights::Compute(const Handle& handle,
     for(int layer_i = 0; layer_i < rnnDesc.nLayers; layer_i++)
     {
         if(layer_i == 0)
-            rnnAlgoModules.PhisXInputWeights(handle, dw, workSpace, args_ext.tempX);
+            rnnAlgoModules.PhisXInputWeights(handle, dw, back_data_space, args_ext.tempX);
         else
-            rnnAlgoModules.HiddenXInputWeights(handle, dw, workSpace, reserveSpace, layer_i);
+            rnnAlgoModules.HiddenXInputWeights(handle, dw, back_data_space, reserveSpace, layer_i);
 
-        rnnAlgoModules.BiasUpdate(handle, dw, workSpace, layer_i, workSpaceSize);
+        rnnAlgoModules.BiasUpdate(
+            handle, dw, back_data_space, free_work_space, layer_i, free_work_space_size);
 
         for(int dir = 0; dir < sequence_directions; dir++)
         {
@@ -108,10 +121,10 @@ void RNNDynamicModularSingleStreamBWWeights::Compute(const Handle& handle,
                                           : rnn_base::SequenceDirection::Reverse;
 
             rnnAlgoModules.PhisHStateWeights(
-                handle, dw, workSpace, hx, layer_i, max_seq_len, seq_dir);
+                handle, dw, back_data_space, hx, layer_i, max_seq_len, seq_dir);
 
             rnnAlgoModules.HiddenHStateWeights(
-                handle, dw, workSpace, reserveSpace, layer_i, max_seq_len, seq_dir);
+                handle, dw, back_data_space, reserveSpace, layer_i, max_seq_len, seq_dir);
         }
     }
 }
