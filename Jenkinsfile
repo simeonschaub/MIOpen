@@ -617,19 +617,16 @@ pipeline {
                 }
                 stage('Check GTest Format') {
                 agent { label rocmnode("nogpu") }
-                environment {
-                    execute_cmd = './test/utils/check_gtests.sh'
-                            }
+                when {
+                    changeset "**/test/utils/**"
+                }
                 steps {
-                script {
-                    checkout scm
-                    sh 'pwd'
-                    sh 'ls -l'
-                    sh 'python3 --version'
-                    sh 'cd ./test/utils && python3 gtest_formating_checks.py'
-                    }
+                    script {
+                        checkout scm
+                        sh 'cd ./test/utils && python3 gtest_formating_checks.py'
                         }
                     }
+                }
 
                 stage('HipNoGPU Debug Build Test') {
                     when {
