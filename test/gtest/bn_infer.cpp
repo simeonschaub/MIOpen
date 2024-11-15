@@ -132,7 +132,7 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_OCL_Infer_Large_FP16_3D,
                          testing::Combine(testing::ValuesIn(Network3DBN<BN3DTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCDHW}),
                                           testing::ValuesIn({testBNAPIV1, testBNAPIV2})),
                          TestNameGenerator<BN3DTestCase>());
 // bfp16
@@ -153,7 +153,7 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_OCL_Infer_Large_BFP16_3D,
                          testing::Combine(testing::ValuesIn(Network3DBN<BN3DTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCDHW}),
                                           testing::ValuesIn({testBNAPIV1, testBNAPIV2})),
                          TestNameGenerator<BN3DTestCase>());
 
@@ -175,7 +175,7 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_Infer_Small_FP32_3D,
                          testing::Combine(testing::ValuesIn(Network3DBN<BN3DTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCDHW}),
                                           testing::ValuesIn({testBNAPIV2})),
                          TestNameGenerator<BN3DTestCase>());
 // fp64

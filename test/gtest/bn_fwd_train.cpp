@@ -102,7 +102,7 @@ TEST_P(GPU_BN_CK_FWD_Train_Large_FP16_2D, DISABLED_BnV2LargeFWD_TrainCKfp16_2D) 
 TEST_P(GPU_BN_OCL_FWD_Train_Large_FP16_2D, BnV2LargeFWD_TrainOCLfp16_2D) {}
 TEST_P(GPU_BN_OCL_FWD_Train_Large_FP16_3D, BnV2LargeFWD_TrainOCLfp16_3D) {}
 
-// // bfp16
+// bfp16
 TEST_P(GPU_BN_CK_FWD_Train_Large_BFP16_2D, DISABLED_BnV2LargeFWD_TrainCKbfp16_2D) {}
 TEST_P(GPU_BN_OCL_FWD_Train_Large_BFP16_2D, BnV2LargeFWD_TrainOCLbfp16_2D) {}
 TEST_P(GPU_BN_OCL_FWD_Train_Large_BFP16_3D, BnV2LargeFWD_TrainOCLbfp16_3D) {}
@@ -135,7 +135,7 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_OCL_FWD_Train_Large_FP16_3D,
                          testing::Combine(testing::ValuesIn(Network3DBN<BN3DTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCDHW}),
                                           testing::ValuesIn({testBNAPIV1, testBNAPIV2})),
                          TestNameGenerator<BN3DTestCase>());
 
@@ -157,7 +157,7 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_OCL_FWD_Train_Large_BFP16_3D,
                          testing::Combine(testing::ValuesIn(Network3DBN<BN3DTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCDHW}),
                                           testing::ValuesIn({testBNAPIV1, testBNAPIV2})),
                          TestNameGenerator<BN3DTestCase>());
 // // fp32
@@ -171,7 +171,7 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_FWD_Train_Small_FP32_3D,
                          testing::Combine(testing::ValuesIn(Network3DBN<BN3DTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCDHW}),
                                           testing::ValuesIn({testBNAPIV1, testBNAPIV2})),
                          TestNameGenerator<BN3DTestCase>());
 
