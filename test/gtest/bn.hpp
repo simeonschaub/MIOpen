@@ -45,7 +45,9 @@ static std::string LayoutToString(int tensor_format)
     switch(tensor_format)
     {
     case miopenTensorNCHW: return "NCHW";
+    case miopenTensorNCDHW: return "NCDHW";
     case miopenTensorNHWC: return "NHWC";
+    case miopenTensorNDHWC: return "NDHWC";
     default: return "UnknownTensorFormat";
     }
 }

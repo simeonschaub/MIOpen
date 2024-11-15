@@ -124,9 +124,10 @@ inline std::vector<BN2DTestCase> Network2DLarge()
 template <>
 inline std::vector<BN2DTestCase> Network2DSmall()
 {
+    // pyt_mlperf_resnet50v1.5
     return {
         {192, 2, 8, 8, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
-        {16, 8, 132, 28, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
+        {16, 8,  56, 56, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
         {16, 8, 128, 256, miopenBNSpatial, miopen::batchnorm::Direction::ForwardTraining, 1, 0},
         {64, 2048, 17, 17, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 0, 1},
 
@@ -137,10 +138,10 @@ template <>
 inline std::vector<BN3DTestCase> Network3DBN()
 {
     return {
-        {192, 2, 8, 8, 9, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
-        {16, 8, 132, 28, 25, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
-        {16, 8, 128, 256, 45, miopenBNSpatial, miopen::batchnorm::Direction::ForwardTraining, 1, 0},
-        {64, 2048, 17, 17, 18, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 0, 1},
+        {2, 2, 3, 224, 224, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
+        {16, 8, 132, 28, 28, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
+        {16, 8, 16, 128, 128, miopenBNSpatial, miopen::batchnorm::Direction::ForwardTraining, 1, 0},
+        {2, 2048, 16, 128, 128, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 0, 1},
 
     };
 }
