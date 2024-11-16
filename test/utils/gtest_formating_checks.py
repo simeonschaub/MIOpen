@@ -1,14 +1,15 @@
 import os
 import re
+import logging
 
-# Path to the folder containing test files
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
 FOLDER_PATH = "../../test/gtest"
 
 # Ignore list: Add test names or file paths you want to exclude
-#"../../test/gtest/ignore_this_test.cpp" or "graphapi_convolution.cpp"
 IGNORE_LIST = {
     "CPU_MIOpenDriverRegressionBigTensorTest_FP32",
-    "../../test/gtest/reduce_custom_fp32.cpp"
+    "../../test/gtest/reduce_custom_fp32.cpp",
 }
 
 # Valid enums and Regex for validation
@@ -23,8 +24,7 @@ TEST_TYPE_REGEX = re.compile(r"^(Smoke|Full|Perf|Unit)([A-Za-z0-9]*)?$")
 
 
 def analyze_tests(folder_path):
-    invalid_tests = []
-    unmatched_tests = []
+    errors = []
 
     for root, _, files in os.walk(folder_path):
         for file in files:
@@ -32,7 +32,7 @@ def analyze_tests(folder_path):
                 file_path = os.path.join(root, file)
 
                 if file_path in IGNORE_LIST:
-                    print(f"Skipping ignored file: {file_path}")
+                    logging.info(f"Skipping ignored file: {file_path}")
                     continue
 
                 with open(file_path, "r") as f:
@@ -48,57 +48,41 @@ def analyze_tests(folder_path):
                 # Validate TEST_P suites
                 for suite, info in test_p_suites.items():
                     if suite in IGNORE_LIST:
-                        print(f"Skipping ignored test suite: {suite}")
+                        logging.info(f"Skipping ignored test suite: {suite}")
                         continue
 
                     if not TESTSUITE_REGEX.match(suite):
-                        invalid_tests.append(
-                            f"{file_path}: Invalid TESTSUITE_NAME '{suite}' in TEST_P."
-                        )
-                        
+                        errors.append(f"{file_path}: Invalid TESTSUITE_NAME '{suite}' in TEST_P.")
+
                     if suite not in instantiated_suites:
-                        unmatched_tests.append(
-                            f"{file_path}: Test '{suite}.{info}' does not have a matching INSTANTIATE_TEST_SUITE_P."
-                        )
+                        errors.append(f"{file_path}: Test '{suite}.{info}' does not have a matching INSTANTIATE_TEST_SUITE_P.")
 
                 # Validate instantiated suites
                 for suite, test_type in instantiated_suites.items():
-                    
                     normalized_test_type = test_type.replace("\\", "").strip()
-                    
+
                     if suite in IGNORE_LIST:
-                        print(f"Skipping ignored instantiated suite: {suite}")
+                        logging.info(f"Skipping ignored instantiated suite: {suite}")
                         continue
 
                     if suite not in test_p_suites:
-                        unmatched_tests.append(
-                            f"{file_path}: INSTANTIATE_TEST_SUITE_P references non-existent TESTSUITE_NAME '{suite}'."
-                        )
+                        errors.append(f"{file_path}: INSTANTIATE_TEST_SUITE_P references non-existent TESTSUITE_NAME '{suite}'.")
                     if not TEST_TYPE_REGEX.match(normalized_test_type):
-                        invalid_tests.append(
-                            f"{file_path}: Invalid TEST_TYPE '{test_type}' in INSTANTIATE_TEST_SUITE_P."
-                        )
+                        errors.append(f"{file_path}: Invalid TEST_TYPE '{test_type}' in INSTANTIATE_TEST_SUITE_P.")
 
-    return invalid_tests, unmatched_tests
+    return errors
 
 
 def main():
-    invalid_tests, unmatched_tests = analyze_tests(FOLDER_PATH)
+    errors = analyze_tests(FOLDER_PATH)
 
-    print("----------------------------")
-
-    if not invalid_tests and not unmatched_tests:
-        print("All tests meet the criteria.")
+    if errors:
+        logging.error("The following issues were found:")
+        for error in errors:
+            logging.error(f"  {error}")
+        raise ValueError("Validation failed. See the errors above.")
     else:
-        if invalid_tests:
-            print("\nInvalid tests:")
-            for test in invalid_tests:
-                print(f"  {test}")
-
-        if unmatched_tests:
-            print("\nUnmatched tests:")
-            for test in unmatched_tests:
-                print(f"  {test}")
+        logging.info("All tests meet the criteria.")
 
 
 if __name__ == "__main__":
