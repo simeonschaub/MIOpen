@@ -131,7 +131,7 @@ struct MIOPEN_EXPORT PoolingDescriptor : miopenPoolingDescriptor
     std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>
     GetForwardOutputDim(const TensorDescriptor& xDesc) const;
 
-    void GetForwardOutputDimNd(const TensorDescriptor& xDesc, int dims, int* tensorDimArr) const;
+    void GetForwardOutputDimNd(const TensorDescriptor& xDesc, int dims, size_t* tensorDimArr) const;
 
     TensorDescriptor GetForwardOutputTensor(const TensorDescriptor& xDesc) const;
 

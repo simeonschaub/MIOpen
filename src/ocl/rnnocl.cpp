@@ -174,7 +174,7 @@ miopenStatus_t ReducAddBias(miopen::Handle& handle,
             int lda = k, ldb = ws_desc.GetStrides()[1], ldc = n;
 
             const miopen::TensorDescriptor red_matrix{
-                red_type, std::vector<int>{1, 1, k}, std::vector<int>{k, k, 1}};
+                red_type, std::vector<size_t>{1, 1, k}, std::vector<size_t>{k, k, 1}};
 
             SetTensor(handle, red_matrix, red_workSpace, &alpha1);
 
@@ -254,7 +254,7 @@ miopenStatus_t ReducAddBias(miopen::Handle& handle,
 } // namespace
 
 void RNNDescriptor::RNNForwardMS(Handle& handle,
-                                 std::vector<int>& seq_array,
+                                 std::vector<size_t>& seq_array,
                                  const TensorDescriptor& xDesc,
                                  ConstData_t x,
                                  const TensorDescriptor& hxDesc,
@@ -271,7 +271,7 @@ void RNNDescriptor::RNNForwardMS(Handle& handle,
                                  miopenRNNFWDMode_t fwd_mode) const
 {
 #if MIOPEN_USE_GEMM && MIOPEN_BACKEND_HIP
-    std::vector<int> in_n;
+    std::vector<size_t> in_n;
     int in_vec  = xDesc.GetLengths()[1]; // input vector size
     int out_vec = yDesc.GetLengths()[1]; // output vector size
 
@@ -289,7 +289,7 @@ void RNNDescriptor::RNNForwardMS(Handle& handle,
     ms_controller.ChangeActiveStream(root_stream_id);
 
     int total_batch_size = 0;
-    std::vector<int> bacc_per_time(seq_len + 1);
+    std::vector<size_t> bacc_per_time(seq_len + 1);
 
     for(int i = 0; i < seq_len; i++)
     {
@@ -583,13 +583,13 @@ void RNNDescriptor::RNNForwardMS(Handle& handle,
 
         const auto bias_desc =
             miopen::TensorDescriptor(wDesc.GetType(),
-                                     std::vector<int>{1, 1, WeiBuf.bias_vector_mul_gate()},
-                                     std::vector<int>{bias_stride, bias_stride, 1});
+                                     std::vector<size_t>{1, 1, WeiBuf.bias_vector_mul_gate()},
+                                     std::vector<size_t>{bias_stride, bias_stride, 1});
 
         const auto hidden_interim_desc = miopen::TensorDescriptor(
             wDesc.GetType(),
-            std::vector<int>{1, RBuff.batches, WeiBuf.bias_vector_mul_gate()},
-            std::vector<int>{
+            std::vector<size_t>{1, RBuff.batches, WeiBuf.bias_vector_mul_gate()},
+            std::vector<size_t>{
                 RBuff.batches * RBuff.gemm_write_stride(), RBuff.gemm_write_stride(), 1});
 
         const auto RB_layer_out_off       = RBuff.layer_offset(layer);
@@ -1064,7 +1064,7 @@ void RNNDescriptor::RNNForwardMS(Handle& handle,
     }
     else
     {
-        std::vector<int> layer_stream_id(nLayers, 2);
+        std::vector<size_t> layer_stream_id(nLayers, 2);
         layer_stream_id[0] = 1;
 
         auto dispatch_next_chunk = [&layer_upd_cur_time,
@@ -1244,7 +1244,7 @@ void RNNDescriptor::RNNForwardInference(Handle& handle,
             // RNNTensorPaddingConverter::CreatePackedDescriptor()
             // for future developments: as long as we don't use strides from xDesc and yDesc
             // we ignoring conversion of this descriptors.
-            std::vector<int> in_n(seqLen);
+            std::vector<size_t> in_n(seqLen);
 
             for(int i = 0; i < seqLen; i++)
             {
@@ -1327,7 +1327,7 @@ void RNNDescriptor::RNNForwardInferencePacked(Handle& handle,
     // reset kernel timer
     profileRNNkernels(handle, 0, ctime);
 
-    std::vector<int> in_n;
+    std::vector<size_t> in_n;
     int in_h  = xDesc[0].GetLengths()[1]; // input vector size
     int hy_d  = hyDesc.GetLengths()[0];   // biNumLayers
     int hy_n  = hyDesc.GetLengths()[1];   // max batch size
@@ -1421,7 +1421,7 @@ void RNNDescriptor::RNNForwardInferencePacked(Handle& handle,
     float alpha0, alpha1, beta_t;
     float alpha = 1, beta = 0;
 
-    std::vector<int> sp_size(3, 1), sp_stride(3, 1), w_size(3, 1), w_stride(3, 1), x_size(3, 1),
+    std::vector<size_t> sp_size(3, 1), sp_stride(3, 1), w_size(3, 1), w_stride(3, 1), x_size(3, 1),
         x_stride(3, 1), y_size(3, 1), y_stride(3, 1), hx_size(3, 1), hx_stride(3, 1);
     miopen::TensorDescriptor sp_desc, w_desc, x_desc, y_desc, hx_desc;
 
@@ -2635,7 +2635,7 @@ void RNNDescriptor::RNNForwardTraining(Handle& handle,
             // RNNTensorPaddingConverter::CreatePackedDescriptor()
             // for future developments: as long as we don't use strides from xDesc and yDesc
             // we ignoring conversion of this descriptors.
-            std::vector<int> in_n(seqLen);
+            std::vector<size_t> in_n(seqLen);
 
             for(int i = 0; i < seqLen; i++)
             {
@@ -2749,7 +2749,7 @@ void RNNDescriptor::RNNForwardTrainingPackedTensors(
     }
 
     int batch_n = 0;
-    std::vector<int> in_n;
+    std::vector<size_t> in_n;
     for(int i = 0; i < seqLen; i++)
     {
         int batchval, batchvalout;
@@ -2842,7 +2842,7 @@ void RNNDescriptor::RNNForwardTrainingPackedTensors(
     float alpha0, alpha1, beta_t;
     float alpha = 1, beta = 0;
 
-    std::vector<int> sp_size(3, 1), sp_stride(3, 1), w_size(3, 1), w_stride(3, 1), x_size(3, 1),
+    std::vector<size_t> sp_size(3, 1), sp_stride(3, 1), w_size(3, 1), w_stride(3, 1), x_size(3, 1),
         x_stride(3, 1), y_size(3, 1), y_stride(3, 1), hx_size(3, 1), hx_stride(3, 1);
     miopen::TensorDescriptor sp_desc, w_desc, x_desc, y_desc, hx_desc;
 
@@ -2990,7 +2990,7 @@ void RNNDescriptor::RNNForwardTrainingPackedTensors(
 
             if(use_dropout)
             {
-                std::vector<int> drop_size(2), drop_in_str(2, 1), drop_out_str(2, 1);
+                std::vector<size_t> drop_size(2), drop_in_str(2, 1), drop_out_str(2, 1);
                 drop_size[0]    = batch_n;
                 drop_size[1]    = hy_h * bi;
                 drop_in_str[0]  = hy_stride;
@@ -4139,7 +4139,7 @@ void RNNDescriptor::RNNBackwardData(Handle& handle,
                                                         (packedDYSize + packedDXSize));
             auto shifted_workSpace_size = workSpaceSize - (packedDYSize + packedDXSize);
 
-            std::vector<int> in_n(seqLen);
+            std::vector<size_t> in_n(seqLen);
 
             for(int i = 0; i < seqLen; i++)
             {
@@ -4244,7 +4244,7 @@ void RNNDescriptor::RNNBackwardDataPackedTensors(
 
     auto rnn_data_type = dhxDesc.GetType();
 
-    std::vector<int> in_n;
+    std::vector<size_t> in_n;
     int in_h  = dxDesc[0].GetLengths()[1];
     int hy_d  = dhxDesc.GetLengths()[0];
     int hy_n  = dhxDesc.GetLengths()[1];
@@ -4345,7 +4345,7 @@ void RNNDescriptor::RNNBackwardDataPackedTensors(
     float alpha0, alpha1, beta_t;
     float alpha = 1, beta = 0;
 
-    std::vector<int> sp_size(3, 1), sp_stride(3, 1), x_size(3, 1), x_stride(3, 1), y_size(3, 1),
+    std::vector<size_t> sp_size(3, 1), sp_stride(3, 1), x_size(3, 1), x_stride(3, 1), y_size(3, 1),
         y_stride(3, 1), hx_size(3, 1), hx_stride(3, 1);
     miopen::TensorDescriptor sp_desc, x_desc, y_desc, hx_desc;
 
@@ -4497,7 +4497,7 @@ void RNNDescriptor::RNNBackwardDataPackedTensors(
 
             if(use_dropout)
             {
-                std::vector<int> drop_size(2), drop_in_str(2, 1);
+                std::vector<size_t> drop_size(2), drop_in_str(2, 1);
                 drop_size[0]   = batch_n;
                 drop_size[1]   = hy_h * bi;
                 drop_in_str[0] = hy_stride;
@@ -5685,7 +5685,7 @@ void RNNDescriptor::RNNBackwardDataPackedTensors(
     // dinput
     if(inputMode == miopenRNNskip)
     {
-        const std::vector<int> dx_size{1, batch_n, hy_h};
+        const std::vector<size_t> dx_size{1, batch_n, hy_h};
         x_desc  = miopen::TensorDescriptor(rnn_data_type, dx_size, x_stride);
         sp_desc = miopen::TensorDescriptor(rnn_data_type, dx_size, sp_stride);
 
@@ -5828,7 +5828,7 @@ void RNNDescriptor::RNNBackwardWeights(Handle& handle,
                                                         (packedXSize + WA_workSpace_bug));
             auto shifted_workSpace_size = workSpaceSize - (packedXSize + WA_workSpace_bug);
 
-            std::vector<int> in_n(seqLen);
+            std::vector<size_t> in_n(seqLen);
 
             for(int i = 0; i < seqLen; i++)
             {
@@ -5917,7 +5917,7 @@ void RNNDescriptor::RNNBackwardWeightsPackedTensors(
     }
 
     std::string network_config;
-    std::vector<int> in_n;
+    std::vector<size_t> in_n;
     int in_h  = xDesc[0].GetLengths()[1];
     int hy_d  = hxDesc.GetLengths()[0];
     int hy_n  = hxDesc.GetLengths()[1];
@@ -6012,7 +6012,7 @@ void RNNDescriptor::RNNBackwardWeightsPackedTensors(
 
     float alpha0, alpha1, beta_t = 0;
 
-    std::vector<int> sp_size(3, 1), sp_stride(3, 1), w_size(3, 1), w_stride(3, 1);
+    std::vector<size_t> sp_size(3, 1), sp_stride(3, 1), w_size(3, 1), w_stride(3, 1);
     miopen::TensorDescriptor sp_desc, w_desc;
 
     sp_stride[0] = batch_n * hy_stride;
@@ -6233,7 +6233,7 @@ void RNNDescriptor::RNNBackwardWeightsPackedTensors(
                 else
                 {
                     // second dw bias equal to the first, so just copy reduction result
-                    const std::vector<int> dw_bias_strides{wei_stride, wei_stride, 1};
+                    const std::vector<size_t> dw_bias_strides{wei_stride, wei_stride, 1};
                     const miopen::TensorDescriptor dw_desc{
                         rnn_data_t, {1, 1, wei_stride}, dw_bias_strides};
 

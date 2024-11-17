@@ -157,11 +157,11 @@ PoolingDescriptor::GetForwardOutputDim(const TensorDescriptor& xDesc) const
 
 void PoolingDescriptor::GetForwardOutputDimNd(const TensorDescriptor& xDesc,
                                               int dims,
-                                              int* tensorDimArr) const
+                                              size_t* tensorDimArr) const
 {
     assert(xDesc.GetLengths().size() == dims && xDesc.GetLengths().size() <= 5 &&
            xDesc.GetLengths().size() >= 4); // currently only support 2D/3D pooling
-    std::vector<int> out_dim;
+    std::vector<size_t> out_dim;
     auto input_dim             = xDesc.GetLengths();
     auto strs                  = GetStrides();
     auto padd                  = GetPads();
@@ -175,8 +175,8 @@ void PoolingDescriptor::GetForwardOutputDimNd(const TensorDescriptor& xDesc,
     assert(std::all_of(padd.begin(), padd.end(), [](int s) { return s >= 0; }));
 
     auto in_itr = input_dim.begin();
-    out_dim.push_back(int(*(in_itr++))); // n
-    out_dim.push_back(int(*(in_itr++))); // c
+    out_dim.push_back(*(in_itr++)); // n
+    out_dim.push_back(*(in_itr++)); // c
 
     auto str_itr = strs.begin();
     auto pad_itr = padd.begin();
@@ -215,12 +215,12 @@ void PoolingDescriptor::GetForwardOutputDimNd(const TensorDescriptor& xDesc,
 
 TensorDescriptor PoolingDescriptor::GetForwardOutputTensor(const TensorDescriptor& xDesc) const
 {
-    std::vector<int> out_dim(xDesc.GetNumDims());
+    std::vector<size_t> out_dim(xDesc.GetNumDims());
     GetForwardOutputDimNd(xDesc, xDesc.GetNumDims(), out_dim.data());
 
     const std::string default_layout = tensor_layout_get_default(xDesc.GetNumDims());
     const std::string in_layout      = xDesc.GetLayout(default_layout);
-    std::vector<int> out_strides;
+    std::vector<size_t> out_strides;
     tensor_layout_to_strides(out_dim, default_layout, in_layout, out_strides);
 
     return {xDesc.GetType(), out_dim, out_strides};

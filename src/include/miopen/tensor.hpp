@@ -140,15 +140,10 @@ struct MIOPEN_INTERNALS_EXPORT TensorDescriptor : miopenTensorDescriptor
     // The delegation constructor should be placed above the target constructor in the
     // code for better dependency tracking
 
-    TensorDescriptor(miopenDataType_t t, const std::initializer_list<int>& lens_in);
-    TensorDescriptor(miopenDataType_t t, const std::vector<int>& lens_in);
     TensorDescriptor(miopenDataType_t t, const std::initializer_list<std::size_t>& lens_in);
     TensorDescriptor(miopenDataType_t t, const std::vector<std::size_t>& lens_in);
     TensorDescriptor(miopenDataType_t t, std::vector<std::size_t>&& lens_in);
 
-    TensorDescriptor(miopenDataType_t t,
-                     miopenTensorLayout_t layout_in,
-                     const std::vector<int>& lens_in);
     TensorDescriptor(miopenDataType_t t,
                      miopenTensorLayout_t layout_in,
                      const std::initializer_list<std::size_t>& lens_in);
@@ -159,9 +154,6 @@ struct MIOPEN_INTERNALS_EXPORT TensorDescriptor : miopenTensorDescriptor
                      miopenTensorLayout_t layout_in,
                      std::vector<std::size_t>&& lens_in);
 
-    TensorDescriptor(miopenDataType_t t,
-                     const std::vector<int>& lens_in,
-                     const std::vector<int>& strides_in);
     TensorDescriptor(miopenDataType_t t,
                      const std::initializer_list<std::size_t>& lens_in,
                      const std::initializer_list<std::size_t>& strides_in);

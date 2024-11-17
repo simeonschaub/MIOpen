@@ -267,8 +267,9 @@ miopenGetPoolingNdForwardOutputDim(const miopenPoolingDescriptor_t poolDesc,
 
     MIOPEN_LOG_FUNCTION(poolDesc, tensorDesc, dims);
     return miopen::try_([&] {
-        miopen::deref(poolDesc).GetForwardOutputDimNd(
-            miopen::deref(tensorDesc), dims, tensorDimArr);
+        std::vector<size_t> tmp(dims);
+        miopen::deref(poolDesc).GetForwardOutputDimNd(miopen::deref(tensorDesc), dims, tmp.data());
+        std::copy_n(tmp.data(), dims, tensorDimArr);
     });
 }
 

@@ -88,28 +88,20 @@ std::optional<miopenTensorLayout_t> GetDefaultLayout(unsigned num_dims)
 }
 
 template <class T>
-bool CheckLengths(const std::vector<T>& lens, T maxval = 0)
+bool CheckLengthsValues(const std::vector<T>& lens)
 {
-    if(lens.empty())
-        return false;
-    if(!std::all_of(lens.cbegin(), lens.cend(), [](T x) { return x > 0; }))
-        return false;
-    if(maxval)
-    {
-        if(!std::all_of(lens.cbegin(), lens.cend(), [maxval](T x) { return x <= maxval; }))
-            return false;
-    }
-    return true;
+    return std::all_of(lens.cbegin(), lens.cend(), [](T x) {
+        return x > 0 &&
+               static_cast<size_t>(x) <= static_cast<size_t>(std::numeric_limits<int64_t>::max());
+    });
 }
 
-std::vector<std::size_t> ConvertLengthsOrThrow(const std::vector<int>& lens_in,
-                                               [[maybe_unused]] const std::string& err_msg)
+std::vector<std::size_t> ConvertLengthsOrThrow(const std::vector<int>& lens)
 {
-    if(!CheckLengths(lens_in))
-        MIOPEN_THROW(miopenStatusBadParm, err_msg);
+    if(!CheckLengthsValues(lens))
+        MIOPEN_THROW(miopenStatusBadParm, std::string{"Length/Stride values must be > 0"});
 
-    std::vector<std::size_t> lens(lens_in.cbegin(), lens_in.cend());
-    return lens;
+    return std::vector<std::size_t>(lens.cbegin(), lens.cend());
 }
 
 std::string GetStorageLayout4D5D(unsigned num_dims, bool is_CHWNc = false)
@@ -253,20 +245,6 @@ TensorDescriptor::TensorDescriptor(miopenDataType_t t) : packed(true), type(t) {
 // The delegation constructor should be placed above the target constructor in the
 // code for better dependency tracking
 
-TensorDescriptor::TensorDescriptor(miopenDataType_t t, const std::initializer_list<int>& lens_in)
-    : TensorDescriptor(t, std::vector<int>(lens_in))
-{
-}
-
-TensorDescriptor::TensorDescriptor(miopenDataType_t t, const std::vector<int>& lens_in)
-    : TensorDescriptor(t,
-                       GetDefaultLayout(lens_in.size()),
-                       ConvertLengthsOrThrow(lens_in, "Lengths must be > 0"),
-                       {},
-                       false)
-{
-}
-
 TensorDescriptor::TensorDescriptor(miopenDataType_t t,
                                    const std::initializer_list<std::size_t>& lens_in)
     : TensorDescriptor(t, std::vector<std::size_t>(lens_in))
@@ -280,13 +258,6 @@ TensorDescriptor::TensorDescriptor(miopenDataType_t t, const std::vector<std::si
 
 TensorDescriptor::TensorDescriptor(miopenDataType_t t, std::vector<std::size_t>&& lens_in)
     : TensorDescriptor(t, GetDefaultLayout(lens_in.size()), std::move(lens_in), {}, false)
-{
-}
-
-TensorDescriptor::TensorDescriptor(miopenDataType_t t,
-                                   miopenTensorLayout_t layout_in,
-                                   const std::vector<int>& lens_in)
-    : TensorDescriptor(t, layout_in, ConvertLengthsOrThrow(lens_in, "Lengths must be > 0"))
 {
 }
 
@@ -308,15 +279,6 @@ TensorDescriptor::TensorDescriptor(miopenDataType_t t,
                                    miopenTensorLayout_t layout_in,
                                    std::vector<std::size_t>&& lens_in)
     : TensorDescriptor(t, layout_in, std::move(lens_in), {}, false)
-{
-}
-
-TensorDescriptor::TensorDescriptor(miopenDataType_t t,
-                                   const std::vector<int>& lens_in,
-                                   const std::vector<int>& strides_in)
-    : TensorDescriptor(t,
-                       ConvertLengthsOrThrow(lens_in, "Lengths must be > 0"),
-                       ConvertLengthsOrThrow(strides_in, "Strides must be > 0"))
 {
 }
 
@@ -395,7 +357,7 @@ void TensorDescriptor::CheckArgsAndInit(bool use_strides)
     if(tensorLayout && !IsLayoutSupported(tensorLayout.value(), lens.size()))
         MIOPEN_THROW(miopenStatusBadParm, "Unsupported layout");
 
-    if(!CheckLengths(lens, static_cast<std::size_t>(std::numeric_limits<int64_t>::max())))
+    if(!CheckLengthsValues(lens))
         MIOPEN_THROW(miopenStatusBadParm, "Lengths must be > 0 and <= INT64_MAX");
 
     vector_length = GetVectorLengthForLayout(tensorLayout);
@@ -405,7 +367,7 @@ void TensorDescriptor::CheckArgsAndInit(bool use_strides)
         if(lens.size() != strides.size())
             MIOPEN_THROW(miopenStatusBadParm, "Lengths and strides dimensions must be equal");
 
-        if(!CheckLengths(strides, static_cast<std::size_t>(std::numeric_limits<int64_t>::max())))
+        if(!CheckLengthsValues(strides))
             MIOPEN_THROW(miopenStatusBadParm, "Strides must be > 0 and <= INT64_MAX");
 
         packed = (this->GetElementSize() == this->GetElementSpace());
@@ -438,7 +400,7 @@ TensorDescriptor TensorDescriptor::MakeDescriptor(miopenDataType_t t, const int*
     if(plens == nullptr || size <= 0)
         MIOPEN_THROW(miopenStatusInvalidValue);
 
-    return {t, std::vector<int>(plens, plens + size)};
+    return {t, ConvertLengthsOrThrow(std::vector<int>(plens, plens + size))};
 }
 
 TensorDescriptor
@@ -458,7 +420,7 @@ TensorDescriptor TensorDescriptor::MakeDescriptor(miopenDataType_t t,
     if(plens == nullptr || size <= 0)
         MIOPEN_THROW(miopenStatusInvalidValue);
 
-    return {t, layout, std::vector<int>(plens, plens + size)};
+    return {t, layout, ConvertLengthsOrThrow(std::vector<int>(plens, plens + size))};
 }
 
 TensorDescriptor TensorDescriptor::MakeDescriptor(miopenDataType_t t,
@@ -480,7 +442,9 @@ TensorDescriptor TensorDescriptor::MakeDescriptor(miopenDataType_t t,
     if(plens == nullptr || pstrides == nullptr || size <= 0)
         MIOPEN_THROW(miopenStatusInvalidValue);
 
-    return {t, std::vector<int>(plens, plens + size), std::vector<int>(pstrides, pstrides + size)};
+    return {t,
+            ConvertLengthsOrThrow(std::vector<int>(plens, plens + size)),
+            ConvertLengthsOrThrow(std::vector<int>(pstrides, pstrides + size))};
 }
 
 TensorDescriptor TensorDescriptor::MakeDescriptor(miopenDataType_t t,

@@ -37,7 +37,7 @@ int getReductionAlgo() { return env::value_or(MIOPEN_RNNWRW_REDUCTION, 1); }
 
 void RNNTensorPaddingConverter::ConvertTensorData(const Handle& handle,
                                                   const TensorDescriptor& padded_tensor_desc,
-                                                  std::vector<int>& bsize_per_time,
+                                                  std::vector<size_t>& bsize_per_time,
                                                   ConstData_t src,
                                                   Data_t dst,
                                                   bool is_src_padded)

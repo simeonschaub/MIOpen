@@ -110,7 +110,7 @@ struct MIOPEN_INTERNALS_EXPORT RNNDescriptor : miopenRNNDescriptor
 
     size_t paramsOffsetCalculation(const TensorDescriptor& xDesc, int layer, int paramID) const;
 
-    std::vector<int>
+    std::vector<size_t>
     pTensorLengthsCalculation(const TensorDescriptor& xDesc, int layer, int paramID) const;
 
     static SeqTensorDescriptor makeSeqTensorDescriptor(miopenDataType_t t,
@@ -538,7 +538,7 @@ private:
                                          size_t reserveSpaceSize) const;
 
     void RNNForwardMS(Handle& handle,
-                      std::vector<int>& seq_array,
+                      std::vector<size_t>& seq_array,
                       const TensorDescriptor& xDesc,
                       ConstData_t x,
                       const TensorDescriptor& hxDesc,
