@@ -25,7 +25,6 @@
  *******************************************************************************/
 #include "adam.hpp"
 
-// testing ci changes
 namespace adam {
 
 struct GPU_Adam_FP32 : AdamTest<float, float>
