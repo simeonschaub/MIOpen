@@ -990,7 +990,20 @@ void BuildHip(const std::string& name,
                return StartsWith(s, "--std=") || StartsWith(s, "-std=");
            }))
             opts.push_back("-std=c++17");
-        opts.push_back("-I/opt/rocm/include");
+
+        const char* rocm_path = std::getenv("ROCM_PATH");
+        if(rocm_path == nullptr || std::string(rocm_path).empty())
+        {
+            rocm_path = "/opt/rocm";
+        }
+        opts.push_back(std::string("-I") + rocm_path + "/include");
+
+        MIOPEN_LOG_I("HIPRTC compile options:");
+        for (const auto& opt : opts)
+        {
+            MIOPEN_LOG_I(opt);
+        }
+
         HiprtcProgram prog(name, text);
         prog.Compile(opts);
         prog.GetCode(binary);
