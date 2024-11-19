@@ -450,8 +450,10 @@ int SmoothL1LossDriver<Tgpu, Tref>::RunForwardGPU()
                   << " ms\n";
     }
 
-    if(out_dev->FromGPU(GetStream(), out.data()) != 0)
+    if(out_dev->FromGPU(GetStream(), out.data()) != 0) {
         std::cerr << "Error copying (out_dev) from GPU, size: " << out_dev->GetSize() << std::endl;
+        return miopenStatusInternalError;
+    }
 
     return miopenStatusSuccess;
 }
