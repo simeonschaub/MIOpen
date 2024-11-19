@@ -162,7 +162,7 @@ protected:
         if(ws_sizeInBytes != 0)
         {
             std::vector<size_t> workspace_dims;
-            workspace_dims.push_back(ws_sizeInBytes / sizeof(T));
+            workspace_dims.push_back(ws_sizeInBytes / sizeof(float));
 
             workspace = tensor<float>{workspace_dims};
             std::fill(workspace.begin(), workspace.end(), 0.0f);
