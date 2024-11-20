@@ -35,7 +35,7 @@
 namespace miopen {
 
 size_t GetL1LossForwardWorkspaceSize(Handle& handle,
-                                     miopenL1LossReduction_t reduction,
+                                     miopenLossReductionMode_t reduction,
                                      const TensorDescriptor& iDesc,
                                      const TensorDescriptor& tDesc,
                                      const TensorDescriptor& oDesc)
@@ -52,7 +52,7 @@ size_t GetL1LossForwardWorkspaceSize(Handle& handle,
 }
 
 miopenStatus_t L1LossForward(Handle& handle,
-                             miopenL1LossReduction_t reduction,
+                             miopenLossReductionMode_t reduction,
                              Data_t workspace,
                              size_t workspaceSizeInBytes,
                              const TensorDescriptor& iDesc,

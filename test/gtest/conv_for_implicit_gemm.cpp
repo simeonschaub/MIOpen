@@ -34,9 +34,7 @@
 
 using TestCase = std::tuple<std::vector<std::string>, std::string>;
 
-MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
 MIOPEN_DECLARE_ENV_VAR_BOOL(IMPLICITGEMM_TESTING_ENV)
-MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
 
 namespace env = miopen::env;
 
@@ -44,19 +42,9 @@ namespace test_conv_for_implicit_gemm {
 
 static bool SkipTest()
 {
-    if(!MIOPEN_TEST_ALL)
-        return false;
     if(env::enabled(IMPLICITGEMM_TESTING_ENV))
         return false;
     return true;
-}
-
-static bool IsTestRunWith(const char* float_arg)
-{
-    assert(float_arg != nullptr);
-    if(!MIOPEN_TEST_ALL)
-        return true; // standalone run
-    return env::enabled(MIOPEN_TEST_ALL) && env::value(MIOPEN_TEST_FLOAT_ARG) == float_arg;
 }
 
 void GetArgs(const TestCase& param, std::vector<std::string>& tokens)
@@ -76,11 +64,11 @@ void GetArgs(const TestCase& param, std::vector<std::string>& tokens)
         tokens.push_back(*begin++);
 }
 
-class ConfigWithHalf : public testing::TestWithParam<std::vector<TestCase>>
+class GPU_ConvImplicitGemm_FP16 : public testing::TestWithParam<std::vector<TestCase>>
 {
 };
 
-class ConfigWithBF16 : public testing::TestWithParam<std::vector<TestCase>>
+class GPU_ConvImplicitGemm_BFP16 : public testing::TestWithParam<std::vector<TestCase>>
 {
 };
 
@@ -90,8 +78,8 @@ void Run2dDriver(miopenDataType_t prec)
 
     switch(prec)
     {
-    case miopenHalf: params = ConfigWithHalf::GetParam(); break;
-    case miopenBFloat16: params = ConfigWithBF16::GetParam(); break;
+    case miopenHalf: params = GPU_ConvImplicitGemm_FP16::GetParam(); break;
+    case miopenBFloat16: params = GPU_ConvImplicitGemm_BFP16::GetParam(); break;
     case miopenFloat:
     case miopenInt8:
     case miopenInt32:
@@ -259,10 +247,10 @@ std::vector<TestCase> GetTestCases(const std::string& precision)
 
 using namespace test_conv_for_implicit_gemm;
 
-TEST_P(ConfigWithBF16, Test_conv_for_implicit_gemm_bf16)
+TEST_P(GPU_ConvImplicitGemm_BFP16, Test_conv_for_implicit_gemm_bf16)
 {
     const auto& handle = get_handle();
-    if(IsTestSupportedForDevice(handle) && !SkipTest() && IsTestRunWith("--bfloat16"))
+    if(IsTestSupportedForDevice(handle) && !SkipTest())
     {
         Run2dDriver(miopenBFloat16);
     }
@@ -272,10 +260,10 @@ TEST_P(ConfigWithBF16, Test_conv_for_implicit_gemm_bf16)
     }
 };
 
-TEST_P(ConfigWithHalf, Test_conv_for_implicit_gemm_half)
+TEST_P(GPU_ConvImplicitGemm_FP16, Test_conv_for_implicit_gemm_half)
 {
     const auto& handle = get_handle();
-    if(IsTestSupportedForDevice(handle) && !SkipTest() && IsTestRunWith("--half"))
+    if(IsTestSupportedForDevice(handle) && !SkipTest())
     {
         Run2dDriver(miopenHalf);
     }
@@ -285,10 +273,11 @@ TEST_P(ConfigWithHalf, Test_conv_for_implicit_gemm_half)
     }
 };
 
-INSTANTIATE_TEST_SUITE_P(ConvIgemm,
-                             ConfigWithBF16,
+
+INSTANTIATE_TEST_SUITE_P(Full,
+                             GPU_ConvImplicitGemm_BFP16,
                              testing::Values(GetTestCases("--bfloat16")));
 
-INSTANTIATE_TEST_SUITE_P(ConvIgemm,
-                             ConfigWithHalf,
+INSTANTIATE_TEST_SUITE_P(Full,
+                             GPU_ConvImplicitGemm_FP16,
                              testing::Values(GetTestCases("--half")));

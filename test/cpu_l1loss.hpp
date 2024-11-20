@@ -43,10 +43,10 @@ void cpu_l1loss_reduced_forward(tensor<T> input,
                                 tensor<T> target,
                                 tensor<T>& ref_output,
                                 tensor<T>& ref_workspace,
-                                miopenL1LossReduction_t reduction)
+                                miopenLossReductionMode_t reduction)
 {
     auto inputSize = input.desc.GetElementSize();
-    size_t divisor = (reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : inputSize;
+    size_t divisor = (reduction == MIOPEN_LOSS_REDUCTION_SUM) ? 1 : inputSize;
 
     // Phase 1: Calc loss for each element (unreduced)
     par_ford(inputSize)([&](size_t i) { ref_workspace[i] = abs(input[i] - target[i]) / divisor; });

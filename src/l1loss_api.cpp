@@ -32,7 +32,7 @@
 #include <miopen/tensor_ops.hpp>
 
 extern "C" miopenStatus_t miopenGetL1LossForwardWorkspaceSize(miopenHandle_t handle,
-                                                              miopenL1LossReduction_t reduction,
+                                                              miopenLossReductionMode_t reduction,
                                                               const miopenTensorDescriptor_t iDesc,
                                                               const miopenTensorDescriptor_t tDesc,
                                                               const miopenTensorDescriptor_t oDesc,
@@ -51,7 +51,7 @@ extern "C" miopenStatus_t miopenGetL1LossForwardWorkspaceSize(miopenHandle_t han
 }
 
 extern "C" miopenStatus_t miopenL1LossForward(miopenHandle_t handle,
-                                              miopenL1LossReduction_t reduction,
+                                              miopenLossReductionMode_t reduction,
                                               void* workspace,
                                               size_t workspaceSizeInBytes,
                                               const miopenTensorDescriptor_t iDesc,

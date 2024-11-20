@@ -50,10 +50,10 @@ int32_t mloL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
                                        const Tgpu* target,
                                        Tcheck* workspacehost,
                                        Tcheck* outputhost,
-                                       miopenL1LossReduction_t reduction)
+                                       miopenLossReductionMode_t reduction)
 {
     auto size      = miopen::deref(iDesc).GetElementSize();
-    size_t divisor = (reduction == MIOPEN_L1LOSS_MEAN_REDUCTION) ? size : 1;
+    size_t divisor = (reduction == MIOPEN_LOSS_REDUCTION_MEAN) ? size : 1;
 
     // Phase 1: Calc loss for each element
     for(size_t i = 0; i < size; i++)
@@ -136,7 +136,7 @@ private:
     std::vector<Tref> workspacehost;
 
     size_t ws_sizeInBytes;
-    miopenL1LossReduction_t reduction;
+    miopenLossReductionMode_t reduction;
 };
 
 // Equivalent tensor.transpose(0, -1).contiguous().transpose(0, -1)
@@ -158,7 +158,7 @@ template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::ParseCmdLineArgs(int argc, char* argv[])
 {
     inflags.Parse(argc, argv);
-    reduction    = static_cast<miopenL1LossReduction_t>(inflags.GetValueInt("reduction"));
+    reduction    = static_cast<miopenLossReductionMode_t>(inflags.GetValueInt("reduction"));
     isContiguous = inflags.GetValueInt("contiguous") > 0 ? true : false;
 
     if(inflags.GetValueInt("time") == 1)
@@ -178,7 +178,7 @@ int L1LossDriver<Tgpu, Tref>::GetandSetData()
     SetTensorNd(inputDesc, in_len, in_strides, data_type);
     SetTensorNd(targetDesc, in_len, tar_strides, data_type);
 
-    if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
+    if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
     {
         SetTensorNd(outputDesc, in_len, in_strides, data_type);
     }
@@ -319,7 +319,7 @@ int L1LossDriver<Tgpu, Tref>::RunForwardGPU()
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::RunForwardCPU()
 {
-    if(reduction == MIOPEN_L1LOSS_MEAN_REDUCTION || reduction == MIOPEN_L1LOSS_SUM_REDUCTION)
+    if(reduction == MIOPEN_LOSS_REDUCTION_MEAN || reduction == MIOPEN_LOSS_REDUCTION_SUM)
     {
         mloL1LossReducedForwardRunHost<Tgpu, Tref>(
             inputDesc, in.data(), tar.data(), workspacehost.data(), outhost.data(), reduction);

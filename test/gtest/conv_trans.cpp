@@ -26,11 +26,8 @@
 #include <miopen/miopen.h>
 #include <gtest/gtest.h>
 #include <miopen/miopen.h>
-#include <miopen/env.hpp>
 #include "../conv2d.hpp"
 #include "get_handle.hpp"
-
-MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
 
 namespace env = miopen::env;
 
@@ -45,7 +42,7 @@ void GetArgs(const std::string& param, std::vector<std::string>& tokens)
         tokens.push_back(*begin++);
 }
 
-class ConfigWithFloat_conv_trans : public testing::TestWithParam<std::vector<std::string>>
+class GPU_conv_trans_FP32 : public testing::TestWithParam<std::vector<std::string>>
 {
 };
 
@@ -55,7 +52,7 @@ void Run2dDriver(miopenDataType_t prec)
     std::vector<std::string> params;
     switch(prec)
     {
-    case miopenFloat: params = ConfigWithFloat_conv_trans::GetParam(); break;
+    case miopenFloat: params = GPU_conv_trans_FP32::GetParam(); break;
     case miopenHalf:
     case miopenFloat8:
     case miopenBFloat8:
@@ -68,7 +65,7 @@ void Run2dDriver(miopenDataType_t prec)
                   "data type not supported by "
                   "conv_trans test";
 
-    default: params = ConfigWithFloat_conv_trans::GetParam();
+    default: params = GPU_conv_trans_FP32::GetParam();
     }
 
     for(const auto& test_value : params)
@@ -145,10 +142,10 @@ std::vector<std::string> GetTestCases(const std::string& precision)
 } // namespace conv_trans
 using namespace conv_trans;
 
-TEST_P(ConfigWithFloat_conv_trans, FloatTest_conv_trans)
+TEST_P(GPU_conv_trans_FP32, FloatTest_conv_trans)
 {
     const auto& handle = get_handle();
-    if(IsTestSupportedForDevice(handle) && env::enabled(MIOPEN_TEST_ALL))
+    if(IsTestSupportedForDevice(handle))
     {
         Run2dDriver(miopenFloat);
     }
@@ -158,6 +155,4 @@ TEST_P(ConfigWithFloat_conv_trans, FloatTest_conv_trans)
     }
 };
 
-INSTANTIATE_TEST_SUITE_P(ConvTrans,
-                         ConfigWithFloat_conv_trans,
-                         testing::Values(GetTestCases("--float")));
+INSTANTIATE_TEST_SUITE_P(Full, GPU_conv_trans_FP32, testing::Values(GetTestCases("--float")));

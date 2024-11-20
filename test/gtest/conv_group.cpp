@@ -27,11 +27,7 @@
 #include <miopen/miopen.h>
 #include <gtest/gtest_common.hpp>
 #include <gtest/gtest.h>
-#include <miopen/env.hpp>
 #include "get_handle.hpp"
-
-MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
-MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
 
 namespace conv_group {
 void GetArgs(const std::string& param, std::vector<std::string>& tokens)
@@ -108,7 +104,7 @@ std::vector<std::string> GetTestCases(const std::string& precision)
 
 using TestCase = decltype(GetTestCases(std::string{}))::value_type;
 
-class ConfigWithFloat_conv_group : public testing::TestWithParam<std::vector<TestCase>>
+class GPU_ConvGroup_FP32 : public testing::TestWithParam<std::vector<TestCase>>
 {
 };
 
@@ -122,14 +118,11 @@ bool IsTestSupportedForDevice()
 
 void Run2dDriver(void)
 {
-    if(!(IsTestSupportedForDevice()            //
-         && (!MIOPEN_TEST_ALL                  // standalone run
-             || (env::enabled(MIOPEN_TEST_ALL) // or --float full tests enabled
-                 && env::value(MIOPEN_TEST_FLOAT_ARG) == "--float"))))
+    if(!IsTestSupportedForDevice())
     {
         GTEST_SKIP();
     }
-    std::vector<std::string> params = ConfigWithFloat_conv_group::GetParam();
+    std::vector<std::string> params = GPU_ConvGroup_FP32::GetParam();
 
     for(const auto& test_value : params)
     {
@@ -150,8 +143,6 @@ void Run2dDriver(void)
 } // namespace conv_group
 using namespace conv_group;
 
-TEST_P(ConfigWithFloat_conv_group, FloatTest_conv_group) { Run2dDriver(); };
+TEST_P(GPU_ConvGroup_FP32, FloatTest_conv_group) { Run2dDriver(); };
 
-INSTANTIATE_TEST_SUITE_P(ConvGroup,
-                         ConfigWithFloat_conv_group,
-                         testing::Values(GetTestCases("--float")));
+INSTANTIATE_TEST_SUITE_P(Full, GPU_ConvGroup_FP32, testing::Values(GetTestCases("--float")));

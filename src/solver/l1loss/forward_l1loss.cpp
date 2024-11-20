@@ -50,7 +50,7 @@ namespace l1loss {
 bool L1LossForward5d::IsImprovementOverROCm(
     const ExecutionContext& /*context*/, const miopen::l1loss::FwdProblemDescription& problem) const
 {
-    if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
+    if(problem.GetReduction() == MIOPEN_LOSS_REDUCTION_NONE)
     {
         return false;
     }
@@ -171,7 +171,7 @@ L1LossForward5d::GetSolution(const ExecutionContext& /*context*/,
                 /* Phase 1: Calculate loss elementwise. */
                 auto I_tv      = get_inner_expanded_tv<5>(deref(params.iDesc));
                 auto T_tv      = get_inner_expanded_tv<5>(deref(params.tDesc));
-                size_t divisor = (params.reduction == MIOPEN_L1LOSS_SUM_REDUCTION) ? 1 : input_size;
+                size_t divisor = (params.reduction == MIOPEN_LOSS_REDUCTION_SUM) ? 1 : input_size;
 
                 decltype(auto) kernel = handle_.Run(kernels.front());
                 kernel(params.i, params.t, params.workspace, divisor, I_tv, T_tv);
@@ -224,7 +224,7 @@ std::size_t
 L1LossForward5d::GetWorkspaceSize(const ExecutionContext& /*context*/,
                                   const miopen::l1loss::FwdProblemDescription& problem) const
 {
-    if(problem.GetReduction() == MIOPEN_L1LOSS_NONE_REDUCTION)
+    if(problem.GetReduction() == MIOPEN_LOSS_REDUCTION_NONE)
     {
         return 0;
     }

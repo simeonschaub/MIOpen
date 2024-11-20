@@ -38,7 +38,7 @@
 struct L1LossTestCase
 {
     std::vector<size_t> dims;
-    miopenL1LossReduction_t reduction;
+    miopenLossReductionMode_t reduction;
     bool isContiguous;
 
     friend std::ostream& operator<<(std::ostream& os, const L1LossTestCase& tc)
@@ -53,7 +53,7 @@ struct L1LossTestCase
 
     L1LossTestCase() {}
 
-    L1LossTestCase(std::vector<size_t> dims_, miopenL1LossReduction_t reduction_, bool cont_)
+    L1LossTestCase(std::vector<size_t> dims_, miopenLossReductionMode_t reduction_, bool cont_)
         : dims(dims_), reduction(reduction_), isContiguous(cont_)
     {
     }
@@ -77,17 +77,17 @@ inline std::vector<L1LossTestCase> L1LossTestConfigs()
 { // n c d h w dim
     // clang-format off
     return {
-        {{1, 1, 1, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {{1, 2, 3, 4, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {{1, 1, 1, 257, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {{2, 10, 128, 128, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {{5, 13, 17, 11, 1}, MIOPEN_L1LOSS_MEAN_REDUCTION, false},
-        {{256, 4, 8723, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, false},
-        {{256, 4, 8723, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true},
-        {{1, 1, 1, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true},
-        {{34, 4, 5, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true},
-        {{4, 7, 5, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true},
-        {{15, 4, 5, 1, 1}, MIOPEN_L1LOSS_SUM_REDUCTION, true}
+        {{1, 1, 1, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
+        {{1, 2, 3, 4, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
+        {{1, 1, 1, 257, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
+        {{2, 10, 128, 128, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
+        {{5, 13, 17, 11, 1}, MIOPEN_LOSS_REDUCTION_MEAN, false},
+        {{256, 4, 8723, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
+        {{256, 4, 8723, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true},
+        {{1, 1, 1, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true},
+        {{34, 4, 5, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true},
+        {{4, 7, 5, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true},
+        {{15, 4, 5, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true}
     };
     // clang-format on
 }
@@ -112,7 +112,7 @@ protected:
         target           = tensor<T>{in_dims, tar_strides}.generate(gen_value2);
 
         auto out_lengths =
-            (reduction == MIOPEN_L1LOSS_NONE_REDUCTION) ? in_dims : std::vector<size_t>{1};
+            (reduction == MIOPEN_LOSS_REDUCTION_NONE) ? in_dims : std::vector<size_t>{1};
 
         output = tensor<T>{out_lengths};
         std::fill(output.begin(), output.end(), std::numeric_limits<T>::quiet_NaN());
@@ -121,7 +121,7 @@ protected:
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
         std::vector<size_t> workspace_lengths;
-        ws_sizeInBytes = (reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
+        ws_sizeInBytes = (reduction == MIOPEN_LOSS_REDUCTION_NONE)
                              ? 0
                              : miopen::GetL1LossForwardWorkspaceSize(
                                    handle, reduction, input.desc, target.desc, output.desc);
@@ -153,7 +153,7 @@ protected:
 
         miopenStatus_t status;
 
-        if(reduction != MIOPEN_L1LOSS_NONE_REDUCTION)
+        if(reduction != MIOPEN_LOSS_REDUCTION_NONE)
         {
             cpu_l1loss_reduced_forward<T>(input, target, ref_output, ref_workspace, reduction);
             status         = miopen::L1LossForward(handle,
@@ -203,7 +203,7 @@ protected:
     tensor<T> target;
     tensor<T> output;
     tensor<T> workspace;
-    miopenL1LossReduction_t reduction;
+    miopenLossReductionMode_t reduction;
 
     tensor<T> ref_workspace;
     tensor<T> ref_output;

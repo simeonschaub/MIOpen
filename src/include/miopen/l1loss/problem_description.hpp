@@ -40,7 +40,7 @@ struct FwdProblemDescription : ProblemDescriptionBase
     FwdProblemDescription(const TensorDescriptor& iDesc_,
                           const TensorDescriptor& tDesc_,
                           const TensorDescriptor& oDesc_,
-                          miopenL1LossReduction_t reduction_)
+                          miopenLossReductionMode_t reduction_)
         : iDesc(iDesc_), tDesc(tDesc_), oDesc(oDesc_), reduction(reduction_)
     {
         if(iDesc.GetNumDims() != tDesc.GetNumDims())
@@ -50,7 +50,7 @@ struct FwdProblemDescription : ProblemDescriptionBase
                          "and target tensor do not match.");
         }
 
-        if(reduction == MIOPEN_L1LOSS_NONE_REDUCTION)
+        if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
         {
             if(iDesc.GetNumDims() != oDesc.GetNumDims())
             {
@@ -78,7 +78,7 @@ struct FwdProblemDescription : ProblemDescriptionBase
         }
     }
 
-    miopenL1LossReduction_t GetReduction() const { return reduction; }
+    miopenLossReductionMode_t GetReduction() const { return reduction; }
     const TensorDescriptor& GetIDesc() const { return iDesc; }
     const TensorDescriptor& GetTDesc() const { return tDesc; }
     const TensorDescriptor& GetODesc() const { return oDesc; }
@@ -98,7 +98,7 @@ protected:
     TensorDescriptor iDesc;
     TensorDescriptor tDesc;
     TensorDescriptor oDesc;
-    miopenL1LossReduction_t reduction;
+    miopenLossReductionMode_t reduction;
 
     NetworkConfig MakeForwardNetworkConfig() const;
 };

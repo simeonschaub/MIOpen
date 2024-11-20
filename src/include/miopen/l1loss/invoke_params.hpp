@@ -45,9 +45,9 @@ struct InvokeParams : public miopen::InvokeParams
     ConstData_t t = nullptr;
     Data_t o      = nullptr;
 
-    miopenL1LossReduction_t reduction = MIOPEN_L1LOSS_MEAN_REDUCTION;
-    Data_t workspace                  = nullptr;
-    std::size_t workspace_size        = 0;
+    miopenLossReductionMode_t reduction = MIOPEN_LOSS_REDUCTION_MEAN;
+    Data_t workspace                    = nullptr;
+    std::size_t workspace_size          = 0;
 
     std::size_t GetWorkspaceSize() const { return workspace_size; }
     Data_t GetWorkspace() const { return workspace; }

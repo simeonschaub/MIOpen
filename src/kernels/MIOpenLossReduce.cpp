@@ -29,7 +29,7 @@
 #endif
 
 #include "float_types.h"
-#include "warp_shuffle.hpp"
+#include "warp_reduce.hpp"
 
 template <typename DTYPE>
 __device__ void LossSum(const DTYPE* __restrict__ input, DTYPE* __restrict__ output, uint64_t N)
