@@ -999,7 +999,7 @@ void BuildHip(const std::string& name,
         opts.push_back(std::string("-I") + rocm_path + "/include");
 
         MIOPEN_LOG_I("HIPRTC compile options:");
-        for (const auto& opt : opts)
+        for(const auto& opt : opts)
         {
             MIOPEN_LOG_I(opt);
         }
