@@ -43,11 +43,6 @@ size_t GetSigmoidFocalLossForwardWorkspaceSize(Handle& handle,
                                                const TensorDescriptor& outputDesc,
                                                miopenLossReductionMode_t reduction)
 {
-    if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
-    {
-        return 0;
-    }
-
     auto ctx           = ExecutionContext{&handle};
     const auto problem = sigmoidfocalloss::SigmoidFocalLossFwdProblemDescription{
         inputDesc, targetDesc, outputDesc, reduction};
@@ -92,22 +87,10 @@ miopenStatus_t SigmoidFocalLossForward(Handle& handle,
         return tmp;
     }();
 
-    if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
-    {
-        const auto algo = AlgorithmName{"SigmoidFocalLossUnreducedFwd"};
-        const auto solvers =
-            solver::SolverContainer<solver::sigmoidfocalloss::SigmoidFocalLossUnreducedFwd>{};
+    const auto algo    = AlgorithmName{"SigmoidFocalLossFwd"};
+    const auto solvers = solver::SolverContainer<solver::sigmoidfocalloss::SigmoidFocalLossFwd>{};
 
-        solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
-    }
-    else
-    {
-        const auto algo = AlgorithmName{"SigmoidFocalLossFwd"};
-        const auto solvers =
-            solver::SolverContainer<solver::sigmoidfocalloss::SigmoidFocalLossFwd>{};
-
-        solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
-    }
+    solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 
     return miopenStatusSuccess;
 }
@@ -148,22 +131,10 @@ miopenStatus_t SigmoidFocalLossBackward(Handle& handle,
         return tmp;
     }();
 
-    if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
-    {
-        const auto algo = AlgorithmName{"SigmoidFocalLossUnreducedBwd"};
-        const auto solvers =
-            solver::SolverContainer<solver::sigmoidfocalloss::SigmoidFocalLossUnreducedBwd>{};
+    const auto algo    = AlgorithmName{"SigmoidFocalLossBwd"};
+    const auto solvers = solver::SolverContainer<solver::sigmoidfocalloss::SigmoidFocalLossBwd>{};
 
-        solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
-    }
-    else
-    {
-        const auto algo = AlgorithmName{"SigmoidFocalLossBwd"};
-        const auto solvers =
-            solver::SolverContainer<solver::sigmoidfocalloss::SigmoidFocalLossBwd>{};
-
-        solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
-    }
+    solvers.ExecutePrimitive(handle, problem, algo, invoke_params);
 
     return miopenStatusSuccess;
 }

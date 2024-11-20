@@ -52,6 +52,7 @@ struct SigmoidFocalLossProblemDescription : ProblemDescriptionBase
 
     const TensorDescriptor& GetInputDesc() const { return inputDesc; }
     const TensorDescriptor& GetTargetDesc() const { return targetDesc; }
+    const miopenLossReductionMode_t& GetReduction() const { return reduction; }
 
 public:
     TensorDescriptor inputDesc;

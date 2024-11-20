@@ -31,28 +31,18 @@
 
 #include "float_types.h"
 #include "tensor_view.hpp"
+#include "MIOpenLossReductionMode.hpp"
 
-#ifndef IN_OUT_TYPE
-#define IN_OUT_TYPE float
-#endif
-
-#ifndef CVT_ACCUM2FLOAT
-#define CVT_ACCUM2FLOAT(x) (float_to_bfloat16(x))
-#endif
-
-#ifndef CVT_FLOAT2ACCUM
-#define CVT_FLOAT2ACCUM(x) (bfloat16_to_float(x))
-#endif
-
-template <typename TIO>
-__device__ void sigmoidFocalLossFwd(const TIO* input,
-                                    TIO* target,
-                                    FLOAT_ACCUM* workspace,
-                                    float alpha,
-                                    float gamma,
-                                    float divisor,
-                                    tensor_view_t<5> input_tv,
-                                    tensor_view_t<5> target_tv)
+template <typename TIO, uint32_t NDIM, LossReductionMode_t REDUCTION_T>
+__device__ void sigmoidFocalLossFwd(const TIO* __restrict__ input,
+                                    const TIO* __restrict__ target,
+                                    void* __restrict__ output,
+                                    const float alpha,
+                                    const float gamma,
+                                    const uint64_t size,
+                                    tensor_view_t<NDIM> input_tv,
+                                    tensor_view_t<NDIM> target_tv,
+                                    tensor_view_t<NDIM> output_tv)
 {
     /*
         Dim: input = target = workspace = {N, C, D, H, W}.
@@ -62,7 +52,7 @@ __device__ void sigmoidFocalLossFwd(const TIO* input,
     */
     size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
 
-    tensor_layout_t<5> idx(input_tv, gid);
+    tensor_layout_t<NDIM> idx(input_tv, gid);
     if(idx.layout[0] >= input_tv.size[0])
         return;
 
@@ -81,36 +71,45 @@ __device__ void sigmoidFocalLossFwd(const TIO* input,
         loss                = alpha_t * loss;
     }
 
-    workspace[gid] = loss / divisor;
+    switch(REDUCTION_T)
+    {
+    case LossReductionMode_t::NONE:
+        static_cast<TIO*>(output)[output_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(loss);
+        break;
+    case LossReductionMode_t::SUM: static_cast<FLOAT_ACCUM*>(output)[gid] = loss; break;
+    case LossReductionMode_t::MEAN: static_cast<FLOAT_ACCUM*>(output)[gid] = loss / size; break;
+    default: break;
+    }
 }
 
-extern "C" __global__ void SigmoidFocalLossFwd(const IN_OUT_TYPE* input,
-                                               IN_OUT_TYPE* target,
-                                               FLOAT_ACCUM* workspace,
-                                               float alpha,
-                                               float gamma,
-                                               float divisor,
-                                               tensor_view_t<5> input_tv,
-                                               tensor_view_t<5> target_tv)
+extern "C" __global__ void SigmoidFocalLossFwd(const IN_OUT_TYPE* __restrict__ input,
+                                               const IN_OUT_TYPE* __restrict__ target,
+                                               void* __restrict__ output,
+                                               const float alpha,
+                                               const float gamma,
+                                               const uint64_t size,
+                                               tensor_view_t<VIEW_DIMS> input_tv,
+                                               tensor_view_t<VIEW_DIMS> target_tv,
+                                               tensor_view_t<VIEW_DIMS> output_tv)
 {
-    sigmoidFocalLossFwd<IN_OUT_TYPE>(
-        input, target, workspace, alpha, gamma, divisor, input_tv, target_tv);
+    sigmoidFocalLossFwd<IN_OUT_TYPE, VIEW_DIMS, static_cast<LossReductionMode_t>(REDUCTION_TYPE)>(
+        input, target, output, alpha, gamma, size, input_tv, target_tv, output_tv);
 }
 
-template <typename TIO>
-__device__ void sigmoidFocalLossBwd(const TIO* input,
-                                    const TIO* target,
-                                    const TIO* doutput,
-                                    TIO* dinput,
-                                    TIO* dtarget,
-                                    float alpha,
-                                    float gamma,
-                                    float divisor,
-                                    tensor_view_t<5> input_tv,
-                                    tensor_view_t<5> target_tv,
-                                    tensor_view_t<5> doutput_tv,
-                                    tensor_view_t<5> dinput_tv,
-                                    tensor_view_t<5> dtarget_tv)
+template <typename TIO, uint32_t NDIM, LossReductionMode_t REDUCTION_T>
+__device__ void sigmoidFocalLossBwd(const TIO* __restrict__ input,
+                                    const TIO* __restrict__ target,
+                                    const TIO* __restrict__ doutput,
+                                    TIO* __restrict__ dinput,
+                                    TIO* __restrict__ dtarget,
+                                    const float alpha,
+                                    const float gamma,
+                                    const uint64_t size,
+                                    tensor_view_t<NDIM> input_tv,
+                                    tensor_view_t<NDIM> target_tv,
+                                    tensor_view_t<NDIM> doutput_tv,
+                                    tensor_view_t<NDIM> dinput_tv,
+                                    tensor_view_t<NDIM> dtarget_tv)
 {
     /*
         Dim: input = target = doutput = dinput = dtarget = {N, C, D, H, W}.
@@ -120,14 +119,24 @@ __device__ void sigmoidFocalLossBwd(const TIO* input,
     */
     size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
 
-    tensor_layout_t<5> idx(input_tv, gid);
-    tensor_layout_t<5> doIdx(doutput_tv, 0);
+    tensor_layout_t<NDIM> idx(input_tv, gid);
+    tensor_layout_t<NDIM> doIdx(doutput_tv, 0);
     if(idx.layout[0] >= input_tv.size[0])
         return;
 
-    FLOAT_ACCUM i  = CVT_FLOAT2ACCUM(input[input_tv.get_tensor_view_idx(idx)]);
-    FLOAT_ACCUM t  = CVT_FLOAT2ACCUM(target[target_tv.get_tensor_view_idx(idx)]);
-    FLOAT_ACCUM dO = CVT_FLOAT2ACCUM(doutput[doutput_tv.get_tensor_view_idx(doIdx)]);
+    FLOAT_ACCUM i = CVT_FLOAT2ACCUM(input[input_tv.get_tensor_view_idx(idx)]);
+    FLOAT_ACCUM t = CVT_FLOAT2ACCUM(target[target_tv.get_tensor_view_idx(idx)]);
+
+    FLOAT_ACCUM dO;
+    switch(REDUCTION_T)
+    {
+    case LossReductionMode_t::NONE:
+        dO = CVT_FLOAT2ACCUM(doutput[doutput_tv.get_tensor_view_idx(idx)]);
+        break;
+    case LossReductionMode_t::SUM: dO = CVT_FLOAT2ACCUM(doutput[0]); break;
+    case LossReductionMode_t::MEAN: dO = CVT_FLOAT2ACCUM(doutput[0]) / size; break;
+    default: break;
+    }
 
     /* Formula is formed by compute fwd's formula gradient */
     FLOAT_ACCUM p       = 1 / (1 + exp(-i));
@@ -149,10 +158,7 @@ __device__ void sigmoidFocalLossBwd(const TIO* input,
         FLOAT_ACCUM grad = dO * dLdi;
 
         if(alpha >= 0)
-        {
             grad *= alpha_t;
-        }
-        grad /= divisor;
         dinput[dinput_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(grad);
     }
 
@@ -166,192 +172,39 @@ __device__ void sigmoidFocalLossBwd(const TIO* input,
 
         if(alpha >= 0)
         {
-            // alpha_t * dL/dt + dalpha_t/dt * dL
-            gradTarget = alpha_t * dLdt + (2 * alpha - 1) * ceLoss * powPt;
-        }
-        gradTarget /= divisor;
-        dtarget[dtarget_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(gradTarget);
-    }
-}
-
-extern "C" __global__ void SigmoidFocalLossBwd(const IN_OUT_TYPE* input,
-                                               IN_OUT_TYPE* target,
-                                               IN_OUT_TYPE* doutput,
-                                               IN_OUT_TYPE* dinput,
-                                               IN_OUT_TYPE* dtarget,
-                                               float alpha,
-                                               float gamma,
-                                               float divisor,
-                                               tensor_view_t<5> input_tv,
-                                               tensor_view_t<5> target_tv,
-                                               tensor_view_t<5> doutput_tv,
-                                               tensor_view_t<5> dinput_tv,
-                                               tensor_view_t<5> dtarget_tv)
-{
-    sigmoidFocalLossBwd<IN_OUT_TYPE>(input,
-                                     target,
-                                     doutput,
-                                     dinput,
-                                     dtarget,
-                                     alpha,
-                                     gamma,
-                                     divisor,
-                                     input_tv,
-                                     target_tv,
-                                     doutput_tv,
-                                     dinput_tv,
-                                     dtarget_tv);
-}
-
-template <typename TIO>
-__device__ void sigmoidFocalLossUnreducedFwd(const TIO* input,
-                                             TIO* target,
-                                             TIO* output,
-                                             float alpha,
-                                             float gamma,
-                                             tensor_view_t<5> input_tv,
-                                             tensor_view_t<5> target_tv,
-                                             tensor_view_t<5> output_tv)
-{
-    /*
-        Dim: input = target = output = {N, C, D, H, W}.
-        Each thread handle an elem in the input, target tensor.
-        Lws = {LOCAL_SIZE_SIGMOIDFOCALLOSS(default = 256), 1, 1}.
-        Gws = {AlignUp(N * C * D * H * W, lws.x), 1, 1}.
-    */
-    size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
-
-    tensor_layout_t<5> idx(input_tv, gid);
-    if(idx.layout[0] >= input_tv.size[0])
-        return;
-
-    FLOAT_ACCUM i = CVT_FLOAT2ACCUM(input[input_tv.get_tensor_view_idx(idx)]);
-    FLOAT_ACCUM t = CVT_FLOAT2ACCUM(target[target_tv.get_tensor_view_idx(idx)]);
-
-    /* The formula follows torchvision package: torchvision/ops/focal_loss.py */
-    FLOAT_ACCUM p      = 1 / (1 + exp(-i));
-    FLOAT_ACCUM ceLoss = -(t * log(p) + (1 - t) * log(1 - p));
-    FLOAT_ACCUM pT     = p * t + (1 - p) * (1 - t);
-    FLOAT_ACCUM loss   = ceLoss * pow(1 - pT, gamma);
-
-    if(alpha >= 0)
-    {
-        FLOAT_ACCUM alpha_t = alpha * t + (1 - alpha) * (1 - t);
-        loss                = alpha_t * loss;
-    }
-
-    output[output_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(loss);
-}
-
-extern "C" __global__ void SigmoidFocalLossUnreducedFwd(const IN_OUT_TYPE* input,
-                                                        IN_OUT_TYPE* target,
-                                                        IN_OUT_TYPE* output,
-                                                        float alpha,
-                                                        float gamma,
-                                                        tensor_view_t<5> input_tv,
-                                                        tensor_view_t<5> target_tv,
-                                                        tensor_view_t<5> output_tv)
-{
-    sigmoidFocalLossUnreducedFwd<IN_OUT_TYPE>(
-        input, target, output, alpha, gamma, input_tv, target_tv, output_tv);
-}
-
-template <typename TIO>
-__device__ void sigmoidFocalLossUnreducedBwd(const TIO* input,
-                                             const TIO* target,
-                                             const TIO* doutput,
-                                             TIO* dinput,
-                                             TIO* dtarget,
-                                             float alpha,
-                                             float gamma,
-                                             tensor_view_t<5> input_tv,
-                                             tensor_view_t<5> target_tv,
-                                             tensor_view_t<5> doutput_tv,
-                                             tensor_view_t<5> dinput_tv,
-                                             tensor_view_t<5> dtarget_tv)
-{
-    /*
-        Dim: input = target = doutput = dinput = dtarget = {N, C, D, H, W}.
-        Each thread handle an elem in the input, target, doutput tensor.
-        Lws = {LOCAL_SIZE_SIGMOIDFOCALLOSS(default = 256), 1, 1}.
-        Gws = {AlignUp(N * C * D * H * W, lws.x), 1, 1}.
-    */
-    size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
-
-    tensor_layout_t<5> idx(input_tv, gid);
-    if(idx.layout[0] >= input_tv.size[0])
-        return;
-
-    FLOAT_ACCUM i  = CVT_FLOAT2ACCUM(input[input_tv.get_tensor_view_idx(idx)]);
-    FLOAT_ACCUM t  = CVT_FLOAT2ACCUM(target[target_tv.get_tensor_view_idx(idx)]);
-    FLOAT_ACCUM dO = CVT_FLOAT2ACCUM(doutput[doutput_tv.get_tensor_view_idx(idx)]);
-
-    /* Formula is formed by compute fwd's formula gradient */
-    FLOAT_ACCUM p       = 1 / (1 + exp(-i));
-    FLOAT_ACCUM ceLoss  = -(t * log(p) + (1 - t) * log(1 - p));
-    FLOAT_ACCUM pT      = p * t + (1 - p) * (1 - t);
-    FLOAT_ACCUM powPt   = pow(1 - pT, gamma);
-    FLOAT_ACCUM alpha_t = alpha * t + (1 - alpha) * (1 - t);
-
-    if(dinput)
-    {
-        FLOAT_ACCUM dpdi = exp(-i) / pow(1 + exp(-i), 2);
-        // dceloss/di = dceloss/dp * dp/di
-        FLOAT_ACCUM dcelossdi = (-t / p + (1 - t) / (1 - p)) * dpdi;
-        // dpowt/di = dpowt/dpT * dpT/dp * dp/di
-        FLOAT_ACCUM dpowptdi = gamma * pow(1 - pT, gamma - 1) * (1 - 2 * t) * dpdi;
-
-        // L = ce_loss * pow_pt => dL/di = dceloss/di * pow_pt + ce_loss * dpowpt/di
-        FLOAT_ACCUM dLdi = dcelossdi * powPt + ceLoss * dpowptdi;
-        FLOAT_ACCUM grad = dO * dLdi;
-
-        if(alpha >= 0)
-        {
-            grad *= alpha_t;
-        }
-        dinput[dinput_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(grad);
-    }
-
-    if(dtarget)
-    {
-        FLOAT_ACCUM dcelossdt = -log(p) + log(1 - p);
-        FLOAT_ACCUM dpowptdt  = gamma * pow(1 - pT, gamma - 1) * (1 - 2 * p);
-        // L = ce_loss * pow_pt => dL/dt = dceloss/dt * pow_pt + ce_loss * dpowpt/dt
-        FLOAT_ACCUM dLdt       = dcelossdt * powPt + ceLoss * dpowptdt;
-        FLOAT_ACCUM gradTarget = dO * dLdt;
-
-        if(alpha >= 0)
-        {
-            // alpha_t * dL/dt + dalpha_t/dt * dL
-            gradTarget = alpha_t * dLdt + (2 * alpha - 1) * ceLoss * powPt;
+            // alpha_t * dL/dt + dalpha_t/dt * L
+            gradTarget = dO * (alpha_t * dLdt + (2 * alpha - 1) * ceLoss * powPt);
         }
         dtarget[dtarget_tv.get_tensor_view_idx(idx)] = CVT_ACCUM2FLOAT(gradTarget);
     }
 }
 
-extern "C" __global__ void SigmoidFocalLossUnreducedBwd(const IN_OUT_TYPE* input,
-                                                        IN_OUT_TYPE* target,
-                                                        IN_OUT_TYPE* doutput,
-                                                        IN_OUT_TYPE* dinput,
-                                                        IN_OUT_TYPE* dtarget,
-                                                        float alpha,
-                                                        float gamma,
-                                                        tensor_view_t<5> input_tv,
-                                                        tensor_view_t<5> target_tv,
-                                                        tensor_view_t<5> doutput_tv,
-                                                        tensor_view_t<5> dinput_tv,
-                                                        tensor_view_t<5> dtarget_tv)
+extern "C" __global__ void SigmoidFocalLossBwd(const IN_OUT_TYPE* __restrict__ input,
+                                               IN_OUT_TYPE* __restrict__ target,
+                                               IN_OUT_TYPE* __restrict__ doutput,
+                                               IN_OUT_TYPE* __restrict__ dinput,
+                                               IN_OUT_TYPE* __restrict__ dtarget,
+                                               const float alpha,
+                                               const float gamma,
+                                               const uint64_t size,
+                                               tensor_view_t<VIEW_DIMS> input_tv,
+                                               tensor_view_t<VIEW_DIMS> target_tv,
+                                               tensor_view_t<VIEW_DIMS> doutput_tv,
+                                               tensor_view_t<VIEW_DIMS> dinput_tv,
+                                               tensor_view_t<VIEW_DIMS> dtarget_tv)
 {
-    sigmoidFocalLossUnreducedBwd<IN_OUT_TYPE>(input,
-                                              target,
-                                              doutput,
-                                              dinput,
-                                              dtarget,
-                                              alpha,
-                                              gamma,
-                                              input_tv,
-                                              target_tv,
-                                              doutput_tv,
-                                              dinput_tv,
-                                              dtarget_tv);
+    sigmoidFocalLossBwd<IN_OUT_TYPE, VIEW_DIMS, static_cast<LossReductionMode_t>(REDUCTION_TYPE)>(
+        input,
+        target,
+        doutput,
+        dinput,
+        dtarget,
+        alpha,
+        gamma,
+        size,
+        input_tv,
+        target_tv,
+        doutput_tv,
+        dinput_tv,
+        dtarget_tv);
 }

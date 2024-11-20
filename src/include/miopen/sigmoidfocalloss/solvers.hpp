@@ -79,45 +79,6 @@ struct SigmoidFocalLossBwd final : SigmoidFocalLossBwdSolverBase
                                  problem) const override;
 };
 
-using SigmoidFocalLossUnreducedFwdSolverBase =
-    NonTunableSolverBase<ExecutionContext,
-                         miopen::sigmoidfocalloss::SigmoidFocalLossFwdProblemDescription>;
-
-struct SigmoidFocalLossUnreducedFwd final : SigmoidFocalLossUnreducedFwdSolverBase
-{
-    const std::string& SolverDbId() const override
-    {
-        return GetSolverDbId<SigmoidFocalLossUnreducedFwd>();
-    }
-
-    bool IsApplicable(const ExecutionContext& context,
-                      const miopen::sigmoidfocalloss::SigmoidFocalLossFwdProblemDescription&
-                          problem) const override;
-
-    ConvSolution GetSolution(const ExecutionContext& context,
-                             const miopen::sigmoidfocalloss::SigmoidFocalLossFwdProblemDescription&
-                                 problem) const override;
-};
-
-using SigmoidFocalLossUnreducedBwdSolverBase =
-    NonTunableSolverBase<ExecutionContext,
-                         miopen::sigmoidfocalloss::SigmoidFocalLossBwdProblemDescription>;
-
-struct SigmoidFocalLossUnreducedBwd final : SigmoidFocalLossUnreducedBwdSolverBase
-{
-    const std::string& SolverDbId() const override
-    {
-        return GetSolverDbId<SigmoidFocalLossUnreducedBwd>();
-    }
-
-    bool IsApplicable(const ExecutionContext& context,
-                      const miopen::sigmoidfocalloss::SigmoidFocalLossBwdProblemDescription&
-                          problem) const override;
-    ConvSolution GetSolution(const ExecutionContext& context,
-                             const miopen::sigmoidfocalloss::SigmoidFocalLossBwdProblemDescription&
-                                 problem) const override;
-};
-
 } // namespace sigmoidfocalloss
 
 } // namespace solver

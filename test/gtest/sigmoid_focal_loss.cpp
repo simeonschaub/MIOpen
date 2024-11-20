@@ -28,18 +28,12 @@
 #include <miopen/bfloat16.hpp>
 
 namespace sigmoidfocalloss {
-using GPU_SigmoidFocalLoss_fwd_FP32           = SigmoidFocalLossFwdTest<float>;
-using GPU_SigmoidFocalLoss_fwd_FP16           = SigmoidFocalLossFwdTest<half>;
-using GPU_SigmoidFocalLoss_fwd_BFP16          = SigmoidFocalLossFwdTest<bfloat16>;
-using GPU_SigmoidFocalLoss_bwd_FP32           = SigmoidFocalLossBwdTest<float>;
-using GPU_SigmoidFocalLoss_bwd_FP16           = SigmoidFocalLossBwdTest<half>;
-using GPU_SigmoidFocalLoss_bwd_BFP16          = SigmoidFocalLossBwdTest<bfloat16>;
-using GPU_SigmoidFocalLossUnreduced_fwd_FP32  = SigmoidFocalLossUnreducedFwdTest<float>;
-using GPU_SigmoidFocalLossUnreduced_fwd_FP16  = SigmoidFocalLossUnreducedFwdTest<half>;
-using GPU_SigmoidFocalLossUnreduced_fwd_BFP16 = SigmoidFocalLossUnreducedFwdTest<bfloat16>;
-using GPU_SigmoidFocalLossUnreduced_bwd_FP32  = SigmoidFocalLossUnreducedBwdTest<float>;
-using GPU_SigmoidFocalLossUnreduced_bwd_FP16  = SigmoidFocalLossUnreducedBwdTest<half>;
-using GPU_SigmoidFocalLossUnreduced_bwd_BFP16 = SigmoidFocalLossUnreducedBwdTest<bfloat16>;
+using GPU_SigmoidFocalLoss_fwd_FP32  = SigmoidFocalLossFwdTest<float>;
+using GPU_SigmoidFocalLoss_fwd_FP16  = SigmoidFocalLossFwdTest<half>;
+using GPU_SigmoidFocalLoss_fwd_BFP16 = SigmoidFocalLossFwdTest<bfloat16>;
+using GPU_SigmoidFocalLoss_bwd_FP32  = SigmoidFocalLossBwdTest<float>;
+using GPU_SigmoidFocalLoss_bwd_FP16  = SigmoidFocalLossBwdTest<half>;
+using GPU_SigmoidFocalLoss_bwd_BFP16 = SigmoidFocalLossBwdTest<bfloat16>;
 }; // namespace sigmoidfocalloss
 
 using namespace sigmoidfocalloss;
@@ -102,64 +96,4 @@ TEST_P(GPU_SigmoidFocalLoss_bwd_BFP16, Test)
 
 INSTANTIATE_TEST_SUITE_P(Full,
                          GPU_SigmoidFocalLoss_bwd_BFP16,
-                         testing::ValuesIn(SigmoidFocalLossTestConfigs()));
-
-TEST_P(GPU_SigmoidFocalLossUnreduced_fwd_FP32, Test)
-{
-    RunTest();
-    Verify();
-};
-
-INSTANTIATE_TEST_SUITE_P(Full,
-                         GPU_SigmoidFocalLossUnreduced_fwd_FP32,
-                         testing::ValuesIn(SigmoidFocalLossTestConfigs()));
-
-TEST_P(GPU_SigmoidFocalLossUnreduced_fwd_FP16, Test)
-{
-    RunTest();
-    Verify();
-};
-
-INSTANTIATE_TEST_SUITE_P(Full,
-                         GPU_SigmoidFocalLossUnreduced_fwd_FP16,
-                         testing::ValuesIn(SigmoidFocalLossTestConfigs()));
-
-TEST_P(GPU_SigmoidFocalLossUnreduced_fwd_BFP16, Test)
-{
-    RunTest();
-    Verify();
-};
-
-INSTANTIATE_TEST_SUITE_P(Full,
-                         GPU_SigmoidFocalLossUnreduced_fwd_BFP16,
-                         testing::ValuesIn(SigmoidFocalLossTestConfigs()));
-
-TEST_P(GPU_SigmoidFocalLossUnreduced_bwd_FP32, Test)
-{
-    RunTest();
-    Verify();
-};
-
-INSTANTIATE_TEST_SUITE_P(Full,
-                         GPU_SigmoidFocalLossUnreduced_bwd_FP32,
-                         testing::ValuesIn(SigmoidFocalLossTestConfigs()));
-
-TEST_P(GPU_SigmoidFocalLossUnreduced_bwd_FP16, Test)
-{
-    RunTest();
-    Verify();
-};
-
-INSTANTIATE_TEST_SUITE_P(Full,
-                         GPU_SigmoidFocalLossUnreduced_bwd_FP16,
-                         testing::ValuesIn(SigmoidFocalLossTestConfigs()));
-
-TEST_P(GPU_SigmoidFocalLossUnreduced_bwd_BFP16, Test)
-{
-    RunTest();
-    Verify();
-};
-
-INSTANTIATE_TEST_SUITE_P(Full,
-                         GPU_SigmoidFocalLossUnreduced_bwd_BFP16,
                          testing::ValuesIn(SigmoidFocalLossTestConfigs()));

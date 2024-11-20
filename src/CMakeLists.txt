@@ -335,10 +335,8 @@ set( MIOpen_Source
     solver/reduce/forward_sum.cpp
     solver/rope/backward_rope.cpp
     solver/rope/forward_rope.cpp
-    solver/sigmoidfocalloss/backward_reduce_sigmoid_focal_loss.cpp
-    solver/sigmoidfocalloss/backward_unreduce_sigmoid_focal_loss.cpp
-    solver/sigmoidfocalloss/forward_reduce_sigmoid_focal_loss.cpp
-    solver/sigmoidfocalloss/forward_unreduce_sigmoid_focal_loss.cpp
+    solver/sigmoidfocalloss/backward_sigmoid_focal_loss.cpp
+    solver/sigmoidfocalloss/forward_sigmoid_focal_loss.cpp
     solver/softmarginloss/backward_softmarginloss.cpp
     solver/softmarginloss/forward_softmarginloss.cpp
     solver/softmax/attn_softmax.cpp
@@ -477,6 +475,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         kernels/Conv_Winograd_v30_3_1_gfx11_fp32_f3x2_stride1.inc
         kernels/Conv_Winograd_v30_3_1_gfx11_fp32_f3x2_stride2.inc
         kernels/Conv_Winograd_v30_3_1_metadata.inc
+        kernels/MIOpenLossReductionMode.hpp
         kernels/MIOpenReduceCalculation.hpp
         kernels/MIOpenReduceExtreme.hpp
         kernels/bfloat16_dev.hpp

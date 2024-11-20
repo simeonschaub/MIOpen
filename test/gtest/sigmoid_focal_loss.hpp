@@ -36,9 +36,11 @@
 struct SigmoidFocalLossTestCase
 {
     std::vector<size_t> dims;
-    bool isContiguous;
     float alpha;
     float gamma;
+    miopenLossReductionMode_t reduction;
+    bool isContiguous;
+
     friend std::ostream& operator<<(std::ostream& os, const SigmoidFocalLossTestCase& tc)
     {
         os << "dims: ";
@@ -47,247 +49,47 @@ struct SigmoidFocalLossTestCase
             os << dim << " ";
         }
         return os << "is_contiguous: " << tc.isContiguous << " alpha: " << tc.alpha
-                  << " gamma: " << tc.gamma;
-    }
-
-    std::vector<size_t> GetDims() const { return dims; }
-
-    SigmoidFocalLossTestCase() {}
-
-    SigmoidFocalLossTestCase(std::vector<size_t> dim_,
-                             bool isContiguous_ = true,
-                             float alpha_       = 0.25,
-                             float gamma_       = 2)
-        : dims(dim_), isContiguous(isContiguous_), alpha(alpha_), gamma(gamma_)
-    {
-    }
-
-    std::vector<size_t> ComputeStrides(std::vector<size_t> inputDim) const
-    {
-        if(!isContiguous)
-            std::swap(inputDim.front(), inputDim.back());
-        std::vector<size_t> strides(inputDim.size());
-        strides.back() = 1;
-        for(int i = inputDim.size() - 2; i >= 0; --i)
-            strides[i] = strides[i + 1] * inputDim[i + 1];
-        if(!isContiguous)
-            std::swap(strides.front(), strides.back());
-        return strides;
+                  << " gamma: " << tc.gamma << " reduction: " << tc.reduction;
     }
 };
+
+inline std::vector<size_t> ComputeStrides(std::vector<size_t> dims, const bool isContiguous)
+{
+    if(!isContiguous)
+        std::swap(dims.front(), dims.back());
+    std::vector<size_t> strides(dims.size());
+    strides.back() = 1;
+    for(int i = dims.size() - 2; i >= 0; --i)
+        strides[i] = strides[i + 1] * dims[i + 1];
+    if(!isContiguous)
+        std::swap(strides.front(), strides.back());
+    return strides;
+}
 
 inline std::vector<SigmoidFocalLossTestCase> SigmoidFocalLossTestConfigs()
 {
-    return {
-        SigmoidFocalLossTestCase({1}),                      // 1D cont
-        SigmoidFocalLossTestCase({4000}),                   // 1D cont
-        SigmoidFocalLossTestCase({100, 500}),               // 2D cont
-        SigmoidFocalLossTestCase({100, 500}, false),        // 2D non-cont
-        SigmoidFocalLossTestCase({10, 20, 200}),            // 3D cont
-        SigmoidFocalLossTestCase({10, 20, 200}, false),     // 3D non-cont
-        SigmoidFocalLossTestCase({8, 3, 20, 100}),          // 4D cont
-        SigmoidFocalLossTestCase({8, 3, 20, 100}, false),   // 4D non-cont
-        SigmoidFocalLossTestCase({2, 2, 3, 4, 100}),        // 5D cont
-        SigmoidFocalLossTestCase({2, 2, 3, 4, 100}, false), // 5D non-cont
-        SigmoidFocalLossTestCase({10},
-                                 true,
-                                 0.6,
-                                 3), // 5D non-cont, custom alpha, gamma
+    std::vector<std::vector<size_t>> dimss = {
+        {1},
+        {4000},
+        {64},
+        {100, 500},
+        {10, 20, 200},
+        {8, 3, 20, 100},
+        {2, 2, 3, 4, 100},
+        {10},
     };
+
+    std::vector<SigmoidFocalLossTestCase> tcs;
+    for(auto reduction :
+        {MIOPEN_LOSS_REDUCTION_NONE, MIOPEN_LOSS_REDUCTION_SUM, MIOPEN_LOSS_REDUCTION_MEAN})
+        for(auto contiguous : {true, false})
+            for(const auto& dims : dimss)
+                tcs.push_back({dims, 0.25, 2, reduction, contiguous});
+
+    return tcs;
 }
 
-template <typename TIO>
-struct SigmoidFocalLossUnreducedFwdTest : public ::testing::TestWithParam<SigmoidFocalLossTestCase>
-{
-protected:
-    void SetUp() override
-    {
-        auto&& handle = get_handle();
-        config        = GetParam();
-        reduction     = MIOPEN_LOSS_REDUCTION_NONE;
-
-        auto in_dims    = config.GetDims();
-        auto in_strides = config.ComputeStrides(in_dims);
-
-        auto in_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 50); };
-        input             = tensor<TIO>{in_dims, in_strides}.generate(in_gen_value);
-
-        auto tar_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 50); };
-        target             = tensor<TIO>{in_dims, in_strides}.generate(tar_gen_value);
-
-        output = tensor<TIO>{in_dims};
-        std::fill(output.begin(), output.end(), 0);
-
-        outputHost = tensor<TIO>{in_dims};
-        std::fill(outputHost.begin(), outputHost.end(), 0);
-
-        input_dev  = handle.Write(input.data);
-        target_dev = handle.Write(target.data);
-        output_dev = handle.Write(output.data);
-    }
-
-    void RunTest()
-    {
-        auto&& handle = get_handle();
-        miopenStatus_t status;
-
-        status = miopen::SigmoidFocalLossForward(handle,
-                                                 nullptr,
-                                                 0,
-                                                 input.desc,
-                                                 input_dev.get(),
-                                                 target.desc,
-                                                 target_dev.get(),
-                                                 output.desc,
-                                                 output_dev.get(),
-                                                 config.alpha,
-                                                 config.gamma,
-                                                 reduction);
-        cpu_sigmoid_focal_loss_forward<TIO>(
-            input, target, outputHost, config.alpha, config.gamma, reduction, 1);
-
-        EXPECT_EQ(status, miopenStatusSuccess);
-        output.data = handle.Read<TIO>(output_dev, output.data.size());
-    }
-
-    void Verify()
-    {
-        double threshold = get_tolerance<TIO>(reduction);
-
-        auto error = miopen::rms_range(outputHost, output);
-
-        EXPECT_TRUE(miopen::range_distance(outputHost) == miopen::range_distance(output));
-        EXPECT_TRUE(error < threshold)
-            << "Error output beyond tolerance Error: " << error << ",  Threshold: " << threshold;
-    }
-    SigmoidFocalLossTestCase config;
-    miopenLossReductionMode_t reduction;
-
-    tensor<TIO> input;
-    tensor<TIO> target;
-    tensor<TIO> output;
-
-    tensor<TIO> outputHost;
-
-    miopen::Allocator::ManageDataPtr input_dev;
-    miopen::Allocator::ManageDataPtr target_dev;
-    miopen::Allocator::ManageDataPtr output_dev;
-};
-
-template <typename TIO>
-struct SigmoidFocalLossUnreducedBwdTest : public ::testing::TestWithParam<SigmoidFocalLossTestCase>
-{
-protected:
-    void SetUp() override
-    {
-        auto&& handle = get_handle();
-        config        = GetParam();
-        reduction     = MIOPEN_LOSS_REDUCTION_NONE;
-
-        auto in_dims      = config.GetDims();
-        auto in_strides   = config.ComputeStrides(in_dims);
-        auto in_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 50); };
-        input             = tensor<TIO>{in_dims, in_strides}.generate(in_gen_value);
-
-        auto tar_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 50); };
-        target             = tensor<TIO>{in_dims, in_strides}.generate(tar_gen_value);
-
-        auto dOut_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 50); };
-        dOutput             = tensor<TIO>{in_dims, in_strides}.generate(dOut_gen_value);
-
-        dInput = tensor<TIO>{in_dims};
-        std::fill(dInput.begin(), dInput.end(), 0);
-
-        dInputHost = tensor<TIO>{in_dims};
-        std::fill(dInputHost.begin(), dInputHost.end(), 0);
-
-        dTarget = tensor<TIO>{in_dims};
-        std::fill(dTarget.begin(), dTarget.end(), 0);
-
-        dTargetHost = tensor<TIO>{in_dims};
-        std::fill(dTargetHost.begin(), dTargetHost.end(), 0);
-
-        input_dev   = handle.Write(input.data);
-        target_dev  = handle.Write(target.data);
-        dOutput_dev = handle.Write(dOutput.data);
-        dInput_dev  = handle.Write(dInput.data);
-        dTarget_dev = handle.Write(dTarget.data);
-    }
-
-    void RunTest()
-    {
-        auto&& handle = get_handle();
-
-        miopenStatus_t status;
-
-        status = miopen::SigmoidFocalLossBackward(handle,
-                                                  input.desc,
-                                                  input_dev.get(),
-                                                  target.desc,
-                                                  target_dev.get(),
-                                                  dOutput.desc,
-                                                  dOutput_dev.get(),
-                                                  dInput.desc,
-                                                  dInput_dev.get(),
-                                                  dTarget.desc,
-                                                  dTarget_dev.get(),
-                                                  config.alpha,
-                                                  config.gamma,
-                                                  reduction);
-        cpu_sigmoid_focal_loss_backward<TIO>(input,
-                                             target,
-                                             dOutput,
-                                             dInputHost,
-                                             dTargetHost,
-                                             config.alpha,
-                                             config.gamma,
-                                             reduction,
-                                             1);
-
-        EXPECT_EQ(status, miopenStatusSuccess);
-
-        dInput.data  = handle.Read<TIO>(dInput_dev, dInput.data.size());
-        dTarget.data = handle.Read<TIO>(dTarget_dev, dTarget.data.size());
-    }
-
-    void Verify()
-    {
-        double threshold = get_tolerance<TIO>(reduction);
-
-        auto dInputError = miopen::rms_range(dInputHost, dInput);
-
-        EXPECT_TRUE(miopen::range_distance(dInputHost) == miopen::range_distance(dInput));
-        EXPECT_TRUE(dInputError < threshold)
-            << "dInput error output beyond tolerance Error: " << dInputError
-            << ",  Threshold: " << threshold;
-
-        auto dTargetError = miopen::rms_range(dTargetHost, dTarget);
-
-        EXPECT_TRUE(miopen::range_distance(dTargetHost) == miopen::range_distance(dTarget));
-        EXPECT_TRUE(dTargetError < threshold)
-            << "dTarget error output beyond tolerance Error: " << dTargetError
-            << ",  Threshold: " << threshold;
-    }
-    SigmoidFocalLossTestCase config;
-    miopenLossReductionMode_t reduction;
-
-    tensor<TIO> input;
-    tensor<TIO> target;
-    tensor<TIO> dOutput;
-    tensor<TIO> dInput;
-    tensor<TIO> dTarget;
-
-    tensor<TIO> dInputHost;
-    tensor<TIO> dTargetHost;
-
-    miopen::Allocator::ManageDataPtr input_dev;
-    miopen::Allocator::ManageDataPtr target_dev;
-    miopen::Allocator::ManageDataPtr dOutput_dev;
-    miopen::Allocator::ManageDataPtr dInput_dev;
-    miopen::Allocator::ManageDataPtr dTarget_dev;
-};
-
-template <typename TIO>
+template <typename T>
 struct SigmoidFocalLossFwdTest : public ::testing::TestWithParam<SigmoidFocalLossTestCase>
 {
 protected:
@@ -296,40 +98,41 @@ protected:
         auto&& handle = get_handle();
         config        = GetParam();
 
-        reduction = miopenLossReductionMode_t(int(prng::gen_0_to_B(2) + 1));
+        reduction = config.reduction;
 
-        auto in_dims    = config.GetDims();
-        auto in_strides = config.ComputeStrides(in_dims);
+        auto in_dims    = config.dims;
+        auto in_strides = ComputeStrides(in_dims, config.isContiguous);
 
-        auto in_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 20); };
-        input             = tensor<TIO>{in_dims, in_strides}.generate(in_gen_value);
+        auto in_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 1); };
+        input             = tensor<T>{in_dims, in_strides}.generate(in_gen_value);
 
-        auto tar_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 20); };
-        target             = tensor<TIO>{in_dims, in_strides}.generate(tar_gen_value);
+        auto tar_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 2); };
+        target             = tensor<T>{in_dims, in_strides}.generate(tar_gen_value);
+
+        auto out_dims =
+            (reduction == MIOPEN_LOSS_REDUCTION_NONE ? in_dims : std::vector<size_t>{1});
+
+        output = tensor<T>(out_dims);
+        std::fill(output.begin(), output.end(), std::numeric_limits<T>::quiet_NaN());
+
+        ref_output = tensor<T>(out_dims);
+        std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
         size_t workspaceSizeBytes = miopen::GetSigmoidFocalLossForwardWorkspaceSize(
             handle, input.desc, target.desc, output.desc, reduction);
-        size_t workspaceElements = workspaceSizeBytes / sizeof(float);
+        if(workspaceSizeBytes == static_cast<size_t>(-1))
+            GTEST_SKIP();
 
-        workspace = tensor<float>(workspaceElements);
-        std::fill(workspace.begin(), workspace.end(), 0);
-
-        output = tensor<TIO>(1);
-        std::fill(output.begin(), output.end(), 0);
-
-        outputHost = tensor<TIO>(1);
-        std::fill(outputHost.begin(), outputHost.end(), 0);
-
-        divisor = 1;
-        if(reduction == MIOPEN_LOSS_REDUCTION_MEAN)
+        if(workspaceSizeBytes != 0)
         {
-            divisor *= input.desc.GetElementSize();
+            size_t workspaceElements = workspaceSizeBytes / sizeof(float);
+            workspace                = tensor<float>(workspaceElements);
+            workspace_dev            = handle.Write(workspace.data);
         }
 
-        input_dev     = handle.Write(input.data);
-        target_dev    = handle.Write(target.data);
-        workspace_dev = handle.Write(workspace.data);
-        output_dev    = handle.Write(output.data);
+        input_dev  = handle.Write(input.data);
+        target_dev = handle.Write(target.data);
+        output_dev = handle.Write(output.data);
     }
 
     void RunTest()
@@ -350,82 +153,78 @@ protected:
                                                  config.alpha,
                                                  config.gamma,
                                                  reduction);
-        cpu_sigmoid_focal_loss_forward<TIO>(
-            input, target, outputHost, config.alpha, config.gamma, reduction, divisor);
+        cpu_sigmoid_focal_loss_forward<T>(
+            input, target, ref_output, config.alpha, config.gamma, reduction);
 
         EXPECT_EQ(status, miopenStatusSuccess);
 
-        output.data = handle.Read<TIO>(output_dev, output.data.size());
+        output.data = handle.Read<T>(output_dev, output.data.size());
     }
 
     void Verify()
     {
-        double threshold = get_tolerance<TIO>(reduction);
+        double threshold = get_tolerance<T>();
 
-        auto error = miopen::rms_range(outputHost, output);
+        auto error = miopen::rms_range(ref_output, output);
 
-        EXPECT_TRUE(miopen::range_distance(outputHost) == miopen::range_distance(output));
-        EXPECT_TRUE(error < threshold)
-            << "Error output beyond tolerance Error: " << error << ",  Threshold: " << threshold
-            << " Reduction: " << reduction;
+        ASSERT_EQ(miopen::range_distance(ref_output), miopen::range_distance(output));
+        EXPECT_LT(error, threshold)
+            << "Error output beyond tolerance Error: " << error << ",  Threshold: " << threshold;
     }
     SigmoidFocalLossTestCase config;
     miopenLossReductionMode_t reduction;
 
-    tensor<TIO> input;
-    tensor<TIO> target;
+    tensor<T> input;
+    tensor<T> target;
+    tensor<T> output;
     tensor<float> workspace;
-    tensor<TIO> output;
 
-    tensor<TIO> outputHost;
+    tensor<T> ref_output;
 
     miopen::Allocator::ManageDataPtr input_dev;
     miopen::Allocator::ManageDataPtr target_dev;
     miopen::Allocator::ManageDataPtr workspace_dev;
     miopen::Allocator::ManageDataPtr output_dev;
-
-    float divisor;
 };
 
-template <typename TIO>
+template <typename T>
 struct SigmoidFocalLossBwdTest : public ::testing::TestWithParam<SigmoidFocalLossTestCase>
 {
 protected:
     void SetUp() override
     {
-        auto&& handle   = get_handle();
-        config          = GetParam();
-        auto in_dims    = config.GetDims();
-        auto in_strides = config.ComputeStrides(in_dims);
+        auto&& handle = get_handle();
+        config        = GetParam();
 
-        reduction = miopenLossReductionMode_t(int(prng::gen_0_to_B(2) + 1));
+        reduction = config.reduction;
 
-        auto in_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 50); };
-        input             = tensor<TIO>{in_dims, in_strides}.generate(in_gen_value);
+        auto in_dims    = config.dims;
+        auto in_strides = ComputeStrides(in_dims, config.isContiguous);
 
-        auto tar_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<TIO>(0.1, 50); };
-        target             = tensor<TIO>{in_dims, in_strides}.generate(tar_gen_value);
+        auto in_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 1); };
+        input             = tensor<T>{in_dims, in_strides}.generate(in_gen_value);
 
-        dOutput    = tensor<TIO>(1);
-        dOutput[0] = prng::gen_descreet_uniform_sign<TIO>(0.1, 50);
+        auto tar_gen_value = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 2); };
+        target             = tensor<T>{in_dims, in_strides}.generate(tar_gen_value);
 
-        dInput = tensor<TIO>{in_dims};
+        auto out_dims =
+            (reduction == MIOPEN_LOSS_REDUCTION_NONE ? in_dims : std::vector<size_t>{1});
+
+        dOutput = tensor<T>(out_dims);
+        std::fill(dOutput.begin(), dOutput.end(), 1);
+
+        dInput = tensor<T>{in_dims};
         std::fill(dInput.begin(), dInput.end(), 0);
 
-        dInputHost = tensor<TIO>{in_dims};
-        std::fill(dInputHost.begin(), dInputHost.end(), 0);
+        ref_dInput = tensor<T>{in_dims};
+        std::fill(ref_dInput.begin(), ref_dInput.end(), 0);
 
-        dTarget = tensor<TIO>{in_dims};
+        dTarget = tensor<T>{in_dims};
         std::fill(dTarget.begin(), dTarget.end(), 0);
 
-        dTargetHost = tensor<TIO>{in_dims};
-        std::fill(dTargetHost.begin(), dTargetHost.end(), 0);
+        ref_dTarget = tensor<T>{in_dims};
+        std::fill(ref_dTarget.begin(), ref_dTarget.end(), 0);
 
-        divisor = 1;
-        if(reduction == MIOPEN_LOSS_REDUCTION_MEAN)
-        {
-            divisor *= input.desc.GetElementSize();
-        }
         input_dev   = handle.Write(input.data);
         target_dev  = handle.Write(target.data);
         dOutput_dev = handle.Write(dOutput.data);
@@ -453,57 +252,48 @@ protected:
                                                   config.alpha,
                                                   config.gamma,
                                                   reduction);
-        cpu_sigmoid_focal_loss_backward<TIO>(input,
-                                             target,
-                                             dOutput,
-                                             dInputHost,
-                                             dTargetHost,
-                                             config.alpha,
-                                             config.gamma,
-                                             reduction,
-                                             divisor);
+        cpu_sigmoid_focal_loss_backward<T>(
+            input, target, dOutput, ref_dInput, ref_dTarget, config.alpha, config.gamma, reduction);
 
         EXPECT_EQ(status, miopenStatusSuccess);
 
-        dInput.data  = handle.Read<TIO>(dInput_dev, dInput.data.size());
-        dTarget.data = handle.Read<TIO>(dTarget_dev, dTarget.data.size());
+        dInput.data  = handle.Read<T>(dInput_dev, dInput.data.size());
+        dTarget.data = handle.Read<T>(dTarget_dev, dTarget.data.size());
     }
 
     void Verify()
     {
-        double threshold = get_tolerance<TIO>(reduction);
+        double threshold = get_tolerance<T>();
 
-        auto dInputError = miopen::rms_range(dInputHost, dInput);
+        auto dInputError = miopen::rms_range(ref_dInput, dInput);
 
-        EXPECT_TRUE(miopen::range_distance(dInputHost) == miopen::range_distance(dInput));
-        EXPECT_TRUE(dInputError < threshold)
+        ASSERT_EQ(miopen::range_distance(ref_dInput), miopen::range_distance(dInput));
+        EXPECT_LT(dInputError, threshold)
             << "dInput error output beyond tolerance Error: " << dInputError
             << ",  Threshold: " << threshold;
 
-        auto dTargetError = miopen::rms_range(dTargetHost, dTarget);
+        auto dTargetError = miopen::rms_range(ref_dTarget, dTarget);
 
-        EXPECT_TRUE(miopen::range_distance(dTargetHost) == miopen::range_distance(dTarget));
-        EXPECT_TRUE(dTargetError < threshold)
+        ASSERT_EQ(miopen::range_distance(ref_dTarget), miopen::range_distance(dTarget));
+        EXPECT_LT(dTargetError, threshold)
             << "dTarget error output beyond tolerance Error: " << dTargetError
             << ",  Threshold: " << threshold;
     }
     SigmoidFocalLossTestCase config;
     miopenLossReductionMode_t reduction;
 
-    tensor<TIO> input;
-    tensor<TIO> target;
-    tensor<TIO> dOutput;
-    tensor<TIO> dInput;
-    tensor<TIO> dTarget;
+    tensor<T> input;
+    tensor<T> target;
+    tensor<T> dOutput;
+    tensor<T> dInput;
+    tensor<T> dTarget;
 
-    tensor<TIO> dInputHost;
-    tensor<TIO> dTargetHost;
+    tensor<T> ref_dInput;
+    tensor<T> ref_dTarget;
 
     miopen::Allocator::ManageDataPtr input_dev;
     miopen::Allocator::ManageDataPtr target_dev;
     miopen::Allocator::ManageDataPtr dOutput_dev;
     miopen::Allocator::ManageDataPtr dInput_dev;
     miopen::Allocator::ManageDataPtr dTarget_dev;
-
-    float divisor;
 };

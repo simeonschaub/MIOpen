@@ -39,7 +39,7 @@
 
 const float MAX_FP16 = 65504;
 
-template <typename Tgpu, typename Tcheck>
+template <typename Tgpu, typename Tref>
 class SigmoidFocalLossDriver : public Driver
 {
 public:
@@ -70,7 +70,7 @@ public:
     int RunBackwardGPU() override;
     int RunBackwardCPU();
 
-    Tcheck GetTolerance();
+    Tref GetTolerance();
     int VerifyBackward() override;
     int VerifyForward() override;
     ~SigmoidFocalLossDriver() override
@@ -104,25 +104,23 @@ private:
     std::vector<Tgpu> input;
     std::vector<Tgpu> target;
     std::vector<Tgpu> output;
-    std::vector<Tcheck> outputHost;
+    std::vector<Tref> outputHost;
     std::vector<Tgpu> doutput;
     std::vector<Tgpu> dinput;
-    std::vector<Tcheck> dinputHost;
+    std::vector<Tref> dinputHost;
     std::vector<Tgpu> dtarget;
-    std::vector<Tcheck> dtargetHost;
+    std::vector<Tref> dtargetHost;
 
     float alpha;
     float gamma;
-    float divisor;
     bool isContiguous;
-    bool isTargetGradientComputed;
     miopenLossReductionMode_t reduction;
 
     size_t workSpaceSizeInBytes;
 };
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::ParseCmdLineArgs(int argc, char* argv[])
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::ParseCmdLineArgs(int argc, char* argv[])
 {
     inflags.Parse(argc, argv);
 
@@ -133,56 +131,40 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::ParseCmdLineArgs(int argc, char* argv[
     return miopenStatusSuccess;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::GetandSetData()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::GetandSetData()
 {
-    auto inDims              = inflags.GetValueTensor("dim-lengths").lengths;
-    alpha                    = inflags.GetValueDouble("alpha");
-    gamma                    = inflags.GetValueDouble("gamma");
-    isContiguous             = inflags.GetValueInt("is-contiguous") == 1 ? true : false;
-    isTargetGradientComputed = inflags.GetValueInt("target-gradient") == 1 ? true : false;
-    reduction = static_cast<miopenLossReductionMode_t>(inflags.GetValueInt("reduction"));
+    auto inDims  = inflags.GetValueTensor("dim-lengths").lengths;
+    alpha        = inflags.GetValueDouble("alpha");
+    gamma        = inflags.GetValueDouble("gamma");
+    isContiguous = inflags.GetValueInt("is-contiguous") == 1 ? true : false;
+    reduction    = static_cast<miopenLossReductionMode_t>(inflags.GetValueInt("reduction"));
 
     std::vector<int> inStride = ComputeStrides(inDims);
 
     SetTensorNd(inputDesc, inDims, inStride, data_type);
-    SetTensorNd(targetDesc, inDims, inStride, data_type);
-    SetTensorNd(doutputDesc, inDims, data_type);
     SetTensorNd(dinputDesc, inDims, data_type);
-
-    if(isTargetGradientComputed)
-    {
-        SetTensorNd(dtargetDesc, inDims, data_type);
-    }
-    else
-    {
-        std::vector<int> dtargetDim(1);
-        dtargetDim[0] = 1;
-        SetTensorNd(dtargetDesc, dtargetDim, data_type);
-    }
+    SetTensorNd(targetDesc, inDims, inStride, data_type);
+    SetTensorNd(dtargetDesc, inDims, data_type);
 
     if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
     {
         SetTensorNd(outputDesc, inDims, data_type);
+        SetTensorNd(doutputDesc, inDims, data_type);
     }
     else
     {
-        std::vector<int> outDim(1);
-        outDim[0] = 1;
-        SetTensorNd(outputDesc, outDim, data_type);
-        divisor = 1;
-        if(reduction == MIOPEN_LOSS_REDUCTION_MEAN)
-        {
-            divisor = miopen::deref(inputDesc).GetElementSize();
-        }
+        std::vector<int> outDims = {1};
+        SetTensorNd(outputDesc, outDims, data_type);
+        SetTensorNd(doutputDesc, outDims, data_type);
     }
 
-    return 0;
+    return miopenStatusSuccess;
 }
 
 // Equivalent to: tensor.tranpose(0, -1).contiguous().tranpose(0, -1) incase contiguous = False
-template <typename Tgpu, typename Tcheck>
-std::vector<int> SigmoidFocalLossDriver<Tgpu, Tcheck>::ComputeStrides(std::vector<int> inputDim)
+template <typename Tgpu, typename Tref>
+std::vector<int> SigmoidFocalLossDriver<Tgpu, Tref>::ComputeStrides(std::vector<int> inputDim)
 {
     if(!isContiguous)
         std::swap(inputDim.front(), inputDim.back());
@@ -195,8 +177,8 @@ std::vector<int> SigmoidFocalLossDriver<Tgpu, Tcheck>::ComputeStrides(std::vecto
     return strides;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::AddCmdLineArgs()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::AddCmdLineArgs()
 {
     inflags.AddInputFlag("forw", 'F', "1", "Run only Forward (Default=1)", "int");
     inflags.AddTensorFlag(
@@ -206,8 +188,6 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::AddCmdLineArgs()
         "reduction", 'R', "0", "reduction mode: 0(default) - unreduced, 1 - sum, 2 -mean", "int");
     inflags.AddInputFlag("alpha", 'A', "0.25", "Alpha (Default=0.25)", "float");
     inflags.AddInputFlag("gamma", 'G', "2", "Gamma (Default=2)", "float");
-    inflags.AddInputFlag(
-        "target-gradient", 'T', "0", "Is target gradient computed (Default=0)", "int");
     inflags.AddInputFlag("iter", 'i', "10", "Number of Iterations (Default=10)", "int");
     inflags.AddInputFlag("verify", 'V', "1", "Verify Each Layer (Default=1)", "int");
     inflags.AddInputFlag("time", 't', "0", "Time Each Layer (Default=0)", "int");
@@ -217,8 +197,8 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::AddCmdLineArgs()
     return miopenStatusSuccess;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::AllocateBuffersAndCopy()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 {
     size_t in_sz     = miopen::deref(inputDesc).GetElementSize();
     size_t target_sz = miopen::deref(targetDesc).GetElementSize();
@@ -237,61 +217,66 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::AllocateBuffersAndCopy()
     dtarget_dev = std::unique_ptr<GPUMem>(new GPUMem(ctx, dT_sz, sizeof(Tgpu)));
 
     miopenGetSigmoidFocalLossForwardWorkspaceSize(
-        handle, inputDesc, targetDesc, outputDesc, reduction, &workSpaceSizeInBytes);
+        GetHandle(), inputDesc, targetDesc, outputDesc, reduction, &workSpaceSizeInBytes);
     workspace_dev = std::make_unique<GPUMem>(ctx, workSpaceSizeInBytes, sizeof(std::byte));
 
-    input       = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
-    target      = std::vector<Tgpu>(target_sz, static_cast<Tgpu>(0));
-    output      = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
-    outputHost  = std::vector<Tcheck>(out_sz, static_cast<Tcheck>(0));
-    doutput     = std::vector<Tgpu>(dO_sz, static_cast<Tgpu>(0));
-    dinput      = std::vector<Tgpu>(dI_sz, static_cast<Tgpu>(0));
-    dinputHost  = std::vector<Tcheck>(dI_sz, static_cast<Tcheck>(0));
-    dtarget     = std::vector<Tgpu>(dT_sz, static_cast<Tgpu>(0));
-    dtargetHost = std::vector<Tcheck>(dT_sz, static_cast<Tcheck>(0));
+    input       = std::vector<Tgpu>(in_sz);
+    target      = std::vector<Tgpu>(target_sz);
+    output      = std::vector<Tgpu>(out_sz);
+    outputHost  = std::vector<Tref>(out_sz);
+    doutput     = std::vector<Tgpu>(dO_sz, static_cast<Tgpu>(1));
+    dinput      = std::vector<Tgpu>(dI_sz);
+    dinputHost  = std::vector<Tref>(dI_sz);
+    dtarget     = std::vector<Tgpu>(dT_sz);
+    dtargetHost = std::vector<Tref>(dT_sz);
 
-    float randomBound = 2;
-    // For half, the random bound is smaller to avoid half overflow
-    if(data_type == miopenHalf && reduction != MIOPEN_LOSS_REDUCTION_NONE)
-    {
-        randomBound = 0.5;
-    }
     for(int i = 0; i < in_sz; i++)
     {
-        input[i] =
-            prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(-randomBound), static_cast<Tgpu>(randomBound));
-        target[i] =
-            prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(-randomBound), static_cast<Tgpu>(randomBound));
-    }
-    for(int i = 0; i < dO_sz; ++i)
-    {
-        doutput[i] =
-            prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(-randomBound), static_cast<Tgpu>(randomBound));
+        input[i]  = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(-0.5), static_cast<Tgpu>(0.5));
+        target[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(-0.5), static_cast<Tgpu>(0.5));
     }
 
     if(input_dev->ToGPU(GetStream(), input.data()) != 0)
+    {
         std::cerr << "Error copying (in) to GPU, size: " << input_dev->GetSize() << std::endl;
+        return miopenStatusInternalError;
+    }
 
     if(target_dev->ToGPU(GetStream(), target.data()) != 0)
+    {
         std::cerr << "Error copying (in) to GPU, size: " << target_dev->GetSize() << std::endl;
+        return miopenStatusInternalError;
+    }
 
     if(output_dev->ToGPU(GetStream(), output.data()) != 0)
+    {
         std::cerr << "Error copying (out) to GPU, size: " << output_dev->GetSize() << std::endl;
+        return miopenStatusInternalError;
+    }
 
     if(doutput_dev->ToGPU(GetStream(), doutput.data()) != 0)
+    {
         std::cerr << "Error copying (dO) to GPU, size: " << doutput_dev->GetSize() << std::endl;
+        return miopenStatusInternalError;
+    }
 
     if(dinput_dev->ToGPU(GetStream(), dinput.data()) != 0)
+    {
         std::cerr << "Error copying (dI) to GPU, size: " << dinput_dev->GetSize() << std::endl;
+        return miopenStatusInternalError;
+    }
 
     if(dtarget_dev->ToGPU(GetStream(), dtarget.data()) != 0)
+    {
         std::cerr << "Error copying (dT) to GPU, size: " << dtarget_dev->GetSize() << std::endl;
+        return miopenStatusInternalError;
+    }
 
     return miopenStatusSuccess;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::RunForwardGPU()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::RunForwardGPU()
 {
     float kernel_total_time = 0;
     float kernel_first_time = 0;
@@ -335,30 +320,32 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::RunForwardGPU()
     }
 
     if(output_dev->FromGPU(GetStream(), output.data()) != 0)
+    {
         std::cerr << "Error copying (out_dev) from GPU, size: " << output_dev->GetSize()
                   << std::endl;
+        return miopenStatusInternalError;
+    }
 
     return miopenStatusSuccess;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::RunForwardCPU()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::RunForwardCPU()
 {
-    mloSigmoidFocalLossFwdRunHost<Tgpu, Tcheck>(input.data(),
-                                                inputDesc,
-                                                target.data(),
-                                                targetDesc,
-                                                outputHost.data(),
-                                                outputDesc,
-                                                alpha,
-                                                gamma,
-                                                reduction,
-                                                divisor);
-    return miopenStatusSuccess;
+    auto status = mloSigmoidFocalLossFwdRunHost<Tgpu, Tref>(input.data(),
+                                                            inputDesc,
+                                                            target.data(),
+                                                            targetDesc,
+                                                            outputHost.data(),
+                                                            outputDesc,
+                                                            alpha,
+                                                            gamma,
+                                                            reduction);
+    return status;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::RunBackwardGPU()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::RunBackwardGPU()
 {
     float kernel_total_time = 0;
     float kernel_first_time = 0;
@@ -368,12 +355,6 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::RunBackwardGPU()
 
     for(int i = 0; i < inflags.GetValueInt("iter"); i++)
     {
-        void* p_dtarget = nullptr;
-        if(isTargetGradientComputed)
-        {
-            p_dtarget = dtarget_dev->GetMem();
-        }
-
         miopenSigmoidFocalLossBackward(GetHandle(),
                                        inputDesc,
                                        input_dev->GetMem(),
@@ -384,7 +365,7 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::RunBackwardGPU()
                                        dinputDesc,
                                        dinput_dev->GetMem(),
                                        dtargetDesc,
-                                       p_dtarget,
+                                       dtarget_dev->GetMem(),
                                        alpha,
                                        gamma,
                                        reduction);
@@ -411,62 +392,56 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::RunBackwardGPU()
     }
 
     if(dinput_dev->FromGPU(GetStream(), dinput.data()) != 0)
+    {
         std::cerr << "Error copying (dI_dev) from GPU, size: " << dinput_dev->GetSize()
                   << std::endl;
-    if(isTargetGradientComputed && dtarget_dev->FromGPU(GetStream(), dtarget.data()) != 0)
+        return miopenStatusInternalError;
+    }
+    if(dtarget_dev->FromGPU(GetStream(), dtarget.data()) != 0)
+    {
         std::cerr << "Error copying (dT_dev) from GPU, size: " << dtarget_dev->GetSize()
                   << std::endl;
+        return miopenStatusInternalError;
+    }
 
     return miopenStatusSuccess;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::RunBackwardCPU()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::RunBackwardCPU()
 {
-    Tcheck* p_dtarget = nullptr;
-    if(isTargetGradientComputed)
-    {
-        p_dtarget = dtargetHost.data();
-    }
-    mloSigmoidFocalLossBwdRunHost<Tgpu, Tcheck>(input.data(),
-                                                inputDesc,
-                                                target.data(),
-                                                targetDesc,
-                                                doutput.data(),
-                                                doutputDesc,
-                                                dinputHost.data(),
-                                                dinputDesc,
-                                                p_dtarget,
-                                                dtargetDesc,
-                                                alpha,
-                                                gamma,
-                                                reduction,
-                                                divisor);
+    auto status = mloSigmoidFocalLossBwdRunHost<Tgpu, Tref>(input.data(),
+                                                            inputDesc,
+                                                            target.data(),
+                                                            targetDesc,
+                                                            doutput.data(),
+                                                            doutputDesc,
+                                                            dinputHost.data(),
+                                                            dinputDesc,
+                                                            dtargetHost.data(),
+                                                            dtargetDesc,
+                                                            alpha,
+                                                            gamma,
+                                                            reduction);
 
-    return miopenStatusSuccess;
+    return status;
 }
 
-template <typename Tgpu, typename Tcheck>
-Tcheck SigmoidFocalLossDriver<Tgpu, Tcheck>::GetTolerance()
+template <typename Tgpu, typename Tref>
+Tref SigmoidFocalLossDriver<Tgpu, Tref>::GetTolerance()
 {
-    Tcheck tolerance;
-    if(reduction == MIOPEN_LOSS_REDUCTION_NONE)
-    {
-        tolerance = std::is_same<Tgpu, float>::value ? 1.5e-6 : 8.2e-3;
-        // bf16 mantissa has 7 bits, by 3 bits shorter than fp16.
-        if(std::is_same<Tgpu, bfloat16>::value)
-            tolerance *= 8.0;
-    }
-    else
-    {
-        tolerance = std::is_same<Tgpu, float>::value ? 1.0e-2 : 8.2e-1;
-    }
+    // Computation error of fp16 is ~2^13 (=8192) bigger than
+    // the one of fp32 because mantissa is shorter by 13 bits.
+    auto tolerance = std::is_same<Tgpu, float>::value ? 1.5e-6 : 8.2e-3;
 
+    // bf16 mantissa has 7 bits, by 3 bits shorter than fp16.
+    if(std::is_same<Tgpu, bfloat16>::value)
+        tolerance *= 8.0;
     return tolerance;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::VerifyForward()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::VerifyForward()
 {
     RunForwardCPU();
 
@@ -476,50 +451,50 @@ int SigmoidFocalLossDriver<Tgpu, Tcheck>::VerifyForward()
         std::cout << "Float16 overflow - CPU output: " << outputHost[0] << std::endl;
     }
 
-    const Tcheck tolerance = GetTolerance();
-    auto error             = miopen::rms_range(outputHost, output);
+    const Tref tolerance = GetTolerance();
+    auto error           = miopen::rms_range(outputHost, output);
 
     if(!std::isfinite(error) || error > tolerance)
     {
-        std::cout << "Forward " << reduction << " Sigmoid Focal Loss FAILED: " << error << " > "
-                  << tolerance << std::endl;
+        std::cout << "Forward Sigmoid Focal Loss FAILED: " << error << " > " << tolerance
+                  << std::endl;
         return EC_VerifyFwd;
     }
     else
     {
-        std::cout << "Forward " << reduction << " Sigmoid Focal Loss Verifies OK on CPU reference ("
-                  << error << "< " << tolerance << ')' << std::endl;
+        std::cout << "Forward Sigmoid Focal Loss Verifies OK on CPU reference (" << error << " < "
+                  << tolerance << ')' << std::endl;
     }
 
     return miopenStatusSuccess;
 }
 
-template <typename Tgpu, typename Tcheck>
-int SigmoidFocalLossDriver<Tgpu, Tcheck>::VerifyBackward()
+template <typename Tgpu, typename Tref>
+int SigmoidFocalLossDriver<Tgpu, Tref>::VerifyBackward()
 {
     RunBackwardCPU();
 
-    const Tcheck tolerance = GetTolerance();
-    auto dinputError       = miopen::rms_range(dinputHost, dinput);
-    auto dtargetError      = miopen::rms_range(dtargetHost, dtarget);
+    const Tref tolerance = GetTolerance();
+    auto dinputError     = miopen::rms_range(dinputHost, dinput);
+    auto dtargetError    = miopen::rms_range(dtargetHost, dtarget);
 
     if(!std::isfinite(dinputError) || dinputError > tolerance)
     {
-        std::cout << "Backward " << reduction << " Sigmoid Focal Loss FAILED: " << dinputError
-                  << " > " << tolerance << std::endl;
+        std::cout << "Backward Sigmoid Focal Loss Input Gradient FAILED: " << dinputError << " > "
+                  << tolerance << std::endl;
         return EC_VerifyBwd;
     }
-    else if(isTargetGradientComputed && (!std::isfinite(dtargetError) || dtargetError > tolerance))
+    else if(!std::isfinite(dtargetError) || dtargetError > tolerance)
     {
-        std::cout << "Backward " << reduction << " Sigmoid Focal Loss FAILED: " << dtargetError
-                  << " > " << tolerance << std::endl;
+        std::cout << "Backward Sigmoid Focal Loss Target Gradient FAILED: " << dtargetError << " > "
+                  << tolerance << std::endl;
         return EC_VerifyBwd;
     }
     else
     {
-        std::cout << "Backward " << reduction
-                  << " Sigmoid Focal Loss Verifies OK on CPU reference (dinput: " << dinputError
-                  << ", dtarget: " << dtargetError << "< " << tolerance << ')' << std::endl;
+        std::cout << "Backward Sigmoid Focal Loss Verifies OK on CPU reference (dinput: "
+                  << dinputError << ", dtarget: " << dtargetError << "< " << tolerance << ')'
+                  << std::endl;
     }
 
     return miopenStatusSuccess;

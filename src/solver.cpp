@@ -707,14 +707,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
 
     Register(registry, ++id, Primitive::Mha, mha::MhaCKFlashAttentionV2Forward{}.SolverDbId());
 
-    Register(registry,
-             ++id,
-             Primitive::Loss,
-             sigmoidfocalloss::SigmoidFocalLossUnreducedFwd{}.SolverDbId());
-    Register(registry,
-             ++id,
-             Primitive::Loss,
-             sigmoidfocalloss::SigmoidFocalLossUnreducedBwd{}.SolverDbId());
     Register(registry, ++id, Primitive::Loss, sigmoidfocalloss::SigmoidFocalLossFwd{}.SolverDbId());
     Register(registry, ++id, Primitive::Loss, sigmoidfocalloss::SigmoidFocalLossBwd{}.SolverDbId());
 
