@@ -856,7 +856,7 @@ if(WIN32)
     target_compile_options(MIOpen PRIVATE $<BUILD_INTERFACE:$<$<CXX_COMPILER_ID:Clang>:-U__LP64__>>)
 endif()
 
-if(NOT WIN32 AND ${hip_VERSION_FLAT} GREATER 600241132)
+if(NOT WIN32 AND MIOPEN_hip_VERSION_FLAT GREATER 600241132)
     # flags to compress the library
     message("Adding --offload-compress flag for MIOpen")
     target_compile_options(MIOpen PRIVATE --offload-compress)
