@@ -69,6 +69,11 @@ if(WIN32)
     # Refer to https://en.cppreference.com/w/cpp/language/types for details.
     target_compile_options(MIOpenDriver PRIVATE $<BUILD_INTERFACE:$<$<CXX_COMPILER_ID:Clang>:-U__LP64__>>)
 endif()
+if(NOT WIN32 AND ${hip_VERSION_FLAT} GREATER 600241132)
+  # flags to compress driver
+  message("Adding --offload-compress flag for MIOpenDriver")
+  target_compile_options(MIOpenDriver PRIVATE --offload-compress)
+endif()
 add_dependencies(MIOpenDriver generate_kernels)
 target_include_directories(MIOpenDriver PRIVATE ../src/kernels)
 target_link_libraries(MIOpenDriver MIOpen Threads::Threads roc::rocrand)
