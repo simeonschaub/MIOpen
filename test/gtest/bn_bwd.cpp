@@ -95,7 +95,7 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_OCL_BWD_Large_FP16,
                          testing::Combine(testing::ValuesIn(NetworkLarge<BNTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCHW, miopenTensorNHWC}),
                                           testing::ValuesIn({testBNAPIV2})),
                          TestNameGenerator());
 
@@ -110,7 +110,7 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_OCL_BWD_Large_BFP16,
                          testing::Combine(testing::ValuesIn(NetworkLarge<BNTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCHW, miopenTensorNHWC}),
                                           testing::ValuesIn({testBNAPIV2})),
                          TestNameGenerator());
 
@@ -118,14 +118,14 @@ INSTANTIATE_TEST_SUITE_P(Smoke,
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_BWD_Small_FP32,
                          testing::Combine(testing::ValuesIn(NetworkSmall<BNTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCHW, miopenTensorNHWC}),
                                           testing::ValuesIn({testBNAPIV1})),
                          TestNameGenerator());
 
 INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_BN_BWD_Large_FP32,
                          testing::Combine(testing::ValuesIn(NetworkLarge<BNTestCase>()),
-                                          testing::ValuesIn({miopenTensorNCHW}),
+                                          testing::ValuesIn({miopenTensorNCHW, miopenTensorNHWC}),
                                           testing::ValuesIn({testBNAPIV2})),
                          TestNameGenerator());
 // // fp64
