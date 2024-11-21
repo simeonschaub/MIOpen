@@ -75,6 +75,9 @@ MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_SRAM_EDC_DISABLED)
 
 MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_DEBUG_OPENCL_WAVE64_NOWGP)
 
+/// Base directory of ROCm
+MIOPEN_DECLARE_ENV_VAR_STR(ROCM_PATH)
+
 #ifndef MIOPEN_AMD_COMGR_VERSION_MAJOR
 #define MIOPEN_AMD_COMGR_VERSION_MAJOR 0
 #endif
@@ -991,12 +994,13 @@ void BuildHip(const std::string& name,
            }))
             opts.push_back("-std=c++17");
 
-        const char* rocm_path = std::getenv("ROCM_PATH");
-        if(rocm_path == nullptr || std::string(rocm_path).empty())
+        auto rocm_path = env::value(ROCM_PATH);
+
+        if(rocm_path.empty())
         {
             rocm_path = "/opt/rocm";
-        }
-        opts.push_back(std::string("-I") + rocm_path + "/include");
+        } 
+        opts.push_back("-I" + rocm_path + "/include");
 
         MIOPEN_LOG_I("HIPRTC compile options:");
         for(const auto& opt : opts)
