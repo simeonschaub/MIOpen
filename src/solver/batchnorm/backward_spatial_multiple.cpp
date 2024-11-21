@@ -38,9 +38,34 @@ namespace solver {
 
 namespace batchnorm {
 
+bool BNBwdIsCaseVariant2(const miopen::batchnorm::ProblemDescription& problem)
+{
+    int n, c, h, w;
+    std::tie(n, c, h, w) = tien<4>(problem.GetXDesc().GetLengths());
+
+    unsigned int in_cstride = h * w;
+    unsigned int in_nhw     = n * in_cstride;
+
+    if(!(in_nhw < (32 * 1024 * 1024) && in_cstride > 1024) &&
+       !(in_nhw < (32 * 1024 * 1024) && in_cstride > 512) && !(in_cstride <= 512))
+    {
+        return true;
+    }
+    else
+        return false;
+}
+
 bool BnBwdTrainingSpatialMultiple::IsApplicable(
     const ExecutionContext& context, const miopen::batchnorm::ProblemDescription& problem) const
 {
+    if(!problem.IsLayoutNCHW())
+        return false;
+    // NCHW is Applicable for variant = 2 only
+    if(!BNBwdIsCaseVariant2(problem))
+    {
+        return false;
+    }
+
     if(problem.GetDirection() != miopen::batchnorm::Direction::Backward ||
        problem.GetMode() != miopenBNSpatial)
         return false;

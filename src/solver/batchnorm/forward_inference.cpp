@@ -41,7 +41,7 @@ namespace batchnorm {
 bool BnFwdInference::IsApplicable(const ExecutionContext&,
                                   const miopen::batchnorm::ProblemDescription& bn_problem) const
 {
-    if(bn_problem.IsLayoutNHWC())
+    if(!problem.IsLayoutNCHW())
         return false;
     if(bn_problem.GetDirection() != miopen::batchnorm::Direction::ForwardInference)
         return false;

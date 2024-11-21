@@ -40,9 +40,42 @@ namespace solver {
 
 namespace batchnorm {
 
+bool BNFwdTrainIsCaseVariant2(const miopen::batchnorm::ProblemDescription& problem)
+{
+    const auto& xDesc = problem.GetXDesc();
+    int n, c, h, w;
+    std::tie(n, c, h, w)    = tien<4>(xDesc.GetLengths());
+    unsigned int in_cstride = h * w;
+    unsigned int in_nhw     = n * in_cstride;
+    bool bfp32parm          = xDesc.GetType() == miopenFloat;
+    bool bfpmixparm = (xDesc.GetType() == miopenHalf || xDesc.GetType() == miopenBFloat16) &&
+                      problem.GetBnScale().GetType() == miopenFloat;
+
+    // NCHW is Applicable for variant = 2 only
+    if((!(n < 3) &&
+        !((in_nhw < 33554432 && in_cstride > 1024) ||
+          ((n >= 256) && (in_cstride > 60) && bfpmixparm) || ((in_cstride > 512) && bfpmixparm)) &&
+        !(in_cstride <= 512)) ||
+       !((n > 768) && (in_cstride > 150) && bfp32parm))
+    {
+        return true;
+    }
+    else
+        return false;
+}
+
 bool BnFwdTrainingSpatialMultiple::IsApplicable(
     const ExecutionContext& context, const miopen::batchnorm::ProblemDescription& problem) const
 {
+    if(!problem.IsLayoutNCHW())
+        return false;
+
+    if(!BNFwdTrainIsCaseVariant2(problem))
+    {
+        return false;
+    }
+    // if NCHW check if variant is 2 else false (for all data type)
+    // update get solution to not change variant
     if(problem.GetDirection() != miopen::batchnorm::Direction::ForwardTraining ||
        problem.GetMode() != miopenBNSpatial)
         return false;
