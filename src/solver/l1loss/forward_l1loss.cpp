@@ -40,7 +40,7 @@
 #include <vector>
 
 #define LOCAL_SIZE_FWD 256
-#define LOCAL_SIZE_REDUCE 256
+#define LOCAL_SIZE_REDUCE 1024
 
 namespace miopen {
 
