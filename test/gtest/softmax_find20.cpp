@@ -71,7 +71,7 @@ public:
         std::cerr << "Created softmax tensor descriptors." << std::endl;
     }
 
-    std::vector<miopenSolution_t> TestFindSolutions(Handle const& handle)
+    std::vector<miopenSolution_t> TestFindSolutions(Handle& handle)
     {
         std::cerr << "Testing miopenFindSolutions..." << std::endl;
 
@@ -112,8 +112,7 @@ public:
         std::cerr << "Finished testing miopenGetSolution<Attribute>." << std::endl;
     }
 
-    void TestRunSolutionsForward(Handle const& handle,
-                                 const std::vector<miopenSolution_t>& solutions)
+    void TestRunSolutionsForward(Handle& handle, const std::vector<miopenSolution_t>& solutions)
     {
         std::cerr << "Testing solution functions..." << std::endl;
 
@@ -178,8 +177,7 @@ public:
         std::cerr << "Finished testing solution functions." << std::endl;
     }
 
-    void TestRunSolutionsBackward(Handle const& handle,
-                                  const std::vector<miopenSolution_t>& solutions)
+    void TestRunSolutionsBackward(Handle& handle, const std::vector<miopenSolution_t>& solutions)
     {
         std::cerr << "Testing solution functions..." << std::endl;
 
