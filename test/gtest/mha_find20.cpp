@@ -165,7 +165,7 @@ class MhaFind20Test
 public:
     MhaFind20Test(bool forward) : problem(nullptr), isForward(forward) { Initialize(); }
 
-    std::vector<miopenSolution_t> TestFindSolutions(Handle const& handle)
+    std::vector<miopenSolution_t> TestFindSolutions(Handle& handle)
     {
         std::cerr << "Testing miopenFindSolutions..." << std::endl;
 
