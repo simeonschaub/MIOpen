@@ -46,7 +46,7 @@ bool BNBwdIsCaseVariant2(const miopen::batchnorm::ProblemDescription& problem)
     size_t in_cstride = h * w;
     size_t in_nhw     = n * in_cstride;
 
-    if((in_nhw >= (32 * 1024 * 1024) || in_cstride <= 1024) && in_cstride > 512)
+    if((in_nhw >= (32u * 1024 * 1024) || in_cstride <= 1024) && in_cstride > 512)
     {
         return true;
     }

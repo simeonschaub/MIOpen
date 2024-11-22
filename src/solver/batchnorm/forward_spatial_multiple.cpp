@@ -69,13 +69,13 @@ bool BnFwdTrainingSpatialMultiple::IsApplicable(
 {
     if(!problem.IsLayoutNCHW())
         return false;
-
+    // if NCHW check if variant is 2 else false (for all data type)
+    // update get solution to not change variant
     if(!BNFwdTrainIsCaseVariant2(problem))
     {
         return false;
     }
-    // if NCHW check if variant is 2 else false (for all data type)
-    // update get solution to not change variant
+
     if(problem.GetDirection() != miopen::batchnorm::Direction::ForwardTraining ||
        problem.GetMode() != miopenBNSpatial)
         return false;
