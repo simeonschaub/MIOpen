@@ -107,7 +107,7 @@ ConvSolution UnfoldBwd::GetSolution([[maybe_unused]] const ExecutionContext& con
             auto output_grad_dims = deref(params.doutputDesc).GetLengths();
 
             int spatial_dim_size = input_grad_dims.size() - 2;
-            uint64_t P = 1, L = 1;
+            uint64_t P           = 1;
             std::vector<uint64_t> ls;
             for(int i = 0; i < spatial_dim_size; ++i)
             {
@@ -117,7 +117,6 @@ ConvSolution UnfoldBwd::GetSolution([[maybe_unused]] const ExecutionContext& con
                      params.dilation[i] * (params.kernel_size[i] - 1) - 1) /
                         params.stride[i] +
                     1;
-                L *= l;
                 ls.push_back(l);
             }
 

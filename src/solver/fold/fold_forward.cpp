@@ -107,7 +107,7 @@ ConvSolution FoldFwd::GetSolution([[maybe_unused]] const ExecutionContext& conte
             auto output_dims = deref(params.outputDesc).GetLengths();
 
             uint64_t spatial_dim_size = output_dims.size() - 2;
-            uint64_t P = 1, L = 1;
+            uint64_t P                = 1;
             std::vector<uint64_t> ls;
             for(int i = 0; i < spatial_dim_size; ++i)
             {
@@ -116,7 +116,6 @@ ConvSolution FoldFwd::GetSolution([[maybe_unused]] const ExecutionContext& conte
                               params.dilation[i] * (params.kernel_size[i] - 1) - 1) /
                                  params.stride[i] +
                              1;
-                L *= l;
                 ls.push_back(l);
             }
 
