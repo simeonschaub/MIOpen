@@ -43,6 +43,8 @@ MIOpenBatchNormFwdInferPerActivationEst(const __global _FLOAT* in,
                                         const __global _FLOAT_PREC* __restrict bias,
                                         double epsilon,
                                         unsigned int batchSize,
+                                        unsigned int cLen,
+                                        unsigned int cStride,
                                         unsigned int imageDims,
                                         unsigned int batchStride)
 {
@@ -58,7 +60,7 @@ MIOpenBatchNormFwdInferPerActivationEst(const __global _FLOAT* in,
 
     for(int img_offset = ygid; img_offset < imageDims; img_offset += yglb_sz)
     {
-        adjIndex    = (grpid * imageDims) + img_offset;
+        adjIndex    = (grpid * cStride) + img_offset * cLen;
         mean        = estimatedMean[adjIndex];
         variance    = estimatedVariance[adjIndex];
         invVariance = rsqrt(fabs(variance + epsilon));
