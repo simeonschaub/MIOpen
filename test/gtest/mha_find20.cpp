@@ -658,7 +658,7 @@ private:
 
 TEST(GPU_TestMhaFind20_FP32, MhaForward)
 {
-    Handle const& handle = get_handle();
+    Handle& handle = get_handle();
 
     MhaFind20Test test(true);
 
@@ -671,7 +671,7 @@ TEST(GPU_TestMhaFind20_FP32, MhaForward)
 
 TEST(GPU_TestMhaFind20_FP32, MhaBackward)
 {
-    Handle const& handle = get_handle();
+    Handle& handle = get_handle();
 
     MhaFind20Test test(false);
 

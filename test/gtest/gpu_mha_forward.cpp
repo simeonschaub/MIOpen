@@ -304,7 +304,7 @@ protected:
 
     void TestBody() override
     {
-        Handle const& handle = get_handle();
+        Handle& handle = get_handle();
 
         std::vector<miopenSolution_t> solutions(16);
         std::size_t found;

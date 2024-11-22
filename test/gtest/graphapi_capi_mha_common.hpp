@@ -238,7 +238,7 @@ public:
         m_testD               = d;
         m_bernulliProbability = p;
 
-        miopen::Handle const& handle = get_handle();
+        miopen::Handle& handle = get_handle();
 
         if((p > 0.0f) && (s % handle.GetWavefrontWidth() != 0))
         {
@@ -249,7 +249,7 @@ public:
 
     void Run()
     {
-        miopen::Handle const& handle = get_handle();
+        miopen::Handle& handle = get_handle();
 
         try
         {

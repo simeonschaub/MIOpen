@@ -303,7 +303,7 @@ protected:
 
     void TestBody() override
     {
-        Handle const& handle = get_handle();
+        Handle& handle = get_handle();
 
         auto FindSolutions = [&handle](miopenProblem_t problem_) {
             std::size_t found;

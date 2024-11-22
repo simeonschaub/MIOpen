@@ -304,7 +304,7 @@ private:
 
 TEST(GPU_SoftmaxFind20_FP32, softmaxForward)
 {
-    Handle const& handle = get_handle();
+    Handle& handle = get_handle();
 
     SoftmaxFind20Test test(true);
 
@@ -317,7 +317,7 @@ TEST(GPU_SoftmaxFind20_FP32, softmaxForward)
 
 TEST(GPU_SoftmaxFind20_FP32, softmaxBackward)
 {
-    Handle const& handle = get_handle();
+    Handle& handle = get_handle();
 
     SoftmaxFind20Test test(false);
 
