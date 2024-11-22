@@ -24,22 +24,23 @@
  *
  *******************************************************************************/
 
-#include "miopen/common.hpp"
-#include "miopen/hipoc_kernel.hpp"
-#include <miopen/tensor_view_utils.hpp>
+#include <miopen/common.hpp>
+#include <miopen/datatype.hpp>
+#include <miopen/hipoc_kernel.hpp>
+#include <miopen/kernel_build_params.hpp>
 #include <miopen/kernel_info.hpp>
+#include <miopen/l1loss/invoke_params.hpp>
 #include <miopen/l1loss/problem_description.hpp>
+#include <miopen/l1loss/solvers.hpp>
 #include <miopen/miopen.h>
 #include <miopen/mlo_internal.hpp>
+#include <miopen/tensor_view_utils.hpp>
+
 #include <cstddef>
-#include <miopen/datatype.hpp>
-#include <miopen/kernel_build_params.hpp>
-#include <miopen/l1loss/invoke_params.hpp>
-#include <miopen/l1loss/solvers.hpp>
 #include <vector>
 
 #define LOCAL_SIZE_FWD 256
-#define LOCAL_SIZE_REDUCE 1024
+#define LOCAL_SIZE_REDUCE 256
 
 namespace miopen {
 
@@ -54,8 +55,6 @@ bool L1LossForward5d::IsImprovementOverROCm(
     {
         return false;
     }
-
-    /* TODO: Maybe <= 2 kernels should be used */
 
     return true;
 }
@@ -81,74 +80,79 @@ L1LossForward5d::GetSolution(const ExecutionContext& /*context*/,
     auto io_dtype   = miopen::GetDataType(dtype);
     auto input_size = problem.GetIDesc().GetElementSize();
 
+    const auto build_params =
+        KernelBuildParameters{{"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
+                              {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
+                              {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
+                              {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
+                              {"IO_TYPE", io_dtype == "bfloat16" ? "ushort" : io_dtype},
+                              {"REDUCE_SIZE", LOCAL_SIZE_REDUCE}};
+
     {
-        /* Phase 1: Calculate loss elementwise. */
+        /* Phase 1: Calculate loss elementwise. (TIO to FLOAT_ACCUM) */
         size_t xlocalsize = LOCAL_SIZE_FWD;
         size_t xgridsize  = AlignUp(input_size, xlocalsize);
-        size_t ylocalsize = 1;
-        size_t ygridsize  = 1;
-        size_t zlocalsize = 1;
-        size_t zgridsize  = 1;
 
         auto kernel        = KernelInfo{};
         kernel.kernel_file = "MIOpenL1Loss.cpp";
         kernel.kernel_name = "L1LossReducedForward5d";
 
-        const auto build_params = KernelBuildParameters{
-            {"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
-            {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
-            {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
-            {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-            {"IO_TYPE", io_dtype == "bfloat16" ? "ushort" : io_dtype},
-        };
-
         kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
 
         kernel.l_wk.push_back(xlocalsize);
-        kernel.l_wk.push_back(ylocalsize);
-        kernel.l_wk.push_back(zlocalsize);
+        kernel.l_wk.push_back(1);
+        kernel.l_wk.push_back(1);
         kernel.g_wk.push_back(xgridsize);
-        kernel.g_wk.push_back(ygridsize);
-        kernel.g_wk.push_back(zgridsize);
+        kernel.g_wk.push_back(1);
+        kernel.g_wk.push_back(1);
 
         result.construction_params.push_back(kernel);
     }
 
     {
-        /* Phase 2: Reduce sum */
+        /* Phase 2: Reduce sum (FLOAT_ACCUM to FLOAT_ACCUM) */
         auto _size = input_size;
-        const auto build_params =
-            KernelBuildParameters{{"MIOPEN_USE_FP16", static_cast<int>(dtype == miopenHalf)},
-                                  {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
-                                  {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
-                                  {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-                                  {"REDUCE_SIZE", LOCAL_SIZE_REDUCE}};
 
         do
         {
             size_t xlocalsize = LOCAL_SIZE_REDUCE;
             size_t xgridsize  = AlignUp(_size, xlocalsize);
-            size_t ylocalsize = 1;
-            size_t ygridsize  = 1;
-            size_t zlocalsize = 1;
-            size_t zgridsize  = 1;
 
             auto kernel        = KernelInfo{};
-            kernel.kernel_file = "MIOpenLossReduce.cpp";
-            kernel.kernel_name = "ReduceSumLoss";
+            kernel.kernel_file = "MIOpenReduceSum.cpp";
+            kernel.kernel_name = "ReduceSumFLOATACCUM";
 
             kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
 
             kernel.l_wk.push_back(xlocalsize);
-            kernel.l_wk.push_back(ylocalsize);
-            kernel.l_wk.push_back(zlocalsize);
+            kernel.l_wk.push_back(1);
+            kernel.l_wk.push_back(1);
             kernel.g_wk.push_back(xgridsize);
-            kernel.g_wk.push_back(ygridsize);
-            kernel.g_wk.push_back(zgridsize);
+            kernel.g_wk.push_back(1);
+            kernel.g_wk.push_back(1);
 
             result.construction_params.push_back(kernel);
-            _size = AlignUp(_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
-        } while(_size > 1);
+            _size = (_size + LOCAL_SIZE_REDUCE - 1) / LOCAL_SIZE_REDUCE;
+        } while(_size > LOCAL_SIZE_REDUCE);
+
+        /* Reduce sum (FLOAT_ACCUM to TIO) */
+        size_t xlocalsize = LOCAL_SIZE_REDUCE;
+        size_t xgridsize  = AlignUp(_size, xlocalsize);
+
+        auto kernel        = KernelInfo{};
+        kernel.kernel_file = "MIOpenReduceSum.cpp";
+        kernel.kernel_name = "ReduceSum";
+
+        kernel.comp_options = build_params.GenerateFor(kbp::HIP{});
+
+        kernel.l_wk.push_back(xlocalsize);
+        kernel.l_wk.push_back(1);
+        kernel.l_wk.push_back(1);
+        kernel.g_wk.push_back(xgridsize);
+        kernel.g_wk.push_back(1);
+        kernel.g_wk.push_back(1);
+
+        result.construction_params.push_back(kernel);
     }
 
     result.invoker_factory = [input_size, dtype](const std::vector<Kernel>& kernels) {
@@ -184,20 +188,18 @@ L1LossForward5d::GetSolution(const ExecutionContext& /*context*/,
                 auto reduce_out = static_cast<Data_t>(static_cast<char*>(params.workspace) +
                                                       input_size * get_data_size(dtype));
 
-                for(size_t i = 1; i < kernels.size(); ++i)
+                for(size_t i = 1; i < kernels.size() - 1; ++i)
                 {
                     decltype(auto) kernel = handle_.Run(kernels[i]);
-                    if(i + 1 != kernels.size())
-                    {
-                        kernel(reduce_in, reduce_out, _size);
-                        std::swap(reduce_in, reduce_out);
-                    }
-                    else
-                    {
-                        kernel(reduce_in, params.o, _size);
-                    }
-                    _size = AlignUp(_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE;
+
+                    kernel(reduce_in, reduce_out, _size);
+                    std::swap(reduce_in, reduce_out);
+
+                    _size = (_size + LOCAL_SIZE_REDUCE - 1) / LOCAL_SIZE_REDUCE;
                 }
+
+                decltype(auto) kernel = handle_.Run(kernels.back());
+                kernel(reduce_in, params.o, _size);
 
                 if(profiling)
                 {
@@ -230,8 +232,8 @@ L1LossForward5d::GetWorkspaceSize(const ExecutionContext& /*context*/,
     }
 
     size_t input_size = problem.GetIDesc().GetElementSize();
-    return (input_size + AlignUp(input_size, LOCAL_SIZE_REDUCE) / LOCAL_SIZE_REDUCE) *
-           get_data_size(problem.GetODesc().GetType());
+    return (input_size + (input_size + LOCAL_SIZE_REDUCE - 1) / LOCAL_SIZE_REDUCE) *
+           get_data_size(miopenFloat);
 }
 
 } // namespace l1loss

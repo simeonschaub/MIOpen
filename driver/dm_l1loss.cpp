@@ -24,8 +24,8 @@
  *
  *******************************************************************************/
 
-#include "registry_driver_maker.hpp"
 #include "l1loss_driver.hpp"
+#include "registry_driver_maker.hpp"
 
 static Driver* makeDriver(const std::string& base_arg)
 {

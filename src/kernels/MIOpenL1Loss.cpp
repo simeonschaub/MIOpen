@@ -34,7 +34,7 @@
 template <typename TIO>
 __device__ void L1LossReducedForward5d_kernel(const TIO* I,
                                               const TIO* T,
-                                              TIO* lsum,
+                                              FLOAT_ACCUM* lsum,
                                               const size_t divisor,
                                               tensor_view_t<5> I_tv,
                                               tensor_view_t<5> T_tv)
@@ -49,13 +49,13 @@ __device__ void L1LossReducedForward5d_kernel(const TIO* I,
     size_t Iidx = I_tv.get_tensor_view_idx(input_layout);
     size_t Tidx = T_tv.get_tensor_view_idx(input_layout);
 
-    FLOAT_ACCUM diff = abs(CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx]));
-    lsum[gid]        = CVT_ACCUM2FLOAT(diff / div);
+    FLOAT_ACCUM diff = abs(CVT_FLOAT2ACCUM(I[Iidx]) - CVT_FLOAT2ACCUM(T[Tidx])) / div;
+    lsum[gid]        = diff;
 }
 
 extern "C" __global__ void L1LossReducedForward5d(const IO_TYPE* I,
                                                   const IO_TYPE* T,
-                                                  IO_TYPE* lsum,
+                                                  FLOAT_ACCUM* lsum,
                                                   const size_t divisor,
                                                   tensor_view_t<5> I_tv,
                                                   tensor_view_t<5> T_tv)

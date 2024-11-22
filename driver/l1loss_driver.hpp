@@ -23,8 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GUARD_MIOPEN_L1LOSS_DRIVER_HPP
-#define GUARD_MIOPEN_L1LOSS_DRIVER_HPP
+#pragma once
 
 #include "InputFlags.hpp"
 #include "driver.hpp"
@@ -35,22 +34,20 @@
 #include <../test/tensor_holder.hpp>
 #include <../test/verify.hpp>
 
+#include <limits>
+#include <miopen/errors.hpp>
 #include <miopen/miopen.h>
 #include <miopen/tensor.hpp>
-#include <miopen/errors.hpp>
 
 #include <vector>
 
-#ifndef MLO_L1LOSSHOST_H_
-#define MLO_L1LOSSHOST_H_
-
 template <typename Tgpu, typename Tcheck>
-int32_t mloL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
-                                       const Tgpu* input,
-                                       const Tgpu* target,
-                                       Tcheck* workspacehost,
-                                       Tcheck* outputhost,
-                                       miopenLossReductionMode_t reduction)
+int mloL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
+                                   const Tgpu* input,
+                                   const Tgpu* target,
+                                   Tcheck* workspacehost,
+                                   Tcheck* outputhost,
+                                   miopenLossReductionMode_t reduction)
 {
     auto size      = miopen::deref(iDesc).GetElementSize();
     size_t divisor = (reduction == MIOPEN_LOSS_REDUCTION_MEAN) ? size : 1;
@@ -62,17 +59,15 @@ int32_t mloL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
     }
 
     // Phase 2: Reduce
-    double output = 0.0;
+    float output = 0.0;
     for(size_t i = 0; i < size; i++)
     {
         output += workspacehost[i];
     }
     outputhost[0] = output;
 
-    return miopenStatusSuccess;
+    return 0;
 }
-
-#endif
 
 template <typename Tgpu, typename Tref>
 class L1LossDriver : public Driver
@@ -279,16 +274,17 @@ int L1LossDriver<Tgpu, Tref>::RunForwardGPU()
 
     for(int i = 0; i < inflags.GetValueInt("iter"); i++)
     {
-        miopenL1LossForward(GetHandle(),
-                            reduction,
-                            workspace_dev->GetMem(),
-                            ws_sizeInBytes,
-                            inputDesc,
-                            in_dev->GetMem(),
-                            targetDesc,
-                            tar_dev->GetMem(),
-                            outputDesc,
-                            out_dev->GetMem());
+        miopenStatus_t status = miopenL1LossForward(GetHandle(),
+                                                    reduction,
+                                                    workspace_dev->GetMem(),
+                                                    ws_sizeInBytes,
+                                                    inputDesc,
+                                                    in_dev->GetMem(),
+                                                    targetDesc,
+                                                    tar_dev->GetMem(),
+                                                    outputDesc,
+                                                    out_dev->GetMem());
+        MIOPEN_THROW_IF(status != miopenStatusSuccess, "Error in miopenL1LossForward");
 
         float time = 0.0;
         miopenGetKernelTime(GetHandle(), &time);
@@ -331,25 +327,19 @@ int L1LossDriver<Tgpu, Tref>::RunForwardCPU()
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::RunBackwardGPU()
 {
-    return miopenStatusSuccess;
+    return miopenStatusNotImplemented;
 }
 
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::RunBackwardCPU()
 {
-    return miopenStatusSuccess;
+    return miopenStatusNotImplemented;
 }
 
 template <typename Tgpu, typename Tref>
 Tref L1LossDriver<Tgpu, Tref>::GetTolerance()
 {
-    // Computation error of fp16 is ~2^13 (=8192) bigger than
-    // the one of fp32 because mantissa is shorter by 13 bits.
-    auto tolerance = std::is_same<Tgpu, float>::value ? 1.5e-6 : 8.2e-3;
-
-    // bf16 mantissa has 7 bits, by 3 bits shorter than fp16.
-    if(std::is_same<Tgpu, bfloat16>::value)
-        tolerance *= 8.0;
+    Tref tolerance = std::numeric_limits<Tgpu>::epsilon() * 10;
     return tolerance;
 }
 
@@ -377,7 +367,5 @@ int L1LossDriver<Tgpu, Tref>::VerifyForward()
 template <typename Tgpu, typename Tref>
 int L1LossDriver<Tgpu, Tref>::VerifyBackward()
 {
-    return miopenStatusSuccess;
+    return miopenStatusNotImplemented;
 }
-
-#endif // GUARD_MIOPEN_L1LOSS_DRIVER_HPP

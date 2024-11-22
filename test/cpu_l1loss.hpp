@@ -23,57 +23,27 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GUARD_CPU_L1LOSS_HPP
-#define GUARD_CPU_L1LOSS_HPP
+#pragma once
 
-#include "ford.hpp"
-#include "miopen/miopen.h"
-#include "miopen/mlo_internal.hpp"
+#include <miopen/miopen.h>
+
 #include "tensor_holder.hpp"
-#include <cmath>
 #include <cstddef>
-#include <cstdint>
-
-#ifndef LOCAL_SIZE_REDUCE
-#define LOCAL_SIZE_REDUCE 1024
-#endif
 
 template <class T>
 void cpu_l1loss_reduced_forward(tensor<T> input,
                                 tensor<T> target,
                                 tensor<T>& ref_output,
-                                tensor<T>& ref_workspace,
                                 miopenLossReductionMode_t reduction)
 {
     auto inputSize = input.desc.GetElementSize();
     size_t divisor = (reduction == MIOPEN_LOSS_REDUCTION_SUM) ? 1 : inputSize;
 
-    // Phase 1: Calc loss for each element (unreduced)
-    par_ford(inputSize)([&](size_t i) { ref_workspace[i] = abs(input[i] - target[i]) / divisor; });
-
-    /* Phase 2: Reduce */
-    const int local_size = LOCAL_SIZE_REDUCE;
-    int offset_a         = 0;
-    int offset_b         = inputSize;
-    size_t _size         = inputSize;
-    do
+    double output = 0.0;
+    for(size_t i = 0; i < inputSize; i++)
     {
-        for(int i = 0; i < _size; i += local_size)
-        {
-            T shared[local_size];
-            for(int j = 0; j < local_size; ++j)
-                shared[j] = i + j < _size ? ref_workspace[offset_a + i + j] : 0.0f;
-            for(int offset = local_size / 2; offset > 0; offset >>= 1)
-                for(int j = 0; j < offset; ++j)
-                    shared[j] += shared[j + offset];
-            if(_size <= local_size)
-                ref_output[0] = shared[0];
-            else
-                ref_workspace[offset_b + i / local_size] = shared[0];
-        }
-        std::swap(offset_a, offset_b);
-        _size = (_size + local_size - 1) / local_size;
-    } while(_size > 1);
+        float diff = abs(static_cast<float>(input[i]) - static_cast<float>(target[i]));
+        output += diff;
+    }
+    ref_output[0] = output / divisor;
 }
-
-#endif // GUARD_CPU_L1LOSS_HPP

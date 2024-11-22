@@ -24,11 +24,11 @@
  *
  *******************************************************************************/
 
-#include <miopen/miopen.h>
-#include <miopen/l1loss.hpp>
 #include <miopen/errors.hpp>
 #include <miopen/handle.hpp>
+#include <miopen/l1loss.hpp>
 #include <miopen/logger.hpp>
+#include <miopen/miopen.h>
 #include <miopen/tensor_ops.hpp>
 
 extern "C" miopenStatus_t miopenGetL1LossForwardWorkspaceSize(miopenHandle_t handle,

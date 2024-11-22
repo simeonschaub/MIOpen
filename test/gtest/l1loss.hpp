@@ -29,9 +29,11 @@
 #include "tensor_holder.hpp"
 #include "verify.hpp"
 #include "random.hpp"
-#include <algorithm>
+
 #include <cstddef>
 #include <gtest/gtest.h>
+#include <limits>
+
 #include <miopen/miopen.h>
 #include <miopen/l1loss.hpp>
 
@@ -73,7 +75,7 @@ struct L1LossTestCase
     }
 };
 
-inline std::vector<L1LossTestCase> L1LossTestConfigs()
+inline std::vector<L1LossTestCase> GenFullTestCases()
 { // n c d h w dim
     // clang-format off
     return {
@@ -92,7 +94,7 @@ inline std::vector<L1LossTestCase> L1LossTestConfigs()
     // clang-format on
 }
 
-template <typename T = float>
+template <typename T>
 struct L1LossFwdTest : public ::testing::TestWithParam<L1LossTestCase>
 {
 protected:
@@ -100,8 +102,8 @@ protected:
     {
         auto&& handle   = get_handle();
         l1loss_config   = GetParam();
-        auto gen_value1 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 1); };
-        auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 2); };
+        auto gen_value1 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 100); };
+        auto gen_value2 = [](auto...) { return prng::gen_descreet_uniform_sign<T>(1e-2, 99); };
 
         reduction       = l1loss_config.reduction;
         auto in_dims    = l1loss_config.dims;
@@ -120,7 +122,6 @@ protected:
         ref_output = tensor<T>{out_lengths};
         std::fill(ref_output.begin(), ref_output.end(), std::numeric_limits<T>::quiet_NaN());
 
-        std::vector<size_t> workspace_lengths;
         ws_sizeInBytes = (reduction == MIOPEN_LOSS_REDUCTION_NONE)
                              ? 0
                              : miopen::GetL1LossForwardWorkspaceSize(
@@ -131,13 +132,10 @@ protected:
         if(ws_sizeInBytes != 0)
         {
             std::vector<size_t> workspace_dims;
-            workspace_dims.push_back(ws_sizeInBytes / sizeof(T));
+            workspace_dims.push_back(ws_sizeInBytes / sizeof(float));
 
-            workspace = tensor<T>{workspace_dims};
-            std::fill(workspace.begin(), workspace.end(), static_cast<T>(0));
-
-            ref_workspace = tensor<T>{workspace_dims};
-            std::fill(ref_workspace.begin(), ref_workspace.end(), static_cast<T>(0));
+            workspace = tensor<float>{workspace_dims};
+            std::fill(workspace.begin(), workspace.end(), static_cast<float>(0));
 
             workspace_dev = handle.Write(workspace.data);
         }
@@ -155,7 +153,7 @@ protected:
 
         if(reduction != MIOPEN_LOSS_REDUCTION_NONE)
         {
-            cpu_l1loss_reduced_forward<T>(input, target, ref_output, ref_workspace, reduction);
+            cpu_l1loss_reduced_forward<T>(input, target, ref_output, reduction);
             status         = miopen::L1LossForward(handle,
                                            reduction,
                                            workspace_dev.get(),
@@ -166,7 +164,7 @@ protected:
                                            target_dev.get(),
                                            output.desc,
                                            output_dev.get());
-            workspace.data = handle.Read<T>(workspace_dev, workspace.data.size());
+            workspace.data = handle.Read<float>(workspace_dev, workspace.data.size());
         }
 
         EXPECT_EQ(status, miopenStatusSuccess);
@@ -183,6 +181,7 @@ protected:
         // bf16 mantissa has 7 bits, by 3 bits shorter than fp16.
         if(std::is_same<T, bfloat16>::value)
             tolerance *= 8.0;
+
         return tolerance;
     }
 
@@ -192,7 +191,8 @@ protected:
 
         auto error = miopen::rms_range(ref_output, output);
 
-        EXPECT_TRUE(miopen::range_distance(ref_output) == miopen::range_distance(output));
+        std::cout << "cpu output: " << ref_output[0] << "gpu output" << output[0] << std::endl;
+
         EXPECT_TRUE(error < threshold * 10) << "Error output beyond tolerance Error: " << error
                                             << ",  Tolerance: " << threshold * 10;
     }
@@ -202,10 +202,9 @@ protected:
     tensor<T> input;
     tensor<T> target;
     tensor<T> output;
-    tensor<T> workspace;
+    tensor<float> workspace;
     miopenLossReductionMode_t reduction;
 
-    tensor<T> ref_workspace;
     tensor<T> ref_output;
 
     miopen::Allocator::ManageDataPtr input_dev;

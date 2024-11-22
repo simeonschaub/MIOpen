@@ -154,9 +154,8 @@ set( MIOpen_Source
     kernel_warnings.cpp
     kthvalue/problem_description.cpp
     kthvalue_api.cpp
-    l1loss.cpp
-    l1loss_api.cpp
     l1loss/problem_description.cpp
+    l1loss_api.cpp
     layernorm_api.cpp
     layernorm/problem_description.cpp
     load_file.cpp
@@ -681,6 +680,7 @@ if( MIOPEN_BACKEND MATCHES "OpenCL" OR MIOPEN_BACKEND STREQUAL "HIPOC" OR MIOPEN
         glu.cpp
         kernel_cache.cpp
         kthvalue.cpp
+        l1loss.cpp
         layernorm.cpp
         lrn.cpp
         mlo_dir_conv.cpp

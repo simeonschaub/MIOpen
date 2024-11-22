@@ -24,12 +24,12 @@
  *
  *******************************************************************************/
 
-#include <miopen/l1loss/problem_description.hpp>
-#include <miopen/miopen.h>
 #include <miopen/find_solution.hpp>
-#include <miopen/l1loss/invoke_params.hpp>
-#include <miopen/l1loss/solvers.hpp>
 #include <miopen/l1loss.hpp>
+#include <miopen/l1loss/invoke_params.hpp>
+#include <miopen/l1loss/problem_description.hpp>
+#include <miopen/l1loss/solvers.hpp>
+#include <miopen/miopen.h>
 #include <miopen/tensor.hpp>
 
 namespace miopen {

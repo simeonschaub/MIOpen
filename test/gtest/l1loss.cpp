@@ -25,80 +25,35 @@
  *******************************************************************************/
 
 #include "l1loss.hpp"
-#include <miopen/env.hpp>
 using float16 = half_float::half;
-
-MIOPEN_DECLARE_ENV_VAR_STR(MIOPEN_TEST_FLOAT_ARG)
-MIOPEN_DECLARE_ENV_VAR_BOOL(MIOPEN_TEST_ALL)
 
 namespace l1loss {
 
-std::string GetFloatArg()
-{
-    const auto& tmp = env::value(MIOPEN_TEST_FLOAT_ARG);
-    if(tmp.empty())
-    {
-        return "";
-    }
-    return tmp;
-}
-
-struct L1LossFwdTestFloat : L1LossFwdTest<float>
-{
-};
-
-struct L1LossFwdTestFP16 : L1LossFwdTest<float16>
-{
-};
-
-struct L1LossFwdTestBfloat16 : L1LossFwdTest<bfloat16>
-{
-};
+using GPU_L1Loss_fwd_FP32  = L1LossFwdTest<float>;
+using GPU_L1Loss_fwd_FP16  = L1LossFwdTest<float16>;
+using GPU_L1Loss_fwd_BFP16 = L1LossFwdTest<bfloat16>;
 
 } // namespace l1loss
 using namespace l1loss;
 
-TEST_P(L1LossFwdTestFloat, L1LossTestFw)
+TEST_P(GPU_L1Loss_fwd_FP32, Test)
 {
-    if(!MIOPEN_TEST_ALL || (env::enabled(MIOPEN_TEST_ALL) && GetFloatArg() == "--float"))
-    {
-        RunTest();
-        Verify();
-    }
-    else
-    {
-        GTEST_SKIP();
-    }
+    RunTest();
+    Verify();
 };
 
-TEST_P(L1LossFwdTestFP16, L1LossTestFw)
+TEST_P(GPU_L1Loss_fwd_FP16, Test)
 {
-    if(!MIOPEN_TEST_ALL || (env::enabled(MIOPEN_TEST_ALL) && GetFloatArg() == "--fp16"))
-    {
-        RunTest();
-        Verify();
-    }
-    else
-    {
-        GTEST_SKIP();
-    }
+    RunTest();
+    Verify();
 };
 
-TEST_P(L1LossFwdTestBfloat16, L1LossTestFw)
+TEST_P(GPU_L1Loss_fwd_BFP16, Test)
 {
-    if(!MIOPEN_TEST_ALL || (env::enabled(MIOPEN_TEST_ALL) && GetFloatArg() == "--bfloat16"))
-    {
-        RunTest();
-        Verify();
-    }
-    else
-    {
-        GTEST_SKIP();
-    }
+    RunTest();
+    Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(L1LossTestSet, L1LossFwdTestFloat, testing::ValuesIn(L1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(L1LossTestSet, L1LossFwdTestFP16, testing::ValuesIn(L1LossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(L1LossTestSet,
-                         L1LossFwdTestBfloat16,
-                         testing::ValuesIn(L1LossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Full, GPU_L1Loss_fwd_FP32, testing::ValuesIn(GenFullTestCases()));
+INSTANTIATE_TEST_SUITE_P(Full, GPU_L1Loss_fwd_FP16, testing::ValuesIn(GenFullTestCases()));
+INSTANTIATE_TEST_SUITE_P(Full, GPU_L1Loss_fwd_BFP16, testing::ValuesIn(GenFullTestCases()));

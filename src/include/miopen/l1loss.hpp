@@ -23,33 +23,31 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef MIOPEN_L1LOSS_HPP_
-#define MIOPEN_L1LOSS_HPP_
+#pragma once
 
-#include "miopen/miopen.h"
 #include <miopen/common.hpp>
+#include <miopen/miopen.h>
 
 namespace miopen {
 
 struct Handle;
 struct TensorDescriptor;
 
-size_t GetL1LossForwardWorkspaceSize(Handle& handle,
-                                     miopenLossReductionMode_t reduction,
-                                     const TensorDescriptor& iDesc,
-                                     const TensorDescriptor& tDesc,
-                                     const TensorDescriptor& oDesc);
+MIOPEN_INTERNALS_EXPORT size_t GetL1LossForwardWorkspaceSize(Handle& handle,
+                                                             miopenLossReductionMode_t reduction,
+                                                             const TensorDescriptor& iDesc,
+                                                             const TensorDescriptor& tDesc,
+                                                             const TensorDescriptor& oDesc);
 
-miopenStatus_t L1LossForward(Handle& handle,
-                             miopenLossReductionMode_t reduction,
-                             Data_t workspace,
-                             size_t workspaceSizeInBytes,
-                             const TensorDescriptor& iDesc,
-                             ConstData_t i,
-                             const TensorDescriptor& tDesc,
-                             ConstData_t t,
-                             const TensorDescriptor& oDesc,
-                             Data_t o);
+MIOPEN_INTERNALS_EXPORT miopenStatus_t L1LossForward(Handle& handle,
+                                                     miopenLossReductionMode_t reduction,
+                                                     Data_t workspace,
+                                                     size_t workspaceSizeInBytes,
+                                                     const TensorDescriptor& iDesc,
+                                                     ConstData_t i,
+                                                     const TensorDescriptor& tDesc,
+                                                     ConstData_t t,
+                                                     const TensorDescriptor& oDesc,
+                                                     Data_t o);
 
 } // namespace miopen
-#endif // MIOPEN_L1LOSS_HPP
