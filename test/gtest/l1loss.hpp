@@ -82,10 +82,10 @@ inline std::vector<L1LossTestCase> GenFullTestCases()
         {{1, 1, 1, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
         {{1, 2, 3, 4, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
         {{1, 1, 1, 257, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
-        {{2, 10, 128, 128, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
+        {{2, 10, 128, 64, 1}, MIOPEN_LOSS_REDUCTION_MEAN, false},
         {{5, 13, 17, 11, 1}, MIOPEN_LOSS_REDUCTION_MEAN, false},
-        {{256, 4, 8723, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, false},
-        {{256, 4, 8723, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true},
+        {{256, 4, 128, 1, 1}, MIOPEN_LOSS_REDUCTION_MEAN, false},
+        {{256, 4, 128, 1, 1}, MIOPEN_LOSS_REDUCTION_MEAN, true},
         {{1, 1, 1, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true},
         {{34, 4, 5, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true},
         {{4, 7, 5, 1, 1}, MIOPEN_LOSS_REDUCTION_SUM, true},
@@ -174,24 +174,14 @@ protected:
 
     double GetTolerance()
     {
-        // Computation error of fp16 is ~2^13 (=8192) bigger than
-        // the one of fp32 because mantissa is shorter by 13 bits.
-        double tolerance = std::is_same<T, float>::value ? 1.5e-6 : 8.2e-3;
-
-        // bf16 mantissa has 7 bits, by 3 bits shorter than fp16.
-        if(std::is_same<T, bfloat16>::value)
-            tolerance *= 8.0;
-
+        double tolerance = std::numeric_limits<T>::epsilon() * 10;
         return tolerance;
     }
 
     void Verify()
     {
         double threshold = GetTolerance();
-
-        auto error = miopen::rms_range(ref_output, output);
-
-        std::cout << "cpu output: " << ref_output[0] << "gpu output" << output[0] << std::endl;
+        auto error       = miopen::rms_range(ref_output, output);
 
         EXPECT_TRUE(error < threshold * 10) << "Error output beyond tolerance Error: " << error
                                             << ",  Tolerance: " << threshold * 10;

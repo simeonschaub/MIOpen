@@ -45,26 +45,19 @@ template <typename Tgpu, typename Tcheck>
 int mloL1LossReducedForwardRunHost(const miopenTensorDescriptor_t iDesc,
                                    const Tgpu* input,
                                    const Tgpu* target,
-                                   Tcheck* workspacehost,
                                    Tcheck* outputhost,
                                    miopenLossReductionMode_t reduction)
 {
     auto size      = miopen::deref(iDesc).GetElementSize();
     size_t divisor = (reduction == MIOPEN_LOSS_REDUCTION_MEAN) ? size : 1;
 
-    // Phase 1: Calc loss for each element
+    double output = 0.0;
     for(size_t i = 0; i < size; i++)
     {
-        workspacehost[i] = abs(input[i] - target[i]) / divisor;
+        float diff = abs(static_cast<float>(input[i]) - static_cast<float>(target[i]));
+        output += diff;
     }
-
-    // Phase 2: Reduce
-    float output = 0.0;
-    for(size_t i = 0; i < size; i++)
-    {
-        output += workspacehost[i];
-    }
-    outputhost[0] = output;
+    outputhost[0] = output / divisor;
 
     return 0;
 }
@@ -128,7 +121,6 @@ private:
     std::vector<Tgpu> workspace;
 
     std::vector<Tref> outhost;
-    std::vector<Tref> workspacehost;
 
     size_t ws_sizeInBytes;
     miopenLossReductionMode_t reduction;
@@ -199,9 +191,9 @@ int L1LossDriver<Tgpu, Tref>::AddCmdLineArgs()
                          "int");
     inflags.AddInputFlag("reduction",
                          'R',
-                         "0",
+                         "2",
                          "Reduction mode ('none'(0) | 'sum'(1) |'mean'(2)) "
-                         "(Default=0)",
+                         "(Default=2)",
                          "int");
     inflags.AddInputFlag("iter", 'i', "10", "Number of Iterations (Default=10)", "int");
     inflags.AddInputFlag("verify", 'V', "1", "Verify Each Layer (Default=1)", "int");
@@ -239,8 +231,7 @@ int L1LossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     out       = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
     workspace = std::vector<Tgpu>(ws_sz, static_cast<Tgpu>(0));
 
-    outhost       = std::vector<Tref>(out_sz, static_cast<Tref>(0));
-    workspacehost = std::vector<Tref>(ws_sz, static_cast<Tref>(0));
+    outhost = std::vector<Tref>(out_sz, static_cast<Tref>(0));
 
     for(int i = 0; i < in_sz; i++)
     {
@@ -318,7 +309,7 @@ int L1LossDriver<Tgpu, Tref>::RunForwardCPU()
     if(reduction == MIOPEN_LOSS_REDUCTION_MEAN || reduction == MIOPEN_LOSS_REDUCTION_SUM)
     {
         mloL1LossReducedForwardRunHost<Tgpu, Tref>(
-            inputDesc, in.data(), tar.data(), workspacehost.data(), outhost.data(), reduction);
+            inputDesc, in.data(), tar.data(), outhost.data(), reduction);
     }
 
     return miopenStatusSuccess;
