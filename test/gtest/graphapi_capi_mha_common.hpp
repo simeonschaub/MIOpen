@@ -272,7 +272,7 @@ protected:
 
     virtual void MakeVirtualTensorsAndNodes() = 0;
 
-    virtual void PrepareOpGraphAndEngines(miopen::Handle const& handle)
+    virtual void PrepareOpGraphAndEngines(miopen::Handle& handle)
     {
         miopenHandle_t rawHandle = &handle;
 
@@ -344,7 +344,7 @@ protected:
         m_executionPlan->AddRef(engineConfig);
     }
 
-    virtual void MakeVariantPackAndRun(miopen::Handle const& handle)
+    virtual void MakeVariantPackAndRun(miopen::Handle& handle)
     {
         miopenHandle_t rawHandle = &handle;
 

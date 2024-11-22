@@ -1363,7 +1363,7 @@ constexpr miopenRNNBaseLayout_t rnn_data_layout(int io_layout)
     }
 }
 
-inline size_t get_RNN_params_byteSize(miopen::Handle const& handle,
+inline size_t get_RNN_params_byteSize(miopen::Handle& handle,
                                       miopen::RNNDescriptor& rnnDesc,
                                       miopen::SeqTensorDescriptor& inTensor)
 {
@@ -1404,7 +1404,7 @@ struct rnn_seq_api_test_driver : test_driver
 
     rnn_seq_api_test_driver() {}
 
-    bool check_GPU_mem_limit(miopen::Handle const& handle,
+    bool check_GPU_mem_limit(miopen::Handle& handle,
                              miopen::RNNDescriptor& rnnDesc,
                              seqTensor<T>& input,
                              seqTensor<T>& output,
