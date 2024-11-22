@@ -31,7 +31,7 @@
 
 template <class T>
 void cpu_adaptiveavgpool_forward_1d(
-    tensor<T> input, tensor<T>& output, size_t N, size_t C, size_t H, size_t OH)
+    tensor<T> input, tensor<T>& output, size_t C, size_t H, size_t OH)
 {
     auto dims  = input.desc.GetLengths();
     auto numel = output.desc.GetElementSize();
@@ -57,14 +57,8 @@ void cpu_adaptiveavgpool_forward_1d(
 }
 
 template <class T>
-void cpu_adaptiveavgpool_forward_2d(tensor<T> input,
-                                    tensor<T>& output,
-                                    size_t N,
-                                    size_t C,
-                                    size_t H,
-                                    size_t W,
-                                    size_t OH,
-                                    size_t OW)
+void cpu_adaptiveavgpool_forward_2d(
+    tensor<T> input, tensor<T>& output, size_t C, size_t H, size_t W, size_t OH, size_t OW)
 {
     auto dims  = input.desc.GetLengths();
     auto numel = output.desc.GetElementSize();
@@ -100,7 +94,6 @@ void cpu_adaptiveavgpool_forward_2d(tensor<T> input,
 template <class T>
 void cpu_adaptiveavgpool_forward_3d(tensor<T> input,
                                     tensor<T>& output,
-                                    size_t N,
                                     size_t C,
                                     size_t D,
                                     size_t H,
@@ -150,7 +143,7 @@ void cpu_adaptiveavgpool_forward_3d(tensor<T> input,
 
 template <class T>
 void cpu_adaptiveavgpool_backward_1d(
-    tensor<T> output_grad, tensor<T>& input_grad, size_t N, size_t C, size_t H, size_t OH)
+    tensor<T> output_grad, tensor<T>& input_grad, size_t C, size_t H, size_t OH)
 {
     auto dims  = input_grad.desc.GetLengths();
     auto numel = input_grad.desc.GetElementSize();
@@ -182,7 +175,6 @@ void cpu_adaptiveavgpool_backward_1d(
 template <class T>
 void cpu_adaptiveavgpool_backward_2d(tensor<T> output_grad,
                                      tensor<T>& input_grad,
-                                     size_t N,
                                      size_t C,
                                      size_t H,
                                      size_t W,
@@ -228,7 +220,6 @@ void cpu_adaptiveavgpool_backward_2d(tensor<T> output_grad,
 template <class T>
 void cpu_adaptiveavgpool_backward_3d(tensor<T> output_grad,
                                      tensor<T>& input_grad,
-                                     size_t N,
                                      size_t C,
                                      size_t D,
                                      size_t H,

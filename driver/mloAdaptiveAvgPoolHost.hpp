@@ -35,10 +35,9 @@ int32_t mloAdaptiveAvgPoolForward1dRunHost(const miopenTensorDescriptor_t inputD
                                            const miopenTensorDescriptor_t outputDesc,
                                            const Tgpu* input,
                                            Tcheck* output,
-                                           size_t N,
-                                           size_t C,
-                                           size_t H,
-                                           size_t OH)
+                                           const size_t C,
+                                           const size_t H,
+                                           const size_t OH)
 {
     auto dims  = miopen::deref(inputDesc).GetLengths();
     auto numel = miopen::deref(outputDesc).GetElementSize();
@@ -69,12 +68,11 @@ int32_t mloAdaptiveAvgPoolForward2dRunHost(const miopenTensorDescriptor_t inputD
                                            const miopenTensorDescriptor_t outputDesc,
                                            const Tgpu* input,
                                            Tcheck* output,
-                                           size_t N,
-                                           size_t C,
-                                           size_t H,
-                                           size_t W,
-                                           size_t OH,
-                                           size_t OW)
+                                           const size_t C,
+                                           const size_t H,
+                                           const size_t W,
+                                           const size_t OH,
+                                           const size_t OW)
 {
     auto dims  = miopen::deref(inputDesc).GetLengths();
     auto numel = miopen::deref(outputDesc).GetElementSize();
@@ -113,14 +111,13 @@ int32_t mloAdaptiveAvgPoolForward3dRunHost(const miopenTensorDescriptor_t inputD
                                            const miopenTensorDescriptor_t outputDesc,
                                            const Tgpu* input,
                                            Tcheck* output,
-                                           size_t N,
-                                           size_t C,
-                                           size_t D,
-                                           size_t H,
-                                           size_t W,
-                                           size_t OD,
-                                           size_t OH,
-                                           size_t OW)
+                                           const size_t C,
+                                           const size_t D,
+                                           const size_t H,
+                                           const size_t W,
+                                           const size_t OD,
+                                           const size_t OH,
+                                           const size_t OW)
 {
     auto dims  = miopen::deref(inputDesc).GetLengths();
     auto numel = miopen::deref(outputDesc).GetElementSize();
@@ -167,10 +164,9 @@ int32_t mloAdaptiveAvgPoolBackward1dRunHost(const miopenTensorDescriptor_t outpu
                                             const miopenTensorDescriptor_t inputGradDesc,
                                             const Tgpu* output_grad,
                                             Tcheck* input_grad,
-                                            size_t N,
-                                            size_t C,
-                                            size_t H,
-                                            size_t OH)
+                                            const size_t C,
+                                            const size_t H,
+                                            const size_t OH)
 {
     auto dims  = miopen::deref(inputGradDesc).GetLengths();
     auto numel = miopen::deref(inputGradDesc).GetElementSize();
@@ -204,12 +200,11 @@ int32_t mloAdaptiveAvgPoolBackward2dRunHost(const miopenTensorDescriptor_t outpu
                                             const miopenTensorDescriptor_t inputGradDesc,
                                             const Tgpu* output_grad,
                                             Tcheck* input_grad,
-                                            size_t N,
-                                            size_t C,
-                                            size_t H,
-                                            size_t W,
-                                            size_t OH,
-                                            size_t OW)
+                                            const size_t C,
+                                            const size_t H,
+                                            const size_t W,
+                                            const size_t OH,
+                                            const size_t OW)
 {
     auto dims  = miopen::deref(inputGradDesc).GetLengths();
     auto numel = miopen::deref(inputGradDesc).GetElementSize();
@@ -253,14 +248,13 @@ int32_t mloAdaptiveAvgPoolBackward3dRunHost(const miopenTensorDescriptor_t outpu
                                             const miopenTensorDescriptor_t inputGradDesc,
                                             const Tgpu* output_grad,
                                             Tcheck* input_grad,
-                                            size_t N,
-                                            size_t C,
-                                            size_t D,
-                                            size_t H,
-                                            size_t W,
-                                            size_t OD,
-                                            size_t OH,
-                                            size_t OW)
+                                            const size_t C,
+                                            const size_t D,
+                                            const size_t H,
+                                            const size_t W,
+                                            const size_t OD,
+                                            const size_t OH,
+                                            const size_t OW)
 {
     auto dims  = miopen::deref(inputGradDesc).GetLengths();
     auto numel = miopen::deref(inputGradDesc).GetElementSize();

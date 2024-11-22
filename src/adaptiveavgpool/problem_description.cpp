@@ -49,7 +49,7 @@ NetworkConfig FwdProblemDescription::MakeNetworkConfig() const
 {
     auto input_size  = inputDesc.GetLengths();
     auto output_size = outputDesc.GetLengths();
-    auto input_dtype         = inputDesc.GetType();
+    auto input_dtype = inputDesc.GetType();
 
     std::ostringstream ss;
 
@@ -68,7 +68,7 @@ NetworkConfig BwdProblemDescription::MakeNetworkConfig() const
     auto output_grad_size   = outputGradDesc.GetLengths();
     auto input_grad_stride  = inputGradDesc.GetStrides();
     auto output_grad_stride = outputGradDesc.GetStrides();
-    auto input_dtype                = inputGradDesc.GetType();
+    auto input_dtype        = inputGradDesc.GetType();
 
     std::ostringstream ss;
 

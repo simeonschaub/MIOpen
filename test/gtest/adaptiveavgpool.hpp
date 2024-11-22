@@ -220,15 +220,15 @@ protected:
         auto dims = input.desc.GetNumDims();
         if(dims == 3)
         {
-            cpu_adaptiveavgpool_forward_1d<T>(input, ref_output, N, C, H, OH);
+            cpu_adaptiveavgpool_forward_1d<T>(input, ref_output, C, H, OH);
         }
         else if(dims == 4)
         {
-            cpu_adaptiveavgpool_forward_2d<T>(input, ref_output, N, C, H, W, OH, OW);
+            cpu_adaptiveavgpool_forward_2d<T>(input, ref_output, C, H, W, OH, OW);
         }
         else if(dims == 5)
         {
-            cpu_adaptiveavgpool_forward_3d<T>(input, ref_output, N, C, D, H, W, OD, OH, OW);
+            cpu_adaptiveavgpool_forward_3d<T>(input, ref_output, C, D, H, W, OD, OH, OW);
         }
         status = miopen::adaptiveavgpool::AdaptiveAvgPoolForward(
             handle, input.desc, input_dev.get(), output.desc, output_dev.get());
@@ -338,16 +338,15 @@ protected:
         auto dims = input_grad.desc.GetNumDims();
         if(dims == 3)
         {
-            cpu_adaptiveavgpool_backward_1d<T>(output_grad, ref_input_grad, N, C, H, OH);
+            cpu_adaptiveavgpool_backward_1d<T>(output_grad, ref_input_grad, C, H, OH);
         }
         else if(dims == 4)
         {
-            cpu_adaptiveavgpool_backward_2d<T>(output_grad, ref_input_grad, N, C, H, W, OH, OW);
+            cpu_adaptiveavgpool_backward_2d<T>(output_grad, ref_input_grad, C, H, W, OH, OW);
         }
         else if(dims == 5)
         {
-            cpu_adaptiveavgpool_backward_3d<T>(
-                output_grad, ref_input_grad, N, C, D, H, W, OD, OH, OW);
+            cpu_adaptiveavgpool_backward_3d<T>(output_grad, ref_input_grad, C, D, H, W, OD, OH, OW);
         }
         status = miopen::adaptiveavgpool::AdaptiveAvgPoolBackward(
             handle, output_grad.desc, output_grad_dev.get(), input_grad.desc, input_grad_dev.get());

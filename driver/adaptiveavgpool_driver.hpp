@@ -323,21 +323,21 @@ int AdaptiveAvgPoolDriver<Tgpu, Tref>::RunForwardCPU()
     if(in_dim.size() == 3)
     {
         status = mloAdaptiveAvgPoolForward1dRunHost<Tgpu, Tref>(
-            inputDesc, outputDesc, input.data(), output_host.data(), N, C, H, OH);
+            inputDesc, outputDesc, input.data(), output_host.data(), C, H, OH);
         MIOPEN_THROW_IF(status != miopenStatusSuccess,
                         "Error in mloAdaptiveAvgPoolForward1dRunHost");
     }
     else if(in_dim.size() == 4)
     {
         status = mloAdaptiveAvgPoolForward2dRunHost<Tgpu, Tref>(
-            inputDesc, outputDesc, input.data(), output_host.data(), N, C, H, W, OH, OW);
+            inputDesc, outputDesc, input.data(), output_host.data(), C, H, W, OH, OW);
         MIOPEN_THROW_IF(status != miopenStatusSuccess,
                         "Error in mloAdaptiveAvgPoolForward2dRunHost");
     }
     else if(in_dim.size() == 5)
     {
         status = mloAdaptiveAvgPoolForward3dRunHost<Tgpu, Tref>(
-            inputDesc, outputDesc, input.data(), output_host.data(), N, C, D, H, W, OD, OH, OW);
+            inputDesc, outputDesc, input.data(), output_host.data(), C, D, H, W, OD, OH, OW);
         MIOPEN_THROW_IF(status != miopenStatusSuccess,
                         "Error in mloAdaptiveAvgPoolForward3dRunHost");
     }
@@ -401,7 +401,7 @@ int AdaptiveAvgPoolDriver<Tgpu, Tref>::RunBackwardCPU()
     if(in_dim.size() == 3)
     {
         status = mloAdaptiveAvgPoolBackward1dRunHost<Tgpu, Tref>(
-            outputGradDesc, inputGradDesc, output_grad.data(), input_grad_host.data(), N, C, H, OH);
+            outputGradDesc, inputGradDesc, output_grad.data(), input_grad_host.data(), C, H, OH);
         MIOPEN_THROW_IF(status != miopenStatusSuccess,
                         "Error in mloAdaptiveAvgPoolBackward1dRunHost");
     }
@@ -411,7 +411,6 @@ int AdaptiveAvgPoolDriver<Tgpu, Tref>::RunBackwardCPU()
                                                                  inputGradDesc,
                                                                  output_grad.data(),
                                                                  input_grad_host.data(),
-                                                                 N,
                                                                  C,
                                                                  H,
                                                                  W,
@@ -426,7 +425,6 @@ int AdaptiveAvgPoolDriver<Tgpu, Tref>::RunBackwardCPU()
                                                                  inputGradDesc,
                                                                  output_grad.data(),
                                                                  input_grad_host.data(),
-                                                                 N,
                                                                  C,
                                                                  D,
                                                                  H,
