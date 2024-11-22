@@ -204,7 +204,7 @@ public:
         std::cerr << "Finished testing miopenGetSolution<Attribute>." << std::endl;
     }
 
-    void TestRunSolutions(Handle const& handle, const std::vector<miopenSolution_t>& solutions)
+    void TestRunSolutions(Handle& handle, const std::vector<miopenSolution_t>& solutions)
     {
         std::cerr << "Testing a solution..." << std::endl;
 
