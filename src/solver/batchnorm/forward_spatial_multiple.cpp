@@ -43,20 +43,20 @@ namespace batchnorm {
 bool BNFwdTrainIsCaseVariant2(const miopen::batchnorm::ProblemDescription& problem)
 {
     const auto& xDesc = problem.GetXDesc();
-    int n, c, h, w;
-    std::tie(n, c, h, w)    = tien<4>(xDesc.GetLengths());
-    unsigned int in_cstride = h * w;
-    unsigned int in_nhw     = n * in_cstride;
-    bool bfp32parm          = xDesc.GetType() == miopenFloat;
-    bool bfpmixparm = (xDesc.GetType() == miopenHalf || xDesc.GetType() == miopenBFloat16) &&
+    size_t n, c, h, w;
+    std::tie(n, c, h, w) = tien<4>(xDesc.GetLengths());
+    size_t in_cstride    = h * w;
+    size_t in_nhw        = n * in_cstride;
+    bool bfp32parm       = xDesc.GetType() == miopenFloat;
+    bool bfpmixparm      = (xDesc.GetType() == miopenHalf || xDesc.GetType() == miopenBFloat16) &&
                       problem.GetBnScale().GetType() == miopenFloat;
 
     // NCHW is Applicable for variant = 2 only
-    if((!(n < 3) &&
-        !((in_nhw < 33554432 && in_cstride > 1024) ||
-          ((n >= 256) && (in_cstride > 60) && bfpmixparm) || ((in_cstride > 512) && bfpmixparm)) &&
-        !(in_cstride <= 512)) ||
-       !((n > 768) && (in_cstride > 150) && bfp32parm))
+    // these number comes from BnFwdTrainingSpatialMultiple::GetSolution of
+    // forward_spatial_multiple.cpp
+    if((n >= 3 && in_cstride > 512 && (in_nhw >= 33554432 || in_cstride <= 1024) &&
+        ((n < 256) || (in_cstride <= 60) || !bfpmixparm) && (!bfpmixparm || in_cstride <= 512)) ||
+       (n <= 768 || in_cstride <= 150 || !bfp32parm))
     {
         return true;
     }

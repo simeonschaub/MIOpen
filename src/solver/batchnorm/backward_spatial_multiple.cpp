@@ -40,14 +40,13 @@ namespace batchnorm {
 
 bool BNBwdIsCaseVariant2(const miopen::batchnorm::ProblemDescription& problem)
 {
-    int n, c, h, w;
+    size_t n, c, h, w;
     std::tie(n, c, h, w) = tien<4>(problem.GetXDesc().GetLengths());
 
-    unsigned int in_cstride = h * w;
-    unsigned int in_nhw     = n * in_cstride;
+    size_t in_cstride = h * w;
+    size_t in_nhw     = n * in_cstride;
 
-    if(!(in_nhw < (32 * 1024 * 1024) && in_cstride > 1024) &&
-       !(in_nhw < (32 * 1024 * 1024) && in_cstride > 512) && !(in_cstride <= 512))
+    if((in_nhw >= (32 * 1024 * 1024) || in_cstride <= 1024) && in_cstride > 512)
     {
         return true;
     }

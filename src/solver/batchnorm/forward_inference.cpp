@@ -41,8 +41,6 @@ namespace batchnorm {
 bool BnFwdInference::IsApplicable(const ExecutionContext&,
                                   const miopen::batchnorm::ProblemDescription& bn_problem) const
 {
-    if(!problem.IsLayoutNCHW())
-        return false;
     if(bn_problem.GetDirection() != miopen::batchnorm::Direction::ForwardInference)
         return false;
     if(!(bn_problem.IsFp32() or bn_problem.IsFp16() or bn_problem.IsBFp16()))
@@ -149,16 +147,36 @@ ConvSolution BnFwdInference::GetSolution(const ExecutionContext& context,
             unsigned int in_nstride_ = c_ * h_ * w_;
             unsigned int in_cstride_ = h_ * w_;
 
-            kernel(params.x,
-                   params.y,
-                   params.estimatedMean,
-                   params.estimatedVariance,
-                   params.bnScale,
-                   params.bnBias,
-                   params.epsilon,
-                   n_,
-                   in_cstride_,
-                   in_nstride_);
+            if(params.xDesc->GetLayout_t() == miopenTensorNHWC)
+            {
+                kernel(params.x,
+                       params.y,
+                       params.estimatedMean,
+                       params.estimatedVariance,
+                       params.bnScale,
+                       params.bnBias,
+                       params.epsilon,
+                       n_,
+                       c_, //  nhwc = c
+                       1,
+                       in_cstride_,
+                       in_nstride_);
+            }
+            else
+            {
+                kernel(params.x,
+                       params.y,
+                       params.estimatedMean,
+                       params.estimatedVariance,
+                       params.bnScale,
+                       params.bnBias,
+                       params.epsilon,
+                       n_,
+                       1, // nchw 1
+                       h_ * w_,
+                       in_cstride_,
+                       in_nstride_);
+            }
         };
     };
 
