@@ -156,7 +156,7 @@ public:
     }
 
 private:
-    // miopen::Handle& handle_;
+    // miopen::Handle const& handle_;
     // miopen::Allocator::ManageDataPtr data_{};
     GPUBuffer gpu_buf_{};
     size_t sz_{};

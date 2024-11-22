@@ -156,7 +156,7 @@ protected:
     {
         prng::reset_seed();
         auto [n, h, s, d, drop] = GetParam();
-        Handle& handle          = get_handle();
+        Handle const& handle    = get_handle();
 
         if((drop > 0.0f) && (s % handle.GetWavefrontWidth() != 0))
         {
@@ -304,7 +304,7 @@ protected:
 
     void TestBody() override
     {
-        Handle& handle = get_handle();
+        Handle const& handle = get_handle();
 
         std::vector<miopenSolution_t> solutions(16);
         std::size_t found;
@@ -332,7 +332,7 @@ protected:
         }
     }
 
-    virtual void VerifyResults(Handle& handle)
+    virtual void VerifyResults(Handle const& handle)
     {
         auto GetResult = [this, &handle](miopenTensorArgumentId_t id, auto type) {
             using ResultT         = std::decay_t<decltype(type)>;
@@ -438,7 +438,7 @@ class GPU_Fwd_Mha_FP16 : public Test_Fwd_Mha<half_float::half>
             q_val, k_val, v_val, softmax, attn_max, Z_sum, output);
     }
 
-    void VerifyResults(Handle& handle) override
+    void VerifyResults(Handle const& handle) override
     {
         auto GetResult = [this, &handle](miopenTensorArgumentId_t id) {
             auto& tensorStructPtr = tensors[id];

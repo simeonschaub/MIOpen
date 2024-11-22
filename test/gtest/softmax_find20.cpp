@@ -71,7 +71,7 @@ public:
         std::cerr << "Created softmax tensor descriptors." << std::endl;
     }
 
-    std::vector<miopenSolution_t> TestFindSolutions(Handle& handle)
+    std::vector<miopenSolution_t> TestFindSolutions(Handle const& handle)
     {
         std::cerr << "Testing miopenFindSolutions..." << std::endl;
 
@@ -112,7 +112,8 @@ public:
         std::cerr << "Finished testing miopenGetSolution<Attribute>." << std::endl;
     }
 
-    void TestRunSolutionsForward(Handle& handle, const std::vector<miopenSolution_t>& solutions)
+    void TestRunSolutionsForward(Handle const& handle,
+                                 const std::vector<miopenSolution_t>& solutions)
     {
         std::cerr << "Testing solution functions..." << std::endl;
 
@@ -177,7 +178,8 @@ public:
         std::cerr << "Finished testing solution functions." << std::endl;
     }
 
-    void TestRunSolutionsBackward(Handle& handle, const std::vector<miopenSolution_t>& solutions)
+    void TestRunSolutionsBackward(Handle const& handle,
+                                  const std::vector<miopenSolution_t>& solutions)
     {
         std::cerr << "Testing solution functions..." << std::endl;
 
@@ -302,7 +304,7 @@ private:
 
 TEST(GPU_SoftmaxFind20_FP32, softmaxForward)
 {
-    Handle& handle = get_handle();
+    Handle const& handle = get_handle();
 
     SoftmaxFind20Test test(true);
 
@@ -315,7 +317,7 @@ TEST(GPU_SoftmaxFind20_FP32, softmaxForward)
 
 TEST(GPU_SoftmaxFind20_FP32, softmaxBackward)
 {
-    Handle& handle = get_handle();
+    Handle const& handle = get_handle();
 
     SoftmaxFind20Test test(false);
 

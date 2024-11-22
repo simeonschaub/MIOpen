@@ -58,7 +58,7 @@
  *
  **********************************************/
 template <typename T>
-void GRUFwdCPUVerify(miopen::Handle& handle,
+void GRUFwdCPUVerify(miopen::Handle const& handle,
                      bool use_dropout,
                      miopen::DropoutDescriptor& dropoutDesc,
                      std::vector<T>& in,

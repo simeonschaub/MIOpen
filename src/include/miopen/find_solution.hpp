@@ -503,7 +503,7 @@ struct SolverContainer
     }
 
     template <class Problem>
-    void ExecutePrimitive(Handle& handle,
+    void ExecutePrimitive(Handle const& handle,
                           const Problem& problem,
                           const AlgorithmName& algo,
                           const AnyInvokeParams& invoke_params) const

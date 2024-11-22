@@ -70,7 +70,7 @@ struct TensorStruct
 
     TensorStruct(const TensorVariant& var) { tensorVariant = var; }
 
-    void GpuRead(Handle& handle)
+    void GpuRead(Handle const& handle)
     {
         if(std::holds_alternative<tensor<float>>(tensorVariant))
         {
@@ -88,7 +88,7 @@ struct TensorStruct
         }
     }
 
-    void GpuWrite(Handle& handle)
+    void GpuWrite(Handle const& handle)
     {
         if(std::holds_alternative<tensor<float>>(tensorVariant))
         {
@@ -165,7 +165,7 @@ class MhaFind20Test
 public:
     MhaFind20Test(bool forward) : problem(nullptr), isForward(forward) { Initialize(); }
 
-    std::vector<miopenSolution_t> TestFindSolutions(Handle& handle)
+    std::vector<miopenSolution_t> TestFindSolutions(Handle const& handle)
     {
         std::cerr << "Testing miopenFindSolutions..." << std::endl;
 
@@ -204,7 +204,7 @@ public:
         std::cerr << "Finished testing miopenGetSolution<Attribute>." << std::endl;
     }
 
-    void TestRunSolutions(Handle& handle, const std::vector<miopenSolution_t>& solutions)
+    void TestRunSolutions(Handle const& handle, const std::vector<miopenSolution_t>& solutions)
     {
         std::cerr << "Testing a solution..." << std::endl;
 
@@ -410,7 +410,7 @@ private:
         }
     }
 
-    void GetForwardResultsWithoutFind20(Handle& handle,
+    void GetForwardResultsWithoutFind20(Handle const& handle,
                                         TensorStructMap& outputResultsMap,
                                         Workspace& workspace,
                                         uint64_t solver_id)
@@ -505,7 +505,7 @@ private:
         ReadData(handle, outputResultsMap);
     }
 
-    void GetBackwardResultsWithoutFind20(Handle& handle,
+    void GetBackwardResultsWithoutFind20(Handle const& handle,
                                          TensorStructMap& outputResultsMap,
                                          Workspace& workspace,
                                          uint64_t solver_id)
@@ -630,7 +630,7 @@ private:
         ReadData(handle, outputResultsMap);
     }
 
-    void ReadData(Handle& handle, TensorStructMap& outputResultsMap)
+    void ReadData(Handle const& handle, TensorStructMap& outputResultsMap)
     {
         for(const auto& it : outputResultsMap)
         {
@@ -658,7 +658,7 @@ private:
 
 TEST(GPU_TestMhaFind20_FP32, MhaForward)
 {
-    Handle& handle = get_handle();
+    Handle const& handle = get_handle();
 
     MhaFind20Test test(true);
 
@@ -671,7 +671,7 @@ TEST(GPU_TestMhaFind20_FP32, MhaForward)
 
 TEST(GPU_TestMhaFind20_FP32, MhaBackward)
 {
-    Handle& handle = get_handle();
+    Handle const& handle = get_handle();
 
     MhaFind20Test test(false);
 

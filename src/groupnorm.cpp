@@ -33,7 +33,7 @@
 
 namespace miopen {
 
-miopenStatus_t GroupNormForward(Handle& handle,
+miopenStatus_t GroupNormForward(Handle const& handle,
                                 const TensorDescriptor& xDesc,
                                 ConstData_t x,
                                 const TensorDescriptor& weightDesc,

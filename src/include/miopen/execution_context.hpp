@@ -98,11 +98,11 @@ struct MIOPEN_INTERNALS_EXPORT ExecutionContext
     bool use_dynamic_solutions_only = false;
     bool is_for_generic_search      = false;
 
-    inline Handle& GetStream() const { return *stream; }
-    inline void SetStream(Handle* stream_) { stream = stream_; }
+    inline Handle const& GetStream() const { return *stream; }
+    inline void SetStream(Handle const* stream_) { stream = stream_; }
 
     ExecutionContext() { DetectRocm(); }
-    ExecutionContext(Handle* stream_) : stream(stream_) { DetectRocm(); }
+    ExecutionContext(Handle const* stream_) : stream(stream_) { DetectRocm(); }
 
     virtual ~ExecutionContext()               = default;
     ExecutionContext(const ExecutionContext&) = default;
@@ -293,7 +293,7 @@ struct MIOPEN_INTERNALS_EXPORT ExecutionContext
     }
 
 private:
-    Handle* stream = nullptr;
+    Handle const* stream = nullptr;
 
     void DetectRocm();
 };

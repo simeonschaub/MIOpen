@@ -120,7 +120,7 @@ size_t RNNDescriptor::RNNTransformerWorkspaceSize(const SeqTensorDescriptor& xDe
            typeSize;
 }
 
-void RNNDescriptor::RNNTransformerForward(Handle& handle,
+void RNNDescriptor::RNNTransformerForward(Handle const& handle,
                                           miopenRNNFWDMode_t fwdMode,
                                           ConstData_t w,
                                           const SeqTensorDescriptor& xDesc,
@@ -278,7 +278,7 @@ void RNNDescriptor::RNNTransformerForward(Handle& handle,
     }
 }
 
-void RNNDescriptor::RNNTransformerBackwardData(Handle& handle,
+void RNNDescriptor::RNNTransformerBackwardData(Handle const& handle,
                                                const SeqTensorDescriptor& yDesc,
                                                ConstData_t dy,
                                                const TensorDescriptor& hDesc,
@@ -446,7 +446,7 @@ void RNNDescriptor::RNNTransformerBackwardData(Handle& handle,
     }
 }
 
-void RNNDescriptor::RNNTransformerBackwardWeights(Handle& handle,
+void RNNDescriptor::RNNTransformerBackwardWeights(Handle const& handle,
                                                   const SeqTensorDescriptor& xDesc,
                                                   ConstData_t x,
                                                   const TensorDescriptor& hDesc,

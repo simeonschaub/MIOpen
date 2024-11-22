@@ -121,7 +121,7 @@ protected:
     {
         prng::reset_seed();
         auto [n, h, s, d, drop] = GetParam();
-        Handle& handle          = get_handle();
+        Handle const& handle    = get_handle();
 
         if((drop > 0.0f))
         {
@@ -303,7 +303,7 @@ protected:
 
     void TestBody() override
     {
-        Handle& handle = get_handle();
+        Handle const& handle = get_handle();
 
         auto FindSolutions = [&handle](miopenProblem_t problem_) {
             std::size_t found;

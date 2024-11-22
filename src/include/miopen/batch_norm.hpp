@@ -163,7 +163,7 @@ void bnFwdTrainSelectMulti(const Handle& handle,
 
 void profileSequence(const Handle& handle, unsigned char select, float* ctime);
 
-MIOPEN_INTERNALS_EXPORT void BatchNormForwardInference(Handle& handle,
+MIOPEN_INTERNALS_EXPORT void BatchNormForwardInference(Handle const& handle,
                                                        miopenBatchNormMode_t bn_mode,
                                                        const void* alpha,
                                                        const void* beta,
@@ -181,7 +181,7 @@ MIOPEN_INTERNALS_EXPORT void BatchNormForwardInference(Handle& handle,
                                                        ConstData_t estimatedVariance,
                                                        double epsilon);
 
-MIOPEN_INTERNALS_EXPORT void BatchNormForwardTraining(Handle& handle,
+MIOPEN_INTERNALS_EXPORT void BatchNormForwardTraining(Handle const& handle,
                                                       miopenBatchNormMode_t bn_mode,
                                                       const void* alpha,
                                                       const void* beta,
@@ -202,7 +202,7 @@ MIOPEN_INTERNALS_EXPORT void BatchNormForwardTraining(Handle& handle,
                                                       Data_t resultSaveMean,
                                                       Data_t resultSaveInvVariance);
 
-MIOPEN_INTERNALS_EXPORT void BatchNormBackward(Handle& handle,
+MIOPEN_INTERNALS_EXPORT void BatchNormBackward(Handle const& handle,
                                                miopenBatchNormMode_t bn_mode,
                                                const void* alphaDataDiff,
                                                const void* betaDataDiff,

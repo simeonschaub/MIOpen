@@ -50,7 +50,7 @@
 
 template <class TensorT>
 miopen::Allocator::ManageDataPtr
-createTensorAtGPUOrNullptr(miopen::Handle& handle, TensorT& tensor, bool is_nullptr)
+createTensorAtGPUOrNullptr(miopen::Handle const& handle, TensorT& tensor, bool is_nullptr)
 {
     if(!is_nullptr)
         return handle.Create(tensor.GetDataByteSize());
@@ -60,7 +60,7 @@ createTensorAtGPUOrNullptr(miopen::Handle& handle, TensorT& tensor, bool is_null
 
 template <class TensorT>
 miopen::Allocator::ManageDataPtr
-transferTensorToGPUOrNullptr(miopen::Handle& handle, TensorT& tensor, bool is_nullptr)
+transferTensorToGPUOrNullptr(miopen::Handle const& handle, TensorT& tensor, bool is_nullptr)
 {
     if(!is_nullptr)
         return handle.Write(tensor.data);
@@ -70,7 +70,7 @@ transferTensorToGPUOrNullptr(miopen::Handle& handle, TensorT& tensor, bool is_nu
 
 // read from GPU cnt elements of type T
 template <template <class T> typename TensorT, class T>
-auto readTFromGPUOrEmpty(miopen::Handle& handle,
+auto readTFromGPUOrEmpty(miopen::Handle const& handle,
                          miopen::Allocator::ManageDataPtr& gpuPtr,
                          const TensorT<T>& tensor,
                          bool isEmpty) -> decltype(handle.Read<T>(gpuPtr, tensor.GetSize()))
@@ -1363,7 +1363,7 @@ constexpr miopenRNNBaseLayout_t rnn_data_layout(int io_layout)
     }
 }
 
-inline size_t get_RNN_params_byteSize(miopen::Handle& handle,
+inline size_t get_RNN_params_byteSize(miopen::Handle const& handle,
                                       miopen::RNNDescriptor& rnnDesc,
                                       miopen::SeqTensorDescriptor& inTensor)
 {
@@ -1404,7 +1404,7 @@ struct rnn_seq_api_test_driver : test_driver
 
     rnn_seq_api_test_driver() {}
 
-    bool check_GPU_mem_limit(miopen::Handle& handle,
+    bool check_GPU_mem_limit(miopen::Handle const& handle,
                              miopen::RNNDescriptor& rnnDesc,
                              seqTensor<T>& input,
                              seqTensor<T>& output,

@@ -35,7 +35,7 @@
 
 namespace miopen {
 
-std::size_t GetGetitemWorkspaceSize(Handle& handle,
+std::size_t GetGetitemWorkspaceSize(Handle const& handle,
                                     uint32_t indexCount,
                                     const TensorDescriptor* const* indexDescs)
 {
@@ -50,7 +50,7 @@ std::size_t GetGetitemWorkspaceSize(Handle& handle,
     return pair_size_vector.empty() ? static_cast<size_t>(0) : pair_size_vector.front().second;
 }
 
-miopenStatus_t GetitemBackward(Handle& handle,
+miopenStatus_t GetitemBackward(Handle const& handle,
                                Data_t workspace,
                                size_t workspaceSizeInBytes,
                                const TensorDescriptor& dyDesc,

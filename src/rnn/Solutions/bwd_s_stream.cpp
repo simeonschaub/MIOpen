@@ -29,7 +29,7 @@ namespace miopen {
 
 namespace rnn_base {
 
-void RNNModularSingleStreamBWD::ComputeBWD(Handle& handle,
+void RNNModularSingleStreamBWD::ComputeBWD(Handle const& handle,
                                            ConstData_t dy,
                                            ConstData_t dhy,
                                            Data_t dhx,

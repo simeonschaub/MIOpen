@@ -31,7 +31,7 @@
  **********************************************/
 
 template <class T>
-void LSTMFwdCPUVerify(miopen::Handle& handle,
+void LSTMFwdCPUVerify(miopen::Handle const& handle,
                       bool use_dropout,
                       const miopen::DropoutDescriptor& dropoutDesc,
                       const std::vector<T>& in,
@@ -1563,7 +1563,7 @@ void LSTMBwdWeightCPUVerify(bool use_dropout_cpu,
  * rnn_vanilla_common.hpp
  **********************************************/
 template <typename T>
-void RNNFwdTrainCPUVerify(miopen::Handle& handle,
+void RNNFwdTrainCPUVerify(miopen::Handle const& handle,
                           bool use_dropout,
                           const miopen::DropoutDescriptor& dropoutDesc,
                           const std::vector<T>& in,
@@ -2728,7 +2728,7 @@ void RNNBwdWeightCPUVerify(bool use_dropout,
  **********************************************/
 
 template <typename T>
-void GRUFwdCPUVerify(miopen::Handle& handle,
+void GRUFwdCPUVerify(miopen::Handle const& handle,
                      bool use_dropout,
                      const miopen::DropoutDescriptor& dropoutDesc,
                      const std::vector<T>& in,
@@ -4488,7 +4488,7 @@ void GRUBwdWeightCPUVerify(bool use_dropout,
  **********************************************/
 template <class T>
 void UniformRNNFwdTrainCPUVerify(
-    miopen::Handle& handle,
+    miopen::Handle const& handle,
     bool use_dropout,
     const miopen::DropoutDescriptor& dropoutDesc,
     const std::vector<T>& in,

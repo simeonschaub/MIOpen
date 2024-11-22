@@ -43,7 +43,7 @@
 
 namespace miopen {
 
-void CTCLossDescriptor::CTCLoss(Handle& handle,
+void CTCLossDescriptor::CTCLoss(Handle const& handle,
                                 const TensorDescriptor& probsDesc,
                                 ConstData_t probs,
                                 const int* labels,

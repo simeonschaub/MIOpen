@@ -184,14 +184,14 @@ struct TensorData
     miopen::Allocator::ManageDataPtr m_gpuBuffer;
 
     template <typename T>
-    void InitAndWriteToGPU(miopen::Handle& handle, tensor<T>&& tensor)
+    void InitAndWriteToGPU(miopen::Handle const& handle, tensor<T>&& tensor)
     {
         m_tensorVariant = std::move(tensor);
         m_gpuBuffer     = handle.Write(GetTensor<T>(m_tensorVariant).data);
     }
 
     template <typename T>
-    void InitAndWriteToGPU(miopen::Handle& handle, T val)
+    void InitAndWriteToGPU(miopen::Handle const& handle, T val)
     {
         GetTensor<T>(m_tensorVariant).generate([=](auto...) { return val; });
         m_gpuBuffer = handle.Write(GetTensor<T>(m_tensorVariant).data);
@@ -238,7 +238,7 @@ public:
         m_testD               = d;
         m_bernulliProbability = p;
 
-        miopen::Handle& handle = get_handle();
+        miopen::Handle const& handle = get_handle();
 
         if((p > 0.0f) && (s % handle.GetWavefrontWidth() != 0))
         {
@@ -249,7 +249,7 @@ public:
 
     void Run()
     {
-        miopen::Handle& handle = get_handle();
+        miopen::Handle const& handle = get_handle();
 
         try
         {
@@ -268,11 +268,11 @@ public:
     }
 
 protected:
-    virtual void MakeRealTensorsAndFillData(miopen::Handle& handle) = 0;
+    virtual void MakeRealTensorsAndFillData(miopen::Handle const& handle) = 0;
 
     virtual void MakeVirtualTensorsAndNodes() = 0;
 
-    virtual void PrepareOpGraphAndEngines(miopen::Handle& handle)
+    virtual void PrepareOpGraphAndEngines(miopen::Handle const& handle)
     {
         miopenHandle_t rawHandle = &handle;
 
@@ -344,7 +344,7 @@ protected:
         m_executionPlan->AddRef(engineConfig);
     }
 
-    virtual void MakeVariantPackAndRun(miopen::Handle& handle)
+    virtual void MakeVariantPackAndRun(miopen::Handle const& handle)
     {
         miopenHandle_t rawHandle = &handle;
 
@@ -388,7 +388,7 @@ protected:
     }
 
     template <typename ResultT>
-    tensor<ResultT>& GetResult(const int64_t& id, miopen::Handle& handle)
+    tensor<ResultT>& GetResult(const int64_t& id, miopen::Handle const& handle)
     {
         auto it = m_realTensorMap.find(id);
         assert(it != m_realTensorMap.cend());
@@ -400,7 +400,7 @@ protected:
         return ret;
     };
 
-    virtual void RunCPUverify(miopen::Handle& handle) = 0;
+    virtual void RunCPUverify(miopen::Handle const& handle) = 0;
 
     // just a simple id generator, might be redone if necessary
     int64_t GetNextId() { return m_nextTensorId++; }

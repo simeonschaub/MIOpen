@@ -196,7 +196,7 @@ static void RunGemmDescriptors(const TestCase& testCase, miopenDataType_t dataTy
         workspaceB_device.Write(workspaceB_host);
         workspaceC_device.Write(workspaceC_host);
 
-        Handle& handle = get_handle();
+        Handle const& handle = get_handle();
 
         if(desc.batch_count == 1)
         {
@@ -255,7 +255,7 @@ static void CheckExceptions(miopenDataType_t dataType)
     Workspace workspaceB_device(bSize * sizeof(T));
     Workspace workspaceC_device(cSize * sizeof(T));
 
-    Handle& handle = get_handle();
+    Handle const& handle = get_handle();
 
     EXPECT_THROW(CallGemm(handle,
                           desc,
