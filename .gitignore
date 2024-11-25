@@ -46,6 +46,7 @@ tags
 # GDB temporary files
 .gdb_history
 install.dir*
+install_dir/
 
 # documentation artifacts
 _build/
