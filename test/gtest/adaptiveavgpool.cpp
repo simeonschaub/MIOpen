@@ -50,13 +50,13 @@ TEST_P(GPU_AdaptiveAvgPool_fwd_BFP16, AdaptiveAvgPoolTestFwd)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_AdaptiveAvgPool_fwd_FP32,
                          testing::ValuesIn(AdaptiveAvgPoolTestConfigsFwdFp32()));
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_AdaptiveAvgPool_fwd_FP16,
                          testing::ValuesIn(AdaptiveAvgPoolTestConfigsFwdFp16()));
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_AdaptiveAvgPool_fwd_BFP16,
                          testing::ValuesIn(AdaptiveAvgPoolTestConfigsFwdBfp16()));
 
@@ -83,12 +83,12 @@ TEST_P(GPU_AdaptiveAvgPool_bwd_BFP16, AdaptiveAvgPoolTestBwd)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_AdaptiveAvgPool_bwd_FP32,
                          testing::ValuesIn(AdaptiveAvgPoolTestConfigsBwdFp32()));
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_AdaptiveAvgPool_bwd_FP16,
                          testing::ValuesIn(AdaptiveAvgPoolTestConfigsBwdFp16()));
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_AdaptiveAvgPool_bwd_BFP16,
                          testing::ValuesIn(AdaptiveAvgPoolTestConfigsBwdBfp16()));
