@@ -330,7 +330,7 @@ public:
                                                Data_t workSpace,
                                                size_t workSpaceSize,
                                                ConstData_t reserveSpace,
-                                               size_t reserveSpaceSize) const
+                                               size_t /*reserveSpaceSize*/) const
     {
         const ConstData_t back_data_space = workSpace;
         const auto back_data_byte_size =

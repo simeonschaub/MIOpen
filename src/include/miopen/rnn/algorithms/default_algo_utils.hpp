@@ -139,7 +139,7 @@ public:
         IOBufferDescriptor x_info{IOBufferDescriptor::build(xDesc)};
         IOBufferDescriptor y_info{IOBufferDescriptor::build(yDesc)};
 
-        return {std::move(rb_layout),
+        return {rb_layout,
                 workspace_info,
                 weights_layout,
                 hidden_hxcx_info,
@@ -150,29 +150,30 @@ public:
                 mode};
     }
 
-    RNNModuleAlgoBase(RNNModuleAlgoBase&&) = default;
+    RNNModuleAlgoBase(RNNModuleAlgoBase&&)      = default;
+    RNNModuleAlgoBase(const RNNModuleAlgoBase&) = default;
     // RNNModuleAlgoBase(RNNModuleAlgoBase const&) = default;
 
-    RNNModuleAlgoBase(GeneralLstmRedBuffer rb_layout,
-                      GeneralLstmTempBuffer workspace_info,
-                      WeightsBufferDescriptor weights_layout,
-                      HiddenBuffersDescriptor hidden_hxcx_info,
-                      IOBufferDescriptor x_info,
-                      IOBufferDescriptor y_info,
+    RNNModuleAlgoBase(const GeneralLstmRedBuffer& rb_layout,
+                      const GeneralLstmTempBuffer& workspace_info,
+                      const WeightsBufferDescriptor& weights_layout,
+                      const HiddenBuffersDescriptor& hidden_hxcx_info,
+                      const IOBufferDescriptor& x_info,
+                      const IOBufferDescriptor& y_info,
                       const RNNDescriptor& rnn_desc,
-                      BatchController batch_controller,
+                      const BatchController& batch_controller,
                       miopenRNNFWDMode_t fwd_mode)
-        : reservLayout(std::move(rb_layout)),
-          workspaceInfo(std::move(workspace_info)),
-          weightsLayout(std::move(weights_layout)),
-          hiddenHxCxInfo(std::move(hidden_hxcx_info)),
-          xInfo(std::move(x_info)),
-          yInfo(std::move(y_info)),
+        : reservLayout(rb_layout),
+          workspaceInfo(workspace_info),
+          weightsLayout(weights_layout),
+          hiddenHxCxInfo(hidden_hxcx_info),
+          xInfo(x_info),
+          yInfo(y_info),
           rnnDesc(rnn_desc),
           tanhDesc{miopenActivationTANH, 1, 1, 1},
           sigDesc{miopenActivationLOGISTIC, 1, 0, 1},
           reluDesc{miopenActivationRELU, 1, 0, 1},
-          batchController(std::move(batch_controller)),
+          batchController((batch_controller)),
           fwdMode(fwd_mode),
           isBidirectSeq(false)
     {
@@ -426,7 +427,8 @@ public:
                                reservInfo.getBufferSize() * GetTypeSize(rnnD.dataType));
     }
 
-    RNNForwardDataModularAlgo(RNNModuleAlgoBase base) : RNNModuleAlgoBase(std::move(base)) {}
+    RNNForwardDataModularAlgo(RNNModuleAlgoBase&& base) : RNNModuleAlgoBase(std::move(base)) {}
+    RNNForwardDataModularAlgo(const RNNModuleAlgoBase& base) : RNNModuleAlgoBase(base) {}
 
 private:
 };
@@ -541,6 +543,7 @@ public:
     }
 
     RNNBackwardDataModularAlgo(RNNModuleAlgoBase&& base) : RNNModuleAlgoBase(std::move(base)) {}
+    RNNBackwardDataModularAlgo(const RNNModuleAlgoBase& base) : RNNModuleAlgoBase(base) {}
 };
 
 class RNNBackwardWeightsModularAlgo : public RNNModuleAlgoBase
@@ -674,7 +677,8 @@ public:
                                reservInfo.getBufferSize() * GetTypeSize(rnnD.dataType));
     }
 
-    RNNBackwardWeightsModularAlgo(RNNModuleAlgoBase base) : RNNModuleAlgoBase(std::move(base)) {}
+    RNNBackwardWeightsModularAlgo(RNNModuleAlgoBase&& base) : RNNModuleAlgoBase(std::move(base)) {}
+    RNNBackwardWeightsModularAlgo(const RNNModuleAlgoBase& base) : RNNModuleAlgoBase(base) {}
 
 protected:
     void HiddenHStateWeights_Unchecked(const Handle& handle,
