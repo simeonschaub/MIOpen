@@ -3751,7 +3751,9 @@ typedef enum
     miopenRNNdefault = 0, /*!< Use dedicated gate-operation kernel for LSTM and fundamental
                              algorithm for vanilla RNN & GRU */
     miopenRNNfundamental =
-        1, /*!< Function by basic tesnsor operations, supported for vanilla RNN, LSTM, GRU */
+        1, /*!< Deprecated, low performance. Function by basic tesnsor operations, supported for vanilla RNN, LSTM, GRU */
+    miopenRNNroundedDynamic = 2, /*!< The algorithm rounds some RNN parametrs upwards
+                                    to utilize the most optimal GEMM kernel in the computation.*/
 } miopenRNNAlgo_t;
 
 /*! @enum miopenRNNDirectionMode_t

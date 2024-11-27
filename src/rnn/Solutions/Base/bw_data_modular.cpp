@@ -275,15 +275,10 @@ void RNNBackwardDataModularAlgo::PropDhxDcx(const Handle& handle,
             const float alpha1 = 1;
             const float beta_t = 1;
 
-            const auto bOffset = rnnDesc.algoMode == miopenRNNdefault
-                                     ? reservLayout.getGasOffset(layer,
+            const auto bOffset = reservLayout.getGasOffset(layer,
                                                                  acc_batch_offset,
                                                                  direction,
-                                                                 LstmGateAndState::F)
-                                     : reservLayout.getActiveCellOffset( // TODO double check
-                                           layer,
-                                           acc_batch_offset,
-                                           direction);
+                                                                 LstmGateAndState::F);
 
             const auto a_offset = workspaceInfo.getGasOffset(
                 layer, acc_batch_offset, direction, LstmGateAndState::St);
@@ -601,13 +596,11 @@ void RNNBackwardDataModularAlgo::UpdateHStatePerTimeSeq(const Handle& handle,
     const size_t hidden_vec = rnnDesc.hsize;
     auto rnn_data_type      = rnnDesc.dataType;
     auto rnn_mode           = rnnDesc.rnnMode;
-    auto rnn_algo_mode      = rnnDesc.algoMode;
 
     if(rnn_mode == miopenRNNRELU || rnn_mode == miopenRNNTANH) {}
     else if(rnn_mode == miopenLSTM)
     {
-        if(rnn_algo_mode == miopenRNNdefault)
-        {
+
             size_t cur_comb_dim  = batchController.getBatchSum(seq.getPhisVal());
             size_t prev_comb_dim = !seq.isFirst()
                                        ? batchController.getBatchSum(seq.getPrev().getPhisVal())
@@ -655,13 +648,6 @@ void RNNBackwardDataModularAlgo::UpdateHStatePerTimeSeq(const Handle& handle,
                 workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::Ht),
                 workspaceInfo.getGasOffset(layer, prev_comb_dim, direction, LstmGateAndState::F));
         }
-        else
-        {
-            MIOPEN_THROW(miopenStatusInternalError,
-                         "TODO implementation algoMode != miopenRNNdefault");
-            // TODO implementation
-        }
-    }
     else if(rnn_mode == miopenGRU)
     {
         MIOPEN_THROW(miopenStatusInternalError, "TODO implementation miopenGRU");

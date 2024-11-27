@@ -33,10 +33,26 @@ namespace miopen {
 
 namespace rnn_base {
 
+inline std::vector<size_t> roundedDynamicLengths(const SeqTensorDescriptor& desc)
+{
+    auto src_lens = desc.GetLengths();
+    src_lens[1]   = [](size_t v) {
+        v--;
+        v |= v >> 1;
+        v |= v >> 2;
+        v |= v >> 4;
+        v |= v >> 8;
+        v |= v >> 16;
+        v++;
+        return v;
+    }(src_lens[1]);
+    return src_lens;
+}
+
 inline SeqTensorDescriptor buildDynamicVirtual(const SeqTensorDescriptor& desc)
 {
     std::vector<unsigned int> def_layout{1, 0, 2};
-    return {desc.GetType(), def_layout, desc.GetLengths(), false};
+    return {desc.GetType(), def_layout, roundedDynamicLengths(desc), false};
 }
 
 inline SeqTensorDescriptor buildRealToDynamicMapTmp(const SeqTensorDescriptor& desc)
@@ -167,23 +183,6 @@ private:
 class RNNBackwardModuleAlgoDynamic : public RNNBackwardDataModularAlgo
 {
     using BaseBWDModuleT = rnn_base::RNNBackwardDataModularAlgo;
-    static SeqTensorDescriptor buildDynamicVirtual(const SeqTensorDescriptor& desc)
-    {
-        std::vector<unsigned int> def_layout{1, 0, 2};
-        return {desc.GetType(), def_layout, desc.GetLengths(), false};
-    }
-
-    static SeqTensorDescriptor buildRealToDynamicMapTmp(const SeqTensorDescriptor& desc)
-    {
-        std::vector<unsigned int> def_layout{1, 0, 2};
-        return {desc.GetType(),
-                def_layout,
-                desc.GetLengths(),
-                desc.GetSequenceLengthsVector(),
-                std::vector<char>{},
-                true,
-                true};
-    }
 
 public:
     RNNBackwardModuleAlgoDynamic(const RNNDescriptor& rnnD,
