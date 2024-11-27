@@ -2789,7 +2789,6 @@ void RNNDescriptor::RNNForwardTrainingPackedTensors(
     // input check end
     bool use_dropout = !float_equal(miopen::deref(dropoutDesc).dropout, 0);
 
-    
     // high priority for DynamicAlgo
     if(!CheckDynamicAlgoSelection(handle, {}, miopenRNNTraining) &&
        RNNForwardMSIsSupported(*this, false) && RNNForwardMSIsFast(seqLen))

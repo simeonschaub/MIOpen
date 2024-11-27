@@ -275,10 +275,8 @@ void RNNBackwardDataModularAlgo::PropDhxDcx(const Handle& handle,
             const float alpha1 = 1;
             const float beta_t = 1;
 
-            const auto bOffset = reservLayout.getGasOffset(layer,
-                                                                 acc_batch_offset,
-                                                                 direction,
-                                                                 LstmGateAndState::F);
+            const auto bOffset =
+                reservLayout.getGasOffset(layer, acc_batch_offset, direction, LstmGateAndState::F);
 
             const auto a_offset = workspaceInfo.getGasOffset(
                 layer, acc_batch_offset, direction, LstmGateAndState::St);
@@ -802,7 +800,6 @@ void RNNBackwardModuleAlgoDynamic::PrepareWriteBuffers(
 
     // realDxProp(handle, runtimeArgsExt);
 }
-
 
 } // namespace rnn_base
 } // namespace miopen

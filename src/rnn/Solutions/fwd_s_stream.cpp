@@ -80,7 +80,7 @@ void RNNModularSingleStreamFWD::ComputeFWD(Handle& handle, const runtimeArgsFwd&
 void RNNDynamicModularSingleStreamFWD::ComputeFWD(Handle& handle,
                                                   const runtimeArgsFwd& realRuntimeArgs) const
 {
-    auto seq_iterations = rnnAlgoModules.getTimeSeqSize();
+    auto seq_iterations      = rnnAlgoModules.getTimeSeqSize();
     auto real_seq_iterations = rnnAlgoModules.getRealTimeSeqSize();
 
     if(rnnDesc.nLayers == 0 || seq_iterations == 0)
@@ -107,7 +107,7 @@ void RNNDynamicModularSingleStreamFWD::ComputeFWD(Handle& handle,
     rnnAlgoModules.PropX(handle, runtimeArgs);
 
     rnnAlgoModules.AddBias(handle, runtimeArgs);
-    
+
     for(auto layer_i = 0; layer_i < rnnDesc.nLayers; ++layer_i)
     {
 

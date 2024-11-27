@@ -224,10 +224,7 @@ public:
                (direction == SequenceDirection::Forward ? 0 : 1);
     }
 
-    inline size_t getTimeSeqSize() const
-    {
-        return batchController.size();
-    }
+    inline size_t getTimeSeqSize() const { return batchController.size(); }
 
     template <typename BufType>
     inline miopen::TensorDescriptor BuildLstmTmpBlockDesc2D(const BufType& buf_info,

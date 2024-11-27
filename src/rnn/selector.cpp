@@ -67,7 +67,6 @@ bool RNNBwWeightMSIsFast(const int seqLen)
     return false;
 }
 
-
 std::tuple<size_t, size_t> RNNDescriptor::GetTmpSpaceSizeDynamicAlgo(
     Handle& /*handle*/, const SeqTensorDescriptor& xDesc, miopenRNNFWDMode_t /*fwdMode*/) const
 {
@@ -84,9 +83,9 @@ bool RNNDescriptor::CheckDynamicAlgoSelection(Handle& /*handle*/,
     bool algo_mode_match = algoMode == miopenRNNroundedDynamic ||
                            (algoMode == miopenRNNdefault && env::enabled(MIOPEN_RNN_DYNAMIC_FORCE));
 
-    bool use_dropout      = !float_equal(miopen::deref(dropoutDesc).dropout, 0);
-    bool rnn_config_match = (dirMode == 0 && inputMode == miopenRNNlinear &&
-                             rnnMode == miopenLSTM && !use_dropout);
+    bool use_dropout = !float_equal(miopen::deref(dropoutDesc).dropout, 0);
+    bool rnn_config_match =
+        (dirMode == 0 && inputMode == miopenRNNlinear && rnnMode == miopenLSTM && !use_dropout);
 
     if(rnn_config_match && algo_mode_match)
     {

@@ -561,10 +561,7 @@ public:
         return batchPrefSumAtTime[time_id];
     }
 
-    size_t size() const
-    {
-        return batchAtTime.size();
-    }
+    size_t size() const { return batchAtTime.size(); }
 
 private:
     template <class T, std::enable_if_t<std::is_same<T, std::vector<size_t>>::value, bool> = true>

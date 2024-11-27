@@ -185,7 +185,7 @@ private:
 class RNNBackwardModuleAlgoDynamic : public RNNBackwardDataModularAlgo
 {
     using BaseBWDModuleT = rnn_base::RNNBackwardDataModularAlgo;
-    
+
 public:
     RNNBackwardModuleAlgoDynamic(const RNNDescriptor& rnnD,
                                  const SeqTensorDescriptor& xTDesc,
@@ -300,7 +300,6 @@ public:
     //                         const runtimeArgsFwd& runtimeArgs) const;
 
     inline size_t getRealTimeSeqSize() const { return realBatchController.size(); }
-
 
 private:
     BatchController realBatchController;

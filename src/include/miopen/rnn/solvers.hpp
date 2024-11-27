@@ -78,15 +78,13 @@ public:
 class RNNDynamicModularSingleStreamFWD
 {
 private:
-
 public:
     RNNDynamicModularSingleStreamFWD(const RNNDescriptor& rnn,
                                      const SeqTensorDescriptor& xDesc,
                                      const SeqTensorDescriptor& yDesc,
                                      const TensorDescriptor& hDesc,
                                      miopenRNNFWDMode_t mode)
-        : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode),
-          rnnDesc(rnn)
+        : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode), rnnDesc(rnn)
     {
     }
 
@@ -168,8 +166,7 @@ public:
                                      const SeqTensorDescriptor& yDesc,
                                      const TensorDescriptor& hDesc,
                                      miopenRNNFWDMode_t mode)
-        : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode),
-          rnnDesc(rnn)
+        : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode), rnnDesc(rnn)
     {
     }
 
