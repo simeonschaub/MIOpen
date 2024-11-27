@@ -133,7 +133,8 @@ struct rnn_seq_driver : rnn_seq_api_test_driver<T>
     void run()
     {
 
-        if(!this->full_set || (is_correct_params() && !is_skip_comb() && !is_dynamic_algo_skip_case()))
+        if(!this->full_set ||
+           (is_correct_params() && !is_skip_comb() && !is_dynamic_algo_skip_case()))
             rnn_seq_api_test_driver<T>::run();
         else
         {

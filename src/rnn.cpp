@@ -572,7 +572,8 @@ size_t RNNDescriptor::GetWorkspaceSize(Handle& handle,
 size_t RNNDescriptor::GetReserveSize(size_t batchLenSum) const
 {
     auto x = 2 * workspaceScale * nLayers * batchLenSum * hsize * typeSize;
-    if( (algoMode == miopenRNNdefault || algoMode == miopenRNNroundedDynamic) && rnnMode == miopenLSTM)
+    if((algoMode == miopenRNNdefault || algoMode == miopenRNNroundedDynamic) &&
+       rnnMode == miopenLSTM)
     {
         x /= 2;
         x += nLayers * batchLenSum * hsize * typeSize;
