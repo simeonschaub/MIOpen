@@ -166,24 +166,26 @@ public:
                              const runtimeArgsFwd& runtimeArgs) const;
 
     void PropHyCy(const Handle& handle,
-                  const runtimeArgsFwd& runtimeArgs,
+                  const runtimeArgsFwdDynamicExt& runtimeArgs,
                   size_t layer,
                   const SequenceIterator& currentSeq,
                   SequenceDirection direction) const;
 
-private:
-    BatchController realBatchController;
+    inline size_t getRealTimeSeqSize() const { return realBatchController.size(); }
 
-    SeqTensorDescriptor realXDesc;
-    SeqTensorDescriptor realYDesc;
-    SeqTensorDescriptor tmpMapXDesc;
-    SeqTensorDescriptor tmpMapYDesc;
+private:
+    const BatchController realBatchController;
+
+    const SeqTensorDescriptor realXDesc;
+    const SeqTensorDescriptor realYDesc;
+    const SeqTensorDescriptor tmpMapXDesc;
+    const SeqTensorDescriptor tmpMapYDesc;
 };
 
 class RNNBackwardModuleAlgoDynamic : public RNNBackwardDataModularAlgo
 {
     using BaseBWDModuleT = rnn_base::RNNBackwardDataModularAlgo;
-
+    
 public:
     RNNBackwardModuleAlgoDynamic(const RNNDescriptor& rnnD,
                                  const SeqTensorDescriptor& xTDesc,
@@ -297,11 +299,8 @@ public:
     //                         const runtimeArgsBwdDynamicExt& runtimeArgsExt,
     //                         const runtimeArgsFwd& runtimeArgs) const;
 
-    void PropHyCy(const Handle& handle,
-                  const runtimeArgsFwd& runtimeArgs,
-                  size_t layer,
-                  const SequenceIterator& currentSeq,
-                  SequenceDirection direction) const;
+    inline size_t getRealTimeSeqSize() const { return realBatchController.size(); }
+
 
 private:
     BatchController realBatchController;
@@ -315,24 +314,6 @@ private:
 class RNNBackwardWeiModuleAlgoDynamic : public RNNBackwardWeightsModularAlgo
 {
     using BaseBWDModuleT = rnn_base::RNNBackwardWeightsModularAlgo;
-
-    static SeqTensorDescriptor buildDynamicVirtual(const SeqTensorDescriptor& desc)
-    {
-        std::vector<unsigned int> def_layout{1, 0, 2};
-        return {desc.GetType(), def_layout, desc.GetLengths(), false};
-    }
-
-    static SeqTensorDescriptor buildRealToDynamicMapTmp(const SeqTensorDescriptor& desc)
-    {
-        std::vector<unsigned int> def_layout{1, 0, 2};
-        return {desc.GetType(),
-                def_layout,
-                desc.GetLengths(),
-                desc.GetSequenceLengthsVector(),
-                std::vector<char>{},
-                true,
-                true};
-    }
 
 public:
     RNNBackwardWeiModuleAlgoDynamic(const RNNDescriptor& rnnD,

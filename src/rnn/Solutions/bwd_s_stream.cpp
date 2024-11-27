@@ -139,7 +139,10 @@ void RNNDynamicModularSingleStreamBWD::ComputeBWD(Handle& handle,
 {
     auto layer_i = rnnDesc.nLayers;
 
-    if(layer_i == 0 || max_seq_len == 0)
+    auto seq_iterations      = rnnAlgoModules.getTimeSeqSize();
+    auto real_seq_iterations = rnnAlgoModules.getRealTimeSeqSize();
+
+    if(layer_i == 0 || seq_iterations == 0 || real_seq_iterations == 0)
         return;
 
     auto sequence_directions =
@@ -174,17 +177,31 @@ void RNNDynamicModularSingleStreamBWD::ComputeBWD(Handle& handle,
             const auto seq_dir = dir == 0 ? rnn_base::SequenceDirection::Forward
                                           : rnn_base::SequenceDirection::Reverse;
 
-            auto ti = max_seq_len;
+            auto ti = seq_iterations;
             do
             {
-                const rnn_base::SequenceIterator cur_seq(--ti, seq_dir, max_seq_len, false);
+                const rnn_base::SequenceIterator cur_seq(--ti, seq_dir, seq_iterations, false);
 
-                rnnAlgoModules.realPropDhy(handle, dhy, workSpace, layer_i, cur_seq, seq_dir);
+                if(ti < real_seq_iterations)
+                {
+                    const rnn_base::SequenceIterator real_cur_seq(
+                        ti, seq_dir, real_seq_iterations, false);
 
-                // rnnAlgoModules.HtHiddenDataZeroing();
+                    rnnAlgoModules.realPropDhy(
+                        handle, dhy, workSpace, layer_i, real_cur_seq, seq_dir);
 
-                rnnAlgoModules.realUpdateHStatePerTimeSeq(
-                    handle, dcy, cx, dcx, workSpace, reserveSpace, layer_i, cur_seq, seq_dir);
+                    // rnnAlgoModules.HtHiddenDataZeroing();
+
+                    rnnAlgoModules.realUpdateHStatePerTimeSeq(handle,
+                                                              dcy,
+                                                              cx,
+                                                              dcx,
+                                                              workSpace,
+                                                              reserveSpace,
+                                                              layer_i,
+                                                              real_cur_seq,
+                                                              seq_dir);
+                }
 
                 // GEMM
                 if(ti != 0)

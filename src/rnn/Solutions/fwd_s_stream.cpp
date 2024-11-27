@@ -80,8 +80,10 @@ void RNNModularSingleStreamFWD::ComputeFWD(Handle& handle, const runtimeArgsFwd&
 void RNNDynamicModularSingleStreamFWD::ComputeFWD(Handle& handle,
                                                   const runtimeArgsFwd& realRuntimeArgs) const
 {
+    auto seq_iterations = rnnAlgoModules.getTimeSeqSize();
+    auto real_seq_iterations = rnnAlgoModules.getRealTimeSeqSize();
 
-    if(rnnDesc.nLayers == 0 || max_seq_len == 0)
+    if(rnnDesc.nLayers == 0 || seq_iterations == 0)
         return;
 
     auto sequence_directions =
@@ -105,7 +107,7 @@ void RNNDynamicModularSingleStreamFWD::ComputeFWD(Handle& handle,
     rnnAlgoModules.PropX(handle, runtimeArgs);
 
     rnnAlgoModules.AddBias(handle, runtimeArgs);
-
+    
     for(auto layer_i = 0; layer_i < rnnDesc.nLayers; ++layer_i)
     {
 
@@ -117,9 +119,9 @@ void RNNDynamicModularSingleStreamFWD::ComputeFWD(Handle& handle,
             if(layer_i != 0)
                 rnnAlgoModules.PropHiddenY(handle, runtimeArgs, layer_i, seq_dir);
 
-            for(int ti = 0; ti < max_seq_len; ti++)
+            for(int ti = 0; ti < seq_iterations; ti++)
             {
-                const rnn_base::SequenceIterator cur_seq(ti, seq_dir, max_seq_len, true);
+                const rnn_base::SequenceIterator cur_seq(ti, seq_dir, seq_iterations, true);
 
                 if(ti == 0)
                     rnnAlgoModules.PropHxCx(handle, runtimeArgs, layer_i, cur_seq, seq_dir);
@@ -129,7 +131,13 @@ void RNNDynamicModularSingleStreamFWD::ComputeFWD(Handle& handle,
                 rnnAlgoModules.UpdateHStatePerTimeSeq(
                     handle, runtimeArgs, layer_i, cur_seq, seq_dir);
 
-                rnnAlgoModules.PropHyCy(handle, runtimeArgs, layer_i, cur_seq, seq_dir);
+                if(ti < real_seq_iterations)
+                {
+                    const rnn_base::SequenceIterator real_cur_seq(
+                        ti, seq_dir, real_seq_iterations, true);
+
+                    rnnAlgoModules.PropHyCy(handle, runtimeArgsExt, layer_i, real_cur_seq, seq_dir);
+                }
             }
         }
     }

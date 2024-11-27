@@ -547,11 +547,19 @@ void RNNModuleAlgoDynamic::PrepareWriteBuffers(const Handle& handle,
                                                const runtimeArgsFwd& runtimeArgs) const
 {
     RNNForwardDataModularAlgo::PrepareWriteBuffers(handle, runtimeArgs);
+
+    {
+        float beta       = 0;
+        auto temp_x_size = buildDynamicVirtual(realXDesc).GetElementCount();
+        miopen::TensorDescriptor temp_x_desk{rnnDesc.dataType, {1, temp_x_size}, {temp_x_size, 1}};
+        SetTensor(handle, temp_x_desk, runtimeArgsExt.tempX, &beta);
+    }
+
     realXProp(handle, runtimeArgsExt);
 }
 
 void RNNModuleAlgoDynamic::PropHyCy(const Handle& handle,
-                                    const runtimeArgsFwd& runtimeArgs,
+                                    const runtimeArgsFwdDynamicExt& runtimeArgs,
                                     size_t layer,
                                     const SequenceIterator& currentSeq,
                                     SequenceDirection direction) const

@@ -224,6 +224,11 @@ public:
                (direction == SequenceDirection::Forward ? 0 : 1);
     }
 
+    inline size_t getTimeSeqSize() const
+    {
+        return batchController.size();
+    }
+
     template <typename BufType>
     inline miopen::TensorDescriptor BuildLstmTmpBlockDesc2D(const BufType& buf_info,
                                                             const size_t batch_size) const
@@ -427,6 +432,8 @@ public:
                                reservInfo.getBufferSize() * GetTypeSize(rnnD.dataType));
     }
 
+    inline size_t getTimeSeqSize() const { return RNNModuleAlgoBase::getTimeSeqSize(); }
+
     RNNForwardDataModularAlgo(RNNModuleAlgoBase&& base) : RNNModuleAlgoBase(std::move(base)) {}
     RNNForwardDataModularAlgo(const RNNModuleAlgoBase& base) : RNNModuleAlgoBase(base) {}
 
@@ -541,6 +548,8 @@ public:
         return false;
 #endif // MIOPEN_USE_GEMM&& MIOPEN_BACKEND_HIP
     }
+
+    inline size_t getTimeSeqSize() const { return RNNModuleAlgoBase::getTimeSeqSize(); }
 
     RNNBackwardDataModularAlgo(RNNModuleAlgoBase&& base) : RNNModuleAlgoBase(std::move(base)) {}
     RNNBackwardDataModularAlgo(const RNNModuleAlgoBase& base) : RNNModuleAlgoBase(base) {}

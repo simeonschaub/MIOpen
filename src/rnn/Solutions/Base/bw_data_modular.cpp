@@ -601,53 +601,53 @@ void RNNBackwardDataModularAlgo::UpdateHStatePerTimeSeq(const Handle& handle,
     else if(rnn_mode == miopenLSTM)
     {
 
-            size_t cur_comb_dim  = batchController.getBatchSum(seq.getPhisVal());
-            size_t prev_comb_dim = !seq.isFirst()
-                                       ? batchController.getBatchSum(seq.getPrev().getPhisVal())
-                                       : batchController.getBatchSum(seq.getPhisVal());
-            size_t next_comb_dim = !seq.isLast()
-                                       ? batchController.getBatchSum(seq.getNext().getPhisVal())
-                                       : batchController.getBatchSum(seq.getPhisVal());
+        size_t cur_comb_dim  = batchController.getBatchSum(seq.getPhisVal());
+        size_t prev_comb_dim = !seq.isFirst()
+                                   ? batchController.getBatchSum(seq.getPrev().getPhisVal())
+                                   : batchController.getBatchSum(seq.getPhisVal());
+        size_t next_comb_dim = !seq.isLast()
+                                   ? batchController.getBatchSum(seq.getNext().getPhisVal())
+                                   : batchController.getBatchSum(seq.getPhisVal());
 
-            LSTMBackwardHiddenStateUpdate(
-                handle,
-                rnn_data_type,
-                seq.isLast(),  // ti == 0,
-                seq.isFirst(), // ti == seqLen - 1,
-                static_cast<int>(direction),
-                batchController.getBatchSize(0),
-                batchSizeUpdate,
-                useDcyIfGtBatch,
-                useCxIfGTBatch,
-                hidden_vec,
-                reservLayout.gateStride[1],
-                -666, // unused
-                -666, // unused
-                cx,
-                hiddenHxCxInfo.getOffset(getVirtualLayer(layer, direction), 0),
-                reserveSpace,
-                reservLayout.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::I),
-                reservLayout.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::F),
-                reservLayout.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::O),
-                reservLayout.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::G),
-                reservLayout.getActiveCellOffset(layer, cur_comb_dim, direction),
-                reservLayout.getGasOffset( // TODO
-                    layer,
-                    next_comb_dim,
-                    direction,
-                    LstmGateAndState::St),
-                dcy,
-                hiddenHxCxInfo.getOffset(getVirtualLayer(layer, direction), 0),
-                workSpace,
-                workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::I),
-                workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::F),
-                workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::O),
-                workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::G),
-                workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::St),
-                workspaceInfo.getGasOffset(layer, prev_comb_dim, direction, LstmGateAndState::St),
-                workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::Ht),
-                workspaceInfo.getGasOffset(layer, prev_comb_dim, direction, LstmGateAndState::F));
-        }
+        LSTMBackwardHiddenStateUpdate(
+            handle,
+            rnn_data_type,
+            seq.isLast(),  // ti == 0,
+            seq.isFirst(), // ti == seqLen - 1,
+            static_cast<int>(direction),
+            batchController.getBatchSize(0),
+            batchSizeUpdate,
+            useDcyIfGtBatch,
+            useCxIfGTBatch,
+            hidden_vec,
+            reservLayout.gateStride[1],
+            -666, // unused
+            -666, // unused
+            cx,
+            hiddenHxCxInfo.getOffset(getVirtualLayer(layer, direction), 0),
+            reserveSpace,
+            reservLayout.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::I),
+            reservLayout.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::F),
+            reservLayout.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::O),
+            reservLayout.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::G),
+            reservLayout.getActiveCellOffset(layer, cur_comb_dim, direction),
+            reservLayout.getGasOffset( // TODO
+                layer,
+                next_comb_dim,
+                direction,
+                LstmGateAndState::St),
+            dcy,
+            hiddenHxCxInfo.getOffset(getVirtualLayer(layer, direction), 0),
+            workSpace,
+            workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::I),
+            workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::F),
+            workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::O),
+            workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::G),
+            workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::St),
+            workspaceInfo.getGasOffset(layer, prev_comb_dim, direction, LstmGateAndState::St),
+            workspaceInfo.getGasOffset(layer, cur_comb_dim, direction, LstmGateAndState::Ht),
+            workspaceInfo.getGasOffset(layer, prev_comb_dim, direction, LstmGateAndState::F));
+    }
     else if(rnn_mode == miopenGRU)
     {
         MIOPEN_THROW(miopenStatusInternalError, "TODO implementation miopenGRU");
@@ -792,77 +792,17 @@ void RNNBackwardModuleAlgoDynamic::PrepareWriteBuffers(
     RNNBackwardDataModularAlgo::PrepareWriteBuffers(
         handle, runtimeArgsExt.dhx, runtimeArgsExt.dcx, runtimeArgsExt.workSpace);
 
+    {
+        float beta        = 0;
+        auto temp_dy_size = buildDynamicVirtual(realDyDesc).GetElementCount();
+        miopen::TensorDescriptor temp_dy_desk{
+            rnnDesc.dataType, {1, temp_dy_size}, {temp_dy_size, 1}};
+        SetTensor(handle, temp_dy_desk, runtimeArgsExt.tempDy, &beta);
+    }
+
     // realDxProp(handle, runtimeArgsExt);
 }
 
-void RNNBackwardModuleAlgoDynamic::PropHyCy(const Handle& handle,
-                                            const runtimeArgsFwd& runtimeArgs,
-                                            size_t layer,
-                                            const SequenceIterator& currentSeq,
-                                            SequenceDirection direction) const
-{
-    if(runtimeArgs.hy != nullptr || (runtimeArgs.cy != nullptr))
-    {
-        const auto gap_batch_size = [&]() {
-            if(currentSeq.isLast())
-            {
-                return realBatchController.getBatchSize(currentSeq.getPhisVal());
-            }
-            else
-            {
-                if(direction == SequenceDirection::Forward)
-                {
-                    return realBatchController.getBatchSize(currentSeq.getPhisVal()) -
-                           realBatchController.getBatchSize(currentSeq.getNext().getPhisVal());
-                }
-                else
-                    return static_cast<size_t>(0);
-            }
-        }();
-
-        const auto gap_batch_offset = [&]() {
-            if(currentSeq.isLast())
-                return static_cast<size_t>(0);
-            else
-                return realBatchController.getBatchSize(currentSeq.getPhisVal()) - gap_batch_size;
-        }();
-
-        if(gap_batch_size > 0)
-        {
-
-            auto src_desc = BuildTempDhtDesc3D(1, gap_batch_size);
-
-            auto dst_desc = BuildHxCxDesc3D(1, gap_batch_size);
-
-            size_t tmp_batch_offset =
-                batchController.getBatchSum(currentSeq.getPhisVal()) + gap_batch_offset;
-
-            if(runtimeArgs.hy != nullptr)
-            {
-                CopyTensor(handle,
-                           src_desc,
-                           runtimeArgs.reserveSpace,
-                           dst_desc,
-                           runtimeArgs.hy,
-                           reservLayout.getGasOffset(
-                               layer, tmp_batch_offset, direction, LstmGateAndState::Ht),
-                           hiddenHxCxInfo.getOffset(layer, gap_batch_offset));
-            }
-
-            if(runtimeArgs.cy != nullptr)
-            {
-                CopyTensor(handle,
-                           src_desc,
-                           runtimeArgs.reserveSpace,
-                           dst_desc,
-                           runtimeArgs.cy,
-                           reservLayout.getGasOffset(
-                               layer, tmp_batch_offset, direction, LstmGateAndState::St),
-                           hiddenHxCxInfo.getOffset(layer, gap_batch_offset));
-            }
-        }
-    }
-}
 
 } // namespace rnn_base
 } // namespace miopen

@@ -78,6 +78,7 @@ public:
 class RNNDynamicModularSingleStreamFWD
 {
 private:
+
 public:
     RNNDynamicModularSingleStreamFWD(const RNNDescriptor& rnn,
                                      const SeqTensorDescriptor& xDesc,
@@ -85,8 +86,7 @@ public:
                                      const TensorDescriptor& hDesc,
                                      miopenRNNFWDMode_t mode)
         : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode),
-          rnnDesc(rnn),
-          max_seq_len(xDesc.GetMaxSequenceLength())
+          rnnDesc(rnn)
     {
     }
 
@@ -110,7 +110,6 @@ public:
 
     const rnn_base::RNNModuleAlgoDynamic rnnAlgoModules;
     const RNNDescriptor& rnnDesc;
-    const size_t max_seq_len;
 };
 
 //
@@ -170,8 +169,7 @@ public:
                                      const TensorDescriptor& hDesc,
                                      miopenRNNFWDMode_t mode)
         : rnnAlgoModules(rnn, xDesc, yDesc, hDesc, mode),
-          rnnDesc(rnn),
-          max_seq_len(xDesc.GetMaxSequenceLength())
+          rnnDesc(rnn)
     {
     }
 
@@ -195,7 +193,6 @@ public:
 
     const rnn_base::RNNBackwardModuleAlgoDynamic rnnAlgoModules;
     const RNNDescriptor& rnnDesc;
-    const size_t max_seq_len;
 };
 
 class RNNModularMultiStreamBWD

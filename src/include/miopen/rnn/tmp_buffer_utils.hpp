@@ -561,6 +561,11 @@ public:
         return batchPrefSumAtTime[time_id];
     }
 
+    size_t size() const
+    {
+        return batchAtTime.size();
+    }
+
 private:
     template <class T, std::enable_if_t<std::is_same<T, std::vector<size_t>>::value, bool> = true>
     explicit BatchController(T&& batch_at_time, T&& batch_prefix_sums)
@@ -939,8 +944,6 @@ public:
     {
         return {lengths[1] * lengths[2], lengths[2], 1};
     }
-
-    inline size_t getBufferSizeImpl() const { return packedLens[0]; }
 
     // private:
     //  local caching
