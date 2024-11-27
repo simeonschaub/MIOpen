@@ -24,6 +24,10 @@
  *
  *******************************************************************************/
 
+#include <miopen/config.h>
+
+#if MIOPEN_ENABLE_FIN_INTERFACE
+
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
@@ -582,3 +586,5 @@ BatchNormSolver GetBatchNormSolver(const std::string& name)
 
 } // namespace fin_interface
 } // namespace miopen
+
+#endif // MIOPEN_ENABLE_FIN_INTERFACE
