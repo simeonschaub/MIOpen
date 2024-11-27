@@ -28,29 +28,56 @@
 #define GUARD_TYPE_NAME_HPP
 
 #include <string>
+#include <string_view>
+
+#include <miopen/config.h> // For BUILD_SHARED_LIBS and MIOPEN_ENABLE_FIN_INTERFACE
 
 namespace miopen {
 
-template <class MIOpen_Private_TypeName_>
+template <class T>
+constexpr std::string_view constexpr_type_name()
+{
+#if defined(__clang__) || defined(__GNUC__)
+    constexpr auto full_name = std::string_view{__PRETTY_FUNCTION__};
+#if defined(__clang__)
+    constexpr auto prefix    = std::string_view{"[T = "};
+#else // !clang
+    constexpr auto prefix    = std::string_view{"[with T = "};
+#endif // !clang
+    constexpr auto suffix    = std::string_view{"]"};
+#endif // clang || gcc
+
+    constexpr auto prefix_pos = full_name.find(prefix);
+    static_assert(prefix_pos != std::string_view::npos);
+
+    constexpr auto suffix_pos = full_name.rfind(suffix);
+    static_assert(suffix_pos != std::string_view::npos);
+    static_assert(suffix_pos == full_name.size() - suffix.size());
+
+    constexpr auto pos = prefix_pos + prefix.size();
+    static_assert(pos < suffix_pos);
+    constexpr auto count = suffix_pos - pos;
+
+    constexpr auto name = full_name.substr(pos, count);
+
+    return name;
+}
+
+template <class T>
 const std::string& get_type_name()
 {
-    static const std::string ret =
-#if defined(_MSC_VER) && !defined(__clang__)
-        typeid(MIOpen_Private_TypeName_).name().substr(7);
-#else
-        [](std::string name) {
-            const char parameter_name[] = "MIOpen_Private_TypeName_ =";
-
-            auto begin  = name.find(parameter_name) + sizeof(parameter_name);
-#if(defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 4 && __GNUC_MINOR__ < 7)
-            auto length = name.find_last_of(",") - begin;
-#else
-            auto length = name.find_first_of("];", begin) - begin;
-#endif
-            name        = name.substr(begin, length);
-            return name;
-        }(__PRETTY_FUNCTION__);
-#endif // _MSC_VER
+#if BUILD_SHARED_LIBS && MIOPEN_ENABLE_FIN_INTERFACE
+    /// When using this function outside of the shared library, the static local variable is duplicated, both the library and the program using it have their own copy, but only one of them is initialized, depending on which entity calls the function first—the library or the program.
+    /// \todo This needs to be removed when the interface matures, and internal class/function templates are no longer used by the fin.
+    static std::string ret;
+    if(ret.empty())
+    {
+        // The "new" operator is used here to avoid segmentation fault (since the variable is not initialized).
+        new(&ret) std::string(constexpr_type_name<T>());
+    }
+#else // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
+    static const auto ret = std::string(constexpr_type_name<T>());
+#endif // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
     return ret;
 }
 
