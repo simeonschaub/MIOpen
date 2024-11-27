@@ -53,8 +53,7 @@ struct TestParams
 
 struct SolverInfo
 {
-    [[maybe_unused]]
-    SolverInfo() = default;
+    [[maybe_unused]] SolverInfo() = default;
 
     SolverInfo(uint64_t id_, bool dynamic_, bool tunable_)
         : id(id_), dynamic(dynamic_), tunable(tunable_)
@@ -119,8 +118,7 @@ struct ConvSolverConfig : SolverConfig, private miopen::unit_tests::ConvTestCase
     {
     }
 
-    [[maybe_unused]]
-    auto GetProblemDescription() const { return GetProblemDescription(direction); }
+    [[maybe_unused]] auto GetProblemDescription() const { return GetProblemDescription(direction); }
 
     friend std::ostream& operator<<(std::ostream& os, const ConvSolverConfig& config)
     {
@@ -149,8 +147,7 @@ struct BatchNormSolverConfig : SolverConfig
 {
     BatchNormSolverConfig(int dummy) : SolverConfig(false) { std::ignore = dummy; }
 
-    [[maybe_unused]]
-    auto GetProblemDescription() const
+    [[maybe_unused]] auto GetProblemDescription() const
     {
         return miopen::batchnorm::ProblemDescription{{}, {}, {}, {}, {}, {}, {}, {}};
     }

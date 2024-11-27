@@ -96,15 +96,20 @@ protected:
     static const std::string& GetSolverDbId()
     {
 #if BUILD_SHARED_LIBS && MIOPEN_ENABLE_FIN_INTERFACE
-        /// When using this function outside of the shared library, the static local variable is duplicated, both the library and the program using it have their own copy, but only one of them is initialized, depending on which entity calls the function first—the library or the program.
-        /// \todo This needs to be removed when the interface matures, and internal class/function templates are no longer used by the fin.
+        /// When using this function outside of the shared library, the static local variable is
+        /// duplicated, both the library and the program using it have their own copy, but only one
+        /// of them is initialized, depending on which entity calls the function first—the library
+        /// or the program.
+        /// \todo This needs to be removed when the interface matures, and internal class/function
+        /// templates are no longer used by the fin.
         static std::string result;
         if(result.empty())
         {
-            // The "new" operator is used here to avoid segmentation fault (since the variable is not initialized).
+            // The "new" operator is used here to avoid segmentation fault (since the variable is
+            // not initialized).
             new(&result) std::string(ComputeSolverDbId(get_type_name<Solver>()));
         }
-#else // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
+#else  // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
         static const auto result = ComputeSolverDbId(get_type_name<Solver>());
 #endif // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
         return result;

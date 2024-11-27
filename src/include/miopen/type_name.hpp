@@ -40,11 +40,11 @@ constexpr std::string_view constexpr_type_name()
 #if defined(__clang__) || defined(__GNUC__)
     constexpr auto full_name = std::string_view{__PRETTY_FUNCTION__};
 #if defined(__clang__)
-    constexpr auto prefix    = std::string_view{"[T = "};
-#else // !clang
-    constexpr auto prefix    = std::string_view{"[with T = "};
+    constexpr auto prefix = std::string_view{"[T = "};
+#else  // !clang
+    constexpr auto prefix = std::string_view{"[with T = "};
 #endif // !clang
-    constexpr auto suffix    = std::string_view{"]"};
+    constexpr auto suffix = std::string_view{"]"};
 #endif // clang || gcc
 
     constexpr auto prefix_pos = full_name.find(prefix);
@@ -67,15 +67,20 @@ template <class T>
 const std::string& get_type_name()
 {
 #if BUILD_SHARED_LIBS && MIOPEN_ENABLE_FIN_INTERFACE
-    /// When using this function outside of the shared library, the static local variable is duplicated, both the library and the program using it have their own copy, but only one of them is initialized, depending on which entity calls the function first—the library or the program.
-    /// \todo This needs to be removed when the interface matures, and internal class/function templates are no longer used by the fin.
+    /// When using this function outside of the shared library, the static local variable is
+    /// duplicated, both the library and the program using it have their own copy, but only one of
+    /// them is initialized, depending on which entity calls the function first—the library or the
+    /// program.
+    /// \todo This needs to be removed when the interface matures, and internal class/function
+    /// templates are no longer used by the fin.
     static std::string ret;
     if(ret.empty())
     {
-        // The "new" operator is used here to avoid segmentation fault (since the variable is not initialized).
+        // The "new" operator is used here to avoid segmentation fault (since the variable is not
+        // initialized).
         new(&ret) std::string(constexpr_type_name<T>());
     }
-#else // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
+#else  // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
     static const auto ret = std::string(constexpr_type_name<T>());
 #endif // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
     return ret;
