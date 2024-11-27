@@ -51,7 +51,7 @@ MIOPEN_EXPORT
 std::string ConvolutionAlgoToString(miopenConvAlgorithm_t algo);
 std::string ConvolutionAlgoToDirectionalString(miopenConvAlgorithm_t algo, conv::Direction dir);
 
-bool IsValidConvolutionDirAlgo(const std::string& s);
+bool IsValidConvolutionDirAlgo(std::string_view s);
 
 } // namespace miopen
 

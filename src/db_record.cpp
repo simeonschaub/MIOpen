@@ -118,26 +118,42 @@ static bool TransformFindDbItem10to20(std::string& id, std::string& values)
 }
 #endif
 
-bool DbRecord::ParseContents(std::istream& contents)
+bool DbRecord::ParseContents(std::string_view contents)
 {
-    std::string id_and_values;
     int found = 0;
 
     map.clear();
 
-    while(std::getline(contents, id_and_values, ';'))
+    while(contents.size() > 0)
     {
-        const auto id_size = id_and_values.find(':');
+        auto const pair = [&]() {
+            auto const pair_size = contents.find(';');
+
+            if(pair_size == std::string_view::npos)
+            {
+                auto line = contents;
+                contents  = {};
+                return line;
+            }
+            else
+            {
+                auto line = contents.substr(pair_size);
+                contents  = contents.substr(pair_size + 1);
+                return line;
+            }
+        }();
+
+        const auto id_size = pair.find(':');
 
         // Empty VALUES is ok, empty ID is not:
-        if(id_size == std::string::npos)
+        if(id_size == std::string_view::npos)
         {
             MIOPEN_LOG_E("Ill-formed file: ID not found; skipped; key: " << key);
             continue;
         }
 
-        auto id     = id_and_values.substr(0, id_size);
-        auto values = id_and_values.substr(id_size + 1);
+        auto id     = std::string{pair.substr(0, id_size)};
+        auto values = std::string{pair.substr(id_size + 1)};
 
 #if WORKAROUND_ISSUE_1987
         // Detect legacy find-db item (v.1.0 ID:VALUES) and transform it to the current format.
@@ -159,7 +175,7 @@ bool DbRecord::ParseContents(std::istream& contents)
             continue;
         }
 
-        map.emplace(id, values);
+        map.emplace(std::move(id), std::move(values));
         ++found;
     }
 

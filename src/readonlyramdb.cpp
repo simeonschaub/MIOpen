@@ -83,25 +83,44 @@ static auto Measure(const std::string& funcName, TFunc&& func)
                                    << " ms");
 }
 
-void ReadonlyRamDb::ParseAndLoadDb(std::istream& input_stream, bool warn_if_unreadable)
+static auto ReadToEnd(std::istream& stream) -> std::vector<char>
 {
-    if(!input_stream)
+    constexpr auto read_size = std::size_t{4096};
+    stream.exceptions(std::ios_base::badbit);
+
+    auto const start_offset = stream.tellg();
+    stream.seekg(std::ios::end);
+    auto const data_size = stream.tellg() - start_offset;
+    stream.seekg(start_offset);
+
+    auto buf = std::array<char, read_size>{};
+    auto out = std::vector<char>{};
+    out.reserve(data_size);
+
+    while(stream.read(&buf[0], read_size))
     {
-        const auto log_level = (warn_if_unreadable && !MIOPEN_DISABLE_SYSDB) ? LoggingLevel::Warning
-                                                                             : LoggingLevel::Info;
-        MIOPEN_LOG(log_level, "File is unreadable: " << db_path);
-        return;
+        using std::begin, std::end;
+        out.insert(end(out), begin(buf), end(buf));
     }
 
-    auto line   = std::string{};
+    return out;
+}
+
+void ReadonlyRamDb::ParseAndLoadDb(std::string_view data)
+{
     auto n_line = 0;
 
-    while(std::getline(input_stream, line))
+    while(data.size() > 0)
     {
         ++n_line;
 
-        if(line.empty())
-            continue;
+        auto eol         = data.find('\n');
+        auto line_length = eol;
+        if(data[line_length - 1] == '\r')
+            --line_length;
+
+        auto line = data.substr(0, line_length);
+        data      = data.substr(eol + 1);
 
         const auto key_size = line.find('=');
         const bool is_key   = (key_size != std::string::npos && key_size != 0);
@@ -124,11 +143,12 @@ void ReadonlyRamDb::Prefetch(bool warn_if_unreadable)
     Measure("Prefetch", [this, warn_if_unreadable]() {
         if(db_path.empty())
             return;
-        constexpr bool isEmbedded = MIOPEN_EMBED_DB;
-        // cppcheck-suppress knownConditionTrueFalse
-        if(!debug::rordb_embed_fs_override() && isEmbedded)
-        {
+
+        auto file_view = std::string_view{};
+
 #if MIOPEN_EMBED_DB
+        if(!debug::rordb_embed_fs_override())
+        {
             fs::path filepath(db_path);
             const auto& it_p = miopen_data().find(make_object_file_name(filepath.filename()));
             if(it_p == miopen_data().end())
@@ -139,15 +159,29 @@ void ReadonlyRamDb::Prefetch(bool warn_if_unreadable)
             const auto& p = it_p->second;
             ptrdiff_t sz  = p.second - p.first;
             MIOPEN_LOG_I2("Loading In Memory file: " << filepath);
-            auto input_stream = std::stringstream(std::string(p.first, sz));
-            ParseAndLoadDb(input_stream, warn_if_unreadable);
-#endif
+            file_view = std::string_view(p.first, sz);
         }
         else
         {
+#endif
             auto input_stream = std::ifstream{db_path};
-            ParseAndLoadDb(input_stream, warn_if_unreadable);
+
+            if(!input_stream)
+            {
+                const auto log_level = (warn_if_unreadable && !MIOPEN_DISABLE_SYSDB)
+                                           ? LoggingLevel::Warning
+                                           : LoggingLevel::Info;
+                MIOPEN_LOG(log_level, "File is unreadable: " << db_path);
+                return;
+            }
+
+            file_data = ReadToEnd(input_stream);
+            file_view = std::string_view{&file_data.front(), file_data.size()};
+#if MIOPEN_EMBED_DB
         }
+#endif
+
+        ParseAndLoadDb(file_view);
     });
 }
 } // namespace miopen

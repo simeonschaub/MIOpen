@@ -197,7 +197,6 @@ private:
         return ss.str();
     }
 
-    bool ParseContents(std::istream& contents);
     void WriteContents(std::ostream& stream) const;
     void WriteIdsAndValues(std::ostream& stream) const;
     bool SetValues(const std::string& id, const std::string& values);
@@ -205,11 +204,7 @@ private:
 
     DbRecord(const std::string& key_) : key(key_) {}
 
-    bool ParseContents(const std::string& contents)
-    {
-        auto ss = std::istringstream(contents);
-        return ParseContents(ss);
-    }
+    bool ParseContents(std::string_view contents);
 
 public:
     DbRecord() : key(""){};

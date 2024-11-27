@@ -32,9 +32,9 @@
 #include <unordered_map>
 namespace miopen {
 
-using mapFwd_t = std::unordered_map<std::string, miopenConvFwdAlgorithm_t>;
-using mapBwd_t = std::unordered_map<std::string, miopenConvBwdDataAlgorithm_t>;
-using mapWrw_t = std::unordered_map<std::string, miopenConvBwdWeightsAlgorithm_t>;
+using mapFwd_t = std::unordered_map<std::string_view, miopenConvFwdAlgorithm_t>;
+using mapBwd_t = std::unordered_map<std::string_view, miopenConvBwdDataAlgorithm_t>;
+using mapWrw_t = std::unordered_map<std::string_view, miopenConvBwdWeightsAlgorithm_t>;
 
 static const mapFwd_t& FwdAlgoMap()
 {
@@ -97,7 +97,7 @@ miopenConvBwdWeightsAlgorithm_t StringToConvolutionBwdWeightsAlgo(const std::str
     return ToConvolutionAlgo(s, WrwAlgoMap());
 }
 
-bool IsValidConvolutionDirAlgo(const std::string& s)
+bool IsValidConvolutionDirAlgo(std::string_view s)
 {
     return FwdAlgoMap().find(s) != FwdAlgoMap().end() ||
            BwdAlgoMap().find(s) != BwdAlgoMap().end() || WrwAlgoMap().find(s) != WrwAlgoMap().end();

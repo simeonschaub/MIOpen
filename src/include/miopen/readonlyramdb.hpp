@@ -31,6 +31,8 @@
 
 #include <boost/optional.hpp>
 
+#include <ankerl/unordered_dense.h>
+
 #include <unordered_map>
 #include <string>
 #include <sstream>
@@ -92,15 +94,16 @@ public:
     struct CacheItem
     {
         int line;
-        std::string content;
+        std::string_view content;
     };
 
-    const std::unordered_map<std::string, CacheItem>& GetCacheMap() const { return cache; }
+    const ankerl::unordered_dense::map<std::string_view, CacheItem>& GetCacheMap() const { return cache; }
 
 private:
     DbKinds db_kind;
     fs::path db_path;
-    std::unordered_map<std::string, CacheItem> cache;
+    std::vector<char> file_data;
+    ankerl::unordered_dense::map<std::string_view, CacheItem> cache;
 
     ReadonlyRamDb(const ReadonlyRamDb&) = default;
     ReadonlyRamDb(ReadonlyRamDb&&)      = default;
@@ -108,7 +111,7 @@ private:
     ReadonlyRamDb& operator=(ReadonlyRamDb&&) = default;
 
     void Prefetch(bool warn_if_unreadable);
-    void ParseAndLoadDb(std::istream& input_stream, bool warn_if_unreadable);
+    void ParseAndLoadDb(std::string_view data);
 };
 
 } // namespace miopen

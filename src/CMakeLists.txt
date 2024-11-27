@@ -825,6 +825,9 @@ else()
         )
 endif()
 
+find_package(unordered_dense CONFIG REQUIRED)
+target_link_libraries(MIOpen PRIVATE unordered_dense::unordered_dense)
+
 rocm_set_soversion(MIOpen ${MIOpen_SOVERSION})
 
 clang_tidy_check(MIOpen)
