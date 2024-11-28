@@ -127,6 +127,12 @@ RUN wget -O ck.tar.gz https://www.github.com/ROCm/composable_kernel/archive/${CK
     -D CMAKE_CXX_FLAGS=" -O3 " .. && \
     make -j $(nproc) install 
 
+RUN rm -rf CMakeCache.txt &&\ 
+    CXX=/opt/rocm/llvm/bin/clang++ cmake ../codegen \
+    -D CMAKE_CXX_COMPILER_LAUNCHER="${COMPILER_LAUNCHER}" \
+    -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_CXX_FLAGS=" -O3 " && \
+    make -j $(nproc) install
 # Composable Kernel installed separated from rbuild to take in values from GPU_ARCHS 
 # this can minimize build time
 RUN sed -i '/composable_kernel/d' /requirements.txt
