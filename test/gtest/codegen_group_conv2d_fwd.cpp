@@ -25,8 +25,9 @@
  *******************************************************************************/
 #include <gtest/gtest.h>
 
-#include "group_conv.hpp"
+//#include "group_conv.hpp"
+#include "codegen_group_conv.hpp"
 
-using namespace group_conv;
+using namespace codegen_group_conv;
 
 DEFINE_CG_GROUP_CONV2D_TEST(half, FP16, Forward);
