@@ -46,7 +46,9 @@ constexpr std::string_view type_name()
     constexpr auto full_name = std::string_view{__FUNCSIG__};
 #endif
 
-    // The substring with the data type name is located within the original string, between the prefix and the suffix, with the prefix always not at the beginning of the string and the suffix always at the end of the string.
+    // The substring with the data type name is located within the original string, between the
+    // prefix and the suffix, with the prefix always not at the beginning of the string and the
+    // suffix always at the end of the string.
 #if defined(__clang__)
     // clang
     constexpr auto prefix = std::string_view{"[T = "};
@@ -81,14 +83,15 @@ constexpr std::string_view type_name()
     // msvc
     if constexpr(std::is_compound_v<T>)
     {
-        // For compound data types, the string contains the keyword 'class/struct/union/enum' before the data type name, separated by a space.
-        constexpr auto sep = std::string_view{" "};
+        // For compound data types, the string contains the keyword 'class/struct/union/enum' before
+        // the data type name, separated by a space.
+        constexpr auto sep     = std::string_view{" "};
         constexpr auto sep_pos = name.find(sep);
         static_assert(sep_pos != std::string_view::npos);
         static_assert(sep_pos != 0); // must not be at the 0 position
 
         constexpr auto name_pos = sep_pos + sep.size();
-        constexpr auto tname = name.substr(name_pos);
+        constexpr auto tname    = name.substr(name_pos);
         static_assert(tname.size() > 0);
 
         return tname;
@@ -104,7 +107,7 @@ template <class T>
 constexpr std::string_view type_name_bare()
 {
     constexpr auto name = type_name<T>();
-    constexpr auto pos = name.rfind(':');
+    constexpr auto pos  = name.rfind(':');
     if constexpr(pos == std::string_view::npos)
     {
         return name;
