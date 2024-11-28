@@ -59,18 +59,10 @@ namespace conv {
 using ProblemDescription = miopen::conv::ProblemDescription;
 
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
-
-using InLayout                             = ck::tensor_layout::convolution::NDHWGC;
-using WeiLayout                            = ck::tensor_layout::convolution::GKZYXC;
-using OutLayout                            = ck::tensor_layout::convolution::NDHWGK;
-using PassThrough                          = ck::tensor_operation::element_wise::PassThrough;
-using Bilinear                             = ck::tensor_operation::element_wise::Bilinear;
-using Scale                                = ck::tensor_operation::element_wise::Scale;
 static constexpr ck::index_t NumDimSpatial = 2;
 
 const std::string conv_compile_check = R"__ck__(
 #include <${include}>
-
 ${template};
 
 )__ck__";
@@ -114,15 +106,6 @@ std::vector<src_file> get_headers_for_test()
         });
     return result;
 }
-void write_buffer(const std::string& filename, const char* buffer, std::size_t size)
-{
-    std::ofstream os(filename);
-    os.write(buffer, size);
-}
-void write_string(const std::string& filename, const std::string_view& buffer)
-{
-    write_buffer(filename, buffer.data(), buffer.size());
-}
 
 struct CKArgs
 {
@@ -132,8 +115,8 @@ struct CKArgs
         prob.NumDim = NumDimSpatial;
         prob.G      = ProblemInterpreter::GetGroupCountG(problem);
         prob.N      = ProblemInterpreter::GetBatchN(problem);
-        int K1      = ProblemInterpreter::GetOutputChannelK(problem);
-        int C1      = ProblemInterpreter::GetInputChannelC(problem);
+        int K1      = prob.G * ProblemInterpreter::GetOutputChannelK(problem);
+        int C1      = prob.G * ProblemInterpreter::GetInputChannelC(problem);
         prob.C      = C1 / prob.G; // Number of input Channel per group
         prob.K      = K1 / prob.G; // Number of output Channel per group
         prob.Y      = ProblemInterpreter::GetFilterHeightY(problem);
@@ -146,30 +129,45 @@ struct CKArgs
         in_lengths  = {prob.G, prob.N, prob.C, prob.Hi, prob.Wi};
         out_lengths = {prob.G, prob.N, prob.K, prob.Ho, prob.Wo};
         wei_lengths = {prob.G, prob.K, prob.C, prob.Y, prob.X};
+        std::cout << "in lengths: " << prob.G << ", " << prob.N << ", " << prob.C << ", " << prob.Hi
+                  << ", " << prob.Wi << std::endl;
+        std::cout << "weight lengths: " << prob.G << ", " << prob.K << ", " << prob.C << ", "
+                  << prob.Y << ", " << prob.X << std::endl;
+        std::cout << "out lengths: " << prob.G << ", " << prob.N << ", " << prob.K << ", "
+                  << prob.Ho << ", " << prob.Wo << std::endl;
 
-        in_strides       = {prob.C,
+        in_strides  = {prob.C,
                       prob.Hi * prob.Wi * prob.G * prob.C,
                       1,
                       prob.Wi * prob.G * prob.C,
                       prob.G * prob.C};
-        out_strides      = {prob.K,
+        out_strides = {prob.K,
                        prob.Ho * prob.Wo * prob.G * prob.K,
                        1,
                        prob.Wo * prob.G * prob.K,
                        prob.G * prob.K};
-        wei_strides      = {prob.K * prob.Y * prob.X * prob.C,
+        wei_strides = {prob.K * prob.Y * prob.X * prob.C,
                        prob.Y * prob.X * prob.C,
                        1,
                        prob.X * prob.C,
                        prob.C};
+        std::cout << "in strides: " << prob.C << ", " << prob.Hi * prob.Wi * prob.G * prob.C
+                  << ", 1, " << prob.Wi * prob.G * prob.C << ", " << prob.G * prob.C << std::endl;
+        std::cout << "wei strides: " << prob.K * prob.Y * prob.X * prob.C << ", "
+                  << prob.Y * prob.X * prob.C << ", 1, " << prob.X * prob.C << ", " << prob.C
+                  << std::endl;
+        std::cout << "out strides: " << prob.K << ", " << prob.Ho * prob.Wo * prob.G * prob.K
+                  << ", 1, " << prob.Wo * prob.G * prob.K << ", " << prob.G * prob.K << std::endl;
+
         filter_strides   = {ProblemInterpreter::GetAdjustedConvolutionStrideH(problem),
                           ProblemInterpreter::GetAdjustedConvolutionStrideW(problem)};
         filter_dilations = {ProblemInterpreter::GetAdjustedConvolutionDilationH(problem),
                             ProblemInterpreter::GetAdjustedConvolutionDilationW(problem)};
         lPadding         = {ProblemInterpreter::GetInputLeftPadH(problem),
                     ProblemInterpreter::GetInputLeftPadW(problem)};
-        rPadding         = {ProblemInterpreter::GetAdjustedInputRightPadH(problem),
-                    ProblemInterpreter::GetAdjustedInputRightPadW(problem)};
+        // rPadding         = {ProblemInterpreter::GetAdjustedInputRightPadH(problem),
+        //          ProblemInterpreter::GetAdjustedInputRightPadW(problem)};
+        rPadding = {1, 1};
     }
 
     CKArgs(const CKArgs&)     = default;
@@ -300,9 +298,6 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
 
     auto kernel_info = KernelInfo{};
     auto path        = std::strcat(std::getenv("HOME"), "/workspace/MIOpen/src/kernels/main.cpp");
-    // should write the generated code into the file
-    std::string path_name(path);
-    write_string(path_name, srcs[srcs.size() - 1].content);
     kernel_info.kernel_file = path;
     kernel_info.kernel_name = "run_" + name;
 
@@ -312,10 +307,13 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     auto tmp = get_launch_params(solution[0], x.out_lengths, x.out_strides);
 
     auto grid_size = tmp * x.in_lengths[1];
+    std::cout << " ------- grid size: " << grid_size << std::endl;
 
-    kernel_info.l_wk = {block_size, 1, 1};
-    kernel_info.g_wk = {block_size * grid_size, 1, 1};
+    kernel_info.l_wk = {256, 1, 1};
+    kernel_info.g_wk = {16384, 1, 1};
 
+    std::cout << "block size: " << block_size << ", grid size: " << grid_size
+              << ", launch: " << block_size * grid_size << std::endl;
     bool bfp16parm = true;
     const auto build_params =
         KernelBuildParameters{{"MIOPEN_USE_FP16", static_cast<int>(bfp16parm)}};
@@ -324,7 +322,6 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     kernel_info.comp_options += " -DCK_CODE_GEN_RTC";
     // soln.construction_params.push_back(kernel_info);
 
-    std::cout << "============== does it get here? =============" << std::endl;
     soln.invoker_factory = [=](const std::vector<Kernel>& kernels) {
         std::cout << " ------------- outer lambda --------------------" << std::endl;
         return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
@@ -335,6 +332,8 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
 
             std::cout << "=========== invoker factory ===============" << std::endl;
             std::cout << "name of kernel: " << name << std::endl;
+            std::cout << "block size: " << block_size << ", grid size: " << grid_size
+                      << ", launch: " << block_size * grid_size << std::endl;
             auto kernel = handle_.AddKernel("tmp",
                                             "tmp",
                                             "cg_main.cpp",
@@ -344,9 +343,39 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
                                             kernel_info.comp_options,
                                             0,
                                             src);
-            std::cout << "in: " << *params.tensors.in << std::endl;
-            std::cout << "w: " << *params.tensors.w << std::endl;
-            std::cout << "out: " << *params.tensors.out << std::endl;
+            std::cout << "in: " << params.tensors.inDesc << std::endl;
+            std::cout << "lens: " << params.tensors.inDesc.GetLengths().size() << std::endl;
+            // std::cout << "w: " << *params.tensors.w << std::endl;
+            // std::cout << "out: " << *params.tensors.out << std::endl;
+            std::cout << "conv: " << problem.GetConv() << std::endl;
+            std::cout << "in: " << problem.GetIn() << std::endl;
+            std::cout << "w: " << problem.GetWeights() << std::endl;
+            std::cout << "out: " << problem.GetOut() << std::endl;
+            std::cout << "in lengths: " << x.in_lengths[0] << ", " << x.in_lengths[1] << ", "
+                      << x.in_lengths[2] << ", " << x.in_lengths[3] << ", " << x.in_lengths[4]
+                      << ", " << std::endl;
+            std::cout << "w lengths: " << x.wei_lengths[0] << ", " << x.wei_lengths[1] << ", "
+                      << x.wei_lengths[2] << ", " << x.wei_lengths[3] << ", " << x.wei_lengths[4]
+                      << ", " << std::endl;
+            std::cout << "out lengths: " << x.out_lengths[0] << ", " << x.out_lengths[1] << ", "
+                      << x.out_lengths[2] << ", " << x.out_lengths[3] << ", " << x.out_lengths[4]
+                      << ", " << std::endl;
+            std::cout << "in strides: " << x.in_strides[0] << ", " << x.in_strides[1] << ", "
+                      << x.in_strides[2] << ", " << x.in_strides[3] << ", " << x.in_strides[4]
+                      << ", " << std::endl;
+            std::cout << "wei strides: " << x.wei_strides[0] << ", " << x.wei_strides[1] << ", "
+                      << x.wei_strides[2] << ", " << x.wei_strides[3] << ", " << x.wei_strides[4]
+                      << ", " << std::endl;
+            std::cout << "out strides: " << x.out_strides[0] << ", " << x.out_strides[1] << ", "
+                      << x.out_strides[2] << ", " << x.out_strides[3] << ", " << x.out_strides[4]
+                      << ", " << std::endl;
+            std::cout << "filter strides: " << x.filter_strides[0] << ", " << x.filter_strides[1]
+                      << std::endl;
+            std::cout << "filter dilations: " << x.filter_dilations[0] << ", "
+                      << x.filter_dilations[1] << std::endl;
+            std::cout << "left pad: " << x.lPadding[0] << ", " << x.lPadding[1] << std::endl;
+            std::cout << "right pad: " << x.rPadding[0] << ", " << x.rPadding[1] << std::endl;
+
             kernel(params.tensors.in,
                    params.tensors.w,
                    params.tensors.out,
