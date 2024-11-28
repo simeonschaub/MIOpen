@@ -38,7 +38,7 @@
 namespace miopen {
 
 template <class T>
-constexpr std::string_view constexpr_type_name()
+constexpr std::string_view type_name()
 {
 #if defined(__clang__) || defined(__GNUC__)
     // clang or gcc
@@ -59,7 +59,7 @@ constexpr std::string_view constexpr_type_name()
     constexpr auto suffix = std::string_view{"; std::string_view = std::basic_string_view<char>]"};
 #elif defined(_MSC_VER)
     // msvc
-    constexpr auto prefix = std::string_view{"constexpr_type_name<"};
+    constexpr auto prefix = std::string_view{"type_name<"};
     constexpr auto suffix = std::string_view{">(void)"};
 #endif
 
@@ -90,10 +90,10 @@ constexpr std::string_view constexpr_type_name()
         static_assert(sep_pos != 0); // must not be at the 0 position
 
         constexpr auto name_pos = sep_pos + sep.size();
-        constexpr auto type_name = name.substr(name_pos);
-        static_assert(type_name.size() > 0);
+        constexpr auto tname = name.substr(name_pos);
+        static_assert(tname.size() > 0);
 
-        return type_name;
+        return tname;
     }
     else
     {
@@ -117,10 +117,10 @@ const std::string& get_type_name()
     {
         // The "new" operator is used here to avoid segmentation fault (since the variable is not
         // initialized).
-        new(&ret) std::string(constexpr_type_name<T>());
+        new(&ret) std::string(type_name<T>());
     }
 #else  // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
-    static const auto ret = std::string(constexpr_type_name<T>());
+    static const auto ret = std::string(type_name<T>());
 #endif // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
     return ret;
 }

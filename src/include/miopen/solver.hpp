@@ -107,10 +107,10 @@ protected:
         {
             // The "new" operator is used here to avoid segmentation fault (since the variable is
             // not initialized).
-            new(&result) std::string(ComputeSolverDbId(std::string(constexpr_type_name<Solver>())));
+            new(&result) std::string(ComputeSolverDbId(std::string(type_name<Solver>())));
         }
 #else  // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
-        static const auto result = ComputeSolverDbId(std::string(constexpr_type_name<Solver>()));
+        static const auto result = ComputeSolverDbId(std::string(type_name<Solver>()));
 #endif // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
         return result;
     }
