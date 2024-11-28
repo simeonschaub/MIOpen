@@ -1088,8 +1088,10 @@ struct verify_train_rnn : verify_rnn_api_base<T>
                                                      nohy,
                                                      nocy);
         if(skip_backward_data)
+        {
             return result_tuple(
                 std::move(fwd_y), std::move(fwd_hy), std::move(fwd_cy), {}, {}, {}, {});
+        }
 
         auto [bwd_din, bwd_dhx, bwd_dcx] = refMethod.bwd(input.desc,
                                                          output.desc,
@@ -1109,6 +1111,7 @@ struct verify_train_rnn : verify_rnn_api_base<T>
                                                          nocx);
 
         if(skip_backward_weights)
+        {
             return result_tuple(std::move(fwd_y),
                                 std::move(fwd_hy),
                                 std::move(fwd_cy),
@@ -1116,6 +1119,7 @@ struct verify_train_rnn : verify_rnn_api_base<T>
                                 std::move(bwd_dhx),
                                 std::move(bwd_dcx),
                                 {});
+        }
 
         auto wrw_res = refMethod.wrw(input.desc,
                                      output.desc,
