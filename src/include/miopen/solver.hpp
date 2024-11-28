@@ -107,10 +107,10 @@ protected:
         {
             // The "new" operator is used here to avoid segmentation fault (since the variable is
             // not initialized).
-            new(&result) std::string(ComputeSolverDbId(std::string(type_name<Solver>())));
+            new(&result) std::string(ComputeSolverDbId(type_name_bare<Solver>()));
         }
 #else  // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
-        static const auto result = ComputeSolverDbId(std::string(type_name<Solver>()));
+        static const auto result = ComputeSolverDbId(type_name_bare<Solver>());
 #endif // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
         return result;
     }
@@ -118,12 +118,14 @@ protected:
     SolverBase(const SolverBase&) = default;
 
 private:
-    static std::string ComputeSolverDbId(const std::string& type_name)
+    static std::string ComputeSolverDbId(std::string_view type_name)
     {
-        auto idx  = type_name.find_last_of(':');
-        auto name = type_name.substr(idx + 1);
-        std::replace(name.begin(), name.end(), ',', '-');
-        name.erase(std::remove(name.begin(), name.end(), ' '), name.end());
+        auto name = std::string(type_name);
+        if(name.back() == '>')
+        {
+            std::replace(name.begin(), name.end(), ',', '-');
+            name.erase(std::remove(name.begin(), name.end(), ' '), name.end());
+        }
 
         return name;
     }

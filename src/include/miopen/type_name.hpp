@@ -101,6 +101,23 @@ constexpr std::string_view type_name()
 }
 
 template <class T>
+constexpr std::string_view type_name_bare()
+{
+    constexpr auto name = type_name<T>();
+    constexpr auto pos = name.rfind(':');
+    if constexpr(pos == std::string_view::npos)
+    {
+        return name;
+    }
+    else
+    {
+        constexpr auto bare_name = name.substr(pos + 1);
+        static_assert(bare_name.size() > 0);
+        return bare_name;
+    }
+}
+
+template <class T>
 const std::string& get_type_name()
 {
     static const auto ret = std::string(type_name<T>());
