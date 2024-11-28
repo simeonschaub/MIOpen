@@ -114,7 +114,7 @@ DEBIAN_FRONTEND=noninteractive apt-get purge -y --allow-unauthenticated \
     miopen-hip
 
 # TODO: it should be able to automatically get commit hash from requirements.txt
-ARG CK_COMMIT=c7b0b6e770f66a1bc3ee4524945c2519a1f978c3
+ARG CK_COMMIT=60afb5221962064f05608c1e87482ca93afabf54
 RUN wget -O ck.tar.gz https://www.github.com/ROCm/composable_kernel/archive/${CK_COMMIT}.tar.gz && \
     tar zxvf ck.tar.gz &&\
     cd composable_kernel-${CK_COMMIT} && \
@@ -124,8 +124,7 @@ RUN wget -O ck.tar.gz https://www.github.com/ROCm/composable_kernel/archive/${CK
     -D CMAKE_CXX_COMPILER_LAUNCHER="${COMPILER_LAUNCHER}" \
     -D CMAKE_BUILD_TYPE=Release \
     -D GPU_ARCHS="gfx908;gfx90a;gfx942;gfx1100" \
-    -D CMAKE_CXX_FLAGS=" -O3 " \
-    -DCK_USE_CODEGEN=ON .. && \
+    -D CMAKE_CXX_FLAGS=" -O3 " .. && \
     make -j $(nproc) install 
 
 # Composable Kernel installed separated from rbuild to take in values from GPU_ARCHS 
