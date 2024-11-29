@@ -125,9 +125,8 @@ RUN wget -O ck.tar.gz https://www.github.com/ROCm/composable_kernel/archive/${CK
     -D CMAKE_BUILD_TYPE=Release \
     -D GPU_ARCHS="gfx908;gfx90a;gfx942;gfx1100" \
     -D CMAKE_CXX_FLAGS=" -O3 " .. && \
-    make -j $(nproc) install 
-
-RUN rm -rf CMakeCache.txt &&\ 
+    make -j $(nproc) install && \ 
+    rm -rf CMakeCache.txt &&\ 
     CXX=/opt/rocm/llvm/bin/clang++ cmake ../codegen \
     -D CMAKE_CXX_COMPILER_LAUNCHER="${COMPILER_LAUNCHER}" \
     -D CMAKE_BUILD_TYPE=Release \
