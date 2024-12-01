@@ -129,12 +129,6 @@ struct CKArgs
         in_lengths  = {prob.G, prob.N, prob.C, prob.Hi, prob.Wi};
         out_lengths = {prob.G, prob.N, prob.K, prob.Ho, prob.Wo};
         wei_lengths = {prob.G, prob.K, prob.C, prob.Y, prob.X};
-        std::cout << "in lengths: " << prob.G << ", " << prob.N << ", " << prob.C << ", " << prob.Hi
-                  << ", " << prob.Wi << std::endl;
-        std::cout << "weight lengths: " << prob.G << ", " << prob.K << ", " << prob.C << ", "
-                  << prob.Y << ", " << prob.X << std::endl;
-        std::cout << "out lengths: " << prob.G << ", " << prob.N << ", " << prob.K << ", "
-                  << prob.Ho << ", " << prob.Wo << std::endl;
 
         in_strides  = {prob.C,
                       prob.Hi * prob.Wi * prob.G * prob.C,
@@ -151,13 +145,6 @@ struct CKArgs
                        1,
                        prob.X * prob.C,
                        prob.C};
-        std::cout << "in strides: " << prob.C << ", " << prob.Hi * prob.Wi * prob.G * prob.C
-                  << ", 1, " << prob.Wi * prob.G * prob.C << ", " << prob.G * prob.C << std::endl;
-        std::cout << "wei strides: " << prob.K * prob.Y * prob.X * prob.C << ", "
-                  << prob.Y * prob.X * prob.C << ", 1, " << prob.X * prob.C << ", " << prob.C
-                  << std::endl;
-        std::cout << "out strides: " << prob.K << ", " << prob.Ho * prob.Wo * prob.G * prob.K
-                  << ", 1, " << prob.Wo * prob.G * prob.K << ", " << prob.G * prob.K << std::endl;
 
         filter_strides   = {ProblemInterpreter::GetAdjustedConvolutionStrideH(problem),
                           ProblemInterpreter::GetAdjustedConvolutionStrideW(problem)};
@@ -174,21 +161,6 @@ struct CKArgs
     CKArgs(CKArgs&&) noexcept = default;
     CKArgs& operator=(const CKArgs&) = default;
 
-    /**int G;
-    int N;
-    int K;
-    int C;
-    int C1;
-    int K1;
-    int Hi;
-    int Wi;
-    int Di;
-    int Ho;
-    int Wo;
-    int Do;
-    int Y;
-    int X;
-    int Z;**/
     ck::host::conv::Problem_Conv_Fwd prob;
     ck::Array<ck::index_t, 5> in_lengths;
     ck::Array<ck::index_t, 5> in_strides;
@@ -200,7 +172,6 @@ struct CKArgs
     ck::Array<ck::index_t, 2> filter_dilations;
     ck::Array<ck::index_t, 2> lPadding;
     ck::Array<ck::index_t, 2> rPadding;
-    // miopenAlphaBetaCase_t alpha_beta_case;
 };
 
 } // namespace
@@ -218,60 +189,45 @@ bool ConvHipImplicitGemmGroupFwdXdlopsCodegen::IsApplicable(
     [[maybe_unused]] const ExecutionContext& ctx,
     [[maybe_unused]] const ProblemDescription& problem) const
 {
-    // FIXME: rewrite this function
-    std::cout << "####### entered isApplicable #######" << std::endl;
-    // return true;
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
-    std::cout << "----------- entered the header guard -----------" << std::endl;
     if(env::disabled(MIOPEN_DEBUG_GROUP_CONV_IMPLICIT_GEMM_HIP_FWD_XDLOPS))
     {
-        std::cout << "Check 1: false" << std::endl;
         return false;
     }
     if(problem.HasNonPackedTensors())
     {
-        std::cout << "Check 2: false" << std::endl;
         return false;
     }
     if(!problem.AllTensorsDimsFitIntoInt())
     {
-        std::cout << "Check 3: false" << std::endl;
         return false;
     }
     if(problem.IsTensorsCasted())
     {
-        std::cout << "Check 4: false" << std::endl;
         return false;
     }
     if(problem.GetConv().attribute.deterministic)
     {
-        std::cout << "Check 5: false" << std::endl;
         return false;
     }
     if(problem.HasMixedDataTypes())
     {
-        std::cout << "Check 6: false" << std::endl;
         return false;
     }
     if(!problem.IsDirectionForward())
     {
-        std::cout << "Check 7: false" << std::endl;
         return false;
     }
     if(!problem.Is2d())
     {
-        std::cout << "Check 8: false" << std::endl;
         return false;
     }
     if(!(problem.IsLayoutNHWC() || problem.IsLayoutDefault()))
     {
-        std::cout << "Check 9: false" << std::endl;
         return false;
     }
-    std::cout << "------ went through header guard checks ------" << std::endl;
     return true;
 #endif
-    std::cout << "never entered the header guard" << std::endl;
     return false;
 }
 
@@ -307,33 +263,20 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     auto tmp = get_launch_params(solution[0], x.out_lengths, x.out_strides);
 
     auto grid_size = tmp * x.in_lengths[1];
-    std::cout << " ------- grid size: " << grid_size << std::endl;
 
     kernel_info.l_wk = {256, 1, 1};
     kernel_info.g_wk = {16384, 1, 1};
 
-    std::cout << "block size: " << block_size << ", grid size: " << grid_size
-              << ", launch: " << block_size * grid_size << std::endl;
     bool bfp16parm = true;
     const auto build_params =
         KernelBuildParameters{{"MIOPEN_USE_FP16", static_cast<int>(bfp16parm)}};
     kernel_info.comp_options = build_params.GenerateFor(kbp::HIP{});
     kernel_info.comp_options += " -DCK_DONT_USE_HIP_RUNTIME_HEADERS";
     kernel_info.comp_options += " -DCK_CODE_GEN_RTC";
-    // soln.construction_params.push_back(kernel_info);
 
     soln.invoker_factory = [=](const std::vector<Kernel>& kernels) {
-        std::cout << " ------------- outer lambda --------------------" << std::endl;
         return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
-            std::cout << "----------- into inner lambda -----------" << std::endl;
-            // decltype(auto) kernel = handle_.Run(kernels.front());
             decltype(auto) params = raw_params.CastTo<miopen::conv::DataInvokeParams>();
-            std::cout << " ------------- past param assignment -------------" << std::endl;
-
-            std::cout << "=========== invoker factory ===============" << std::endl;
-            std::cout << "name of kernel: " << name << std::endl;
-            std::cout << "block size: " << block_size << ", grid size: " << grid_size
-                      << ", launch: " << block_size * grid_size << std::endl;
             auto kernel = handle_.AddKernel("tmp",
                                             "tmp",
                                             "cg_main.cpp",
@@ -343,38 +286,6 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
                                             kernel_info.comp_options,
                                             0,
                                             src);
-            std::cout << "in: " << params.tensors.inDesc << std::endl;
-            std::cout << "lens: " << params.tensors.inDesc.GetLengths().size() << std::endl;
-            // std::cout << "w: " << *params.tensors.w << std::endl;
-            // std::cout << "out: " << *params.tensors.out << std::endl;
-            std::cout << "conv: " << problem.GetConv() << std::endl;
-            std::cout << "in: " << problem.GetIn() << std::endl;
-            std::cout << "w: " << problem.GetWeights() << std::endl;
-            std::cout << "out: " << problem.GetOut() << std::endl;
-            std::cout << "in lengths: " << x.in_lengths[0] << ", " << x.in_lengths[1] << ", "
-                      << x.in_lengths[2] << ", " << x.in_lengths[3] << ", " << x.in_lengths[4]
-                      << ", " << std::endl;
-            std::cout << "w lengths: " << x.wei_lengths[0] << ", " << x.wei_lengths[1] << ", "
-                      << x.wei_lengths[2] << ", " << x.wei_lengths[3] << ", " << x.wei_lengths[4]
-                      << ", " << std::endl;
-            std::cout << "out lengths: " << x.out_lengths[0] << ", " << x.out_lengths[1] << ", "
-                      << x.out_lengths[2] << ", " << x.out_lengths[3] << ", " << x.out_lengths[4]
-                      << ", " << std::endl;
-            std::cout << "in strides: " << x.in_strides[0] << ", " << x.in_strides[1] << ", "
-                      << x.in_strides[2] << ", " << x.in_strides[3] << ", " << x.in_strides[4]
-                      << ", " << std::endl;
-            std::cout << "wei strides: " << x.wei_strides[0] << ", " << x.wei_strides[1] << ", "
-                      << x.wei_strides[2] << ", " << x.wei_strides[3] << ", " << x.wei_strides[4]
-                      << ", " << std::endl;
-            std::cout << "out strides: " << x.out_strides[0] << ", " << x.out_strides[1] << ", "
-                      << x.out_strides[2] << ", " << x.out_strides[3] << ", " << x.out_strides[4]
-                      << ", " << std::endl;
-            std::cout << "filter strides: " << x.filter_strides[0] << ", " << x.filter_strides[1]
-                      << std::endl;
-            std::cout << "filter dilations: " << x.filter_dilations[0] << ", "
-                      << x.filter_dilations[1] << std::endl;
-            std::cout << "left pad: " << x.lPadding[0] << ", " << x.lPadding[1] << std::endl;
-            std::cout << "right pad: " << x.rPadding[0] << ", " << x.rPadding[1] << std::endl;
 
             kernel(params.tensors.in,
                    params.tensors.w,
@@ -391,21 +302,6 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
                    x.rPadding);
         };
     };
-    // TODO: remove this, replace with lambda. MIOpen has it's own invoker to launch the kernel
-    // launch the kernel with arguments needed for the argument pointer
-    /**k.launch(nullptr, grid_size * block_size, block_size)(in_dev.data(),
-                                                          wei_dev.data(),
-                                                          out_dev.data(),
-                                                          prob.in_lengths,
-                                                          prob.in_strides,
-                                                          prob.wei_lengths,
-                                                          prob.wei_strides,
-                                                          prob.out_lengths,
-                                                          prob.out_strides,
-                                                          prob.filter_strides,
-                                                          prob.filter_dilations,
-                                                          prob.lPadding,
-                                                          prob.rPadding);**/
 
     return soln;
 #else
