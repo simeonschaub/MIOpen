@@ -334,7 +334,7 @@ set( MIOpen_Source
     solver/softmarginloss/forward_softmarginloss.cpp
     solver/softmax/attn_softmax.cpp
     solver/softmax/softmax.cpp
-    solver/tmp_conv_hip_implicit_gemm_3d_grouped_fwd_xdlops.cpp
+    solver/codegen_conv_hip_implicit_gemm_2d_grouped_fwd_xdlops.cpp
     subbuffers.cpp
     t5layernorm_api.cpp
     target_properties.cpp
@@ -843,6 +843,7 @@ endfunction()
 
 target_include_directories(MIOpen PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/include>
+    /usr/local/lib/composable_kernel_host/include
 )
 
 if(MIOPEN_USE_COMPOSABLEKERNEL)
