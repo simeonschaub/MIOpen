@@ -66,7 +66,7 @@ OutputIt exclusive_scan_wa(InputIt first, InputIt last, OutputIt d_first, T init
 
 inline Data_t moveDataPtrByte(Data_t ptr, size_t byteOffset)
 {
-    return static_cast<Data_t>(reinterpret_cast<char*>(ptr) + byteOffset);
+    return static_cast<char*>(ptr) + byteOffset;
 }
 
 inline Data_t moveDataPtr(Data_t ptr, size_t elementOffset, miopenDataType_t elementType)
