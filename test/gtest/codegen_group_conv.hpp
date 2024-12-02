@@ -95,35 +95,22 @@ struct GroupConvTestConfig<2u>
             1.0};
     }
 
-    template <Direction DIR, bool cg>
+    template <Direction DIR>
     static std::vector<GroupConvTestConfig> GetConfigs()
     {
-        if constexpr(cg == true)
+        if constexpr(DIR == Direction::Forward)
         {
-            return {
-                {32, 256, 32, 64, {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
-            };
-        }
-        else
-        {
-            if constexpr(DIR == Direction::Forward)
-            {
 
-                // clang-format off
+            // clang-format off
             return {
             // g   n   C     K      img       filter   pad    stride  dilation
-              {1 , 256, 192 , 192 , {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
-              {1 , 256, 12  , 12  , {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
-              {4 , 256, 192 , 192 , {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
-              {8 , 256, 192 , 192 , {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
-              {8 , 256, 384 , 384 , {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
-              {32, 256, 1024, 2048, {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
+	      {32, 256, 32, 64, {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
             };
-                // clang-format on
-            }
-            else if constexpr(DIR == Direction::BackwardData || DIR == Direction::BackwardWeights)
-            {
-                // clang-format off
+            // clang-format on
+        }
+        else if constexpr(DIR == Direction::BackwardData || DIR == Direction::BackwardWeights)
+        {
+            // clang-format off
             return {
             // g   n   C     K      img       filter   pad    stride  dilation
               {1 , 1  , 1   , 1   , {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
@@ -133,12 +120,11 @@ struct GroupConvTestConfig<2u>
               {8 , 256, 384 , 384 , {28, 28}, {2, 2}, {1, 1}, {1, 1}, {1, 1}},
               {32, 256, 1024, 2048, {28, 28}, {3, 3}, {1, 1}, {1, 1}, {1, 1}},
             };
-                // clang-format on
-            }
-            else
-            {
-                std::abort();
-            }
+            // clang-format on
+        }
+        else
+        {
+            std::abort();
         }
     }
 };
@@ -199,7 +185,7 @@ struct GroupConvTestConfig<3u>
             1.0};
     }
 
-    template <Direction DIR, bool cg>
+    template <Direction DIR>
     static std::vector<GroupConvTestConfig> GetConfigs()
     {
 
@@ -249,7 +235,7 @@ struct GroupConvTestConfig<3u>
     }
 };
 
-template <unsigned NDIM, typename T, Direction CONV_DIR, bool cg>
+template <unsigned NDIM, typename T, Direction CONV_DIR>
 struct GroupConvTestFix
     : public ::testing::TestWithParam<
           std::tuple<GroupConvTestConfig<NDIM>, float, float, miopenTensorLayout_t>>
@@ -349,7 +335,7 @@ private:
     template <typename CodegenSolver>
     void DispatchSolver()
     {
-        if constexpr(cg == true && CONV_DIR == Direction::Forward)
+        if constexpr(CONV_DIR == Direction::Forward)
         {
             RunSolverImpl<CodegenSolver, miopen::conv::DataInvokeParams>(
                 miopen::ConvDataTensors{input.desc,
