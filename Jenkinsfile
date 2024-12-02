@@ -499,19 +499,19 @@ pipeline {
             description: "")
         booleanParam(
             name: "PERF_TEST",
-            defaultValue: false,
+            defaultValue: true,
             description: "Enable performance testing stages")
         booleanParam(
             name: "PERF_TEST_FP16",
-            defaultValue: false,
+            defaultValue: true,
             description: "Enable performance testing stages")
         booleanParam(
             name: "PERF_TEST_FP32",
-            defaultValue: false,
+            defaultValue: true,
             description: "Enable performance testing stages")
         booleanParam(
             name: "PERF_TEST_BRANCH_OVERRIDE",
-            defaultValue: false,
+            defaultValue: true,
             description: "Enable performance testing stages")
         booleanParam(
             name: "DBSYNC_TEST",
@@ -1223,7 +1223,7 @@ pipeline {
                 }
             }
         }
-        stage("Performance Tests - gfx90a") {
+        stage("Performance Tests - gfx942") {
             when {
                 expression {params.PERF_TEST && params.TARGET_GFX90A}
             }
