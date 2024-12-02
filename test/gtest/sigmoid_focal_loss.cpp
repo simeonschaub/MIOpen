@@ -44,7 +44,7 @@ TEST_P(GPU_SigmoidFocalLoss_fwd_FP32, Test)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_SigmoidFocalLoss_fwd_FP32,
                          testing::ValuesIn(SigmoidFocalLossTestConfigs()));
 
@@ -54,7 +54,7 @@ TEST_P(GPU_SigmoidFocalLoss_fwd_FP16, Test)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_SigmoidFocalLoss_fwd_FP16,
                          testing::ValuesIn(SigmoidFocalLossTestConfigs()));
 
@@ -64,7 +64,7 @@ TEST_P(GPU_SigmoidFocalLoss_fwd_BFP16, Test)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_SigmoidFocalLoss_fwd_BFP16,
                          testing::ValuesIn(SigmoidFocalLossTestConfigs()));
 
@@ -74,7 +74,7 @@ TEST_P(GPU_SigmoidFocalLoss_bwd_FP32, Test)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_SigmoidFocalLoss_bwd_FP32,
                          testing::ValuesIn(SigmoidFocalLossTestConfigs()));
 
@@ -84,7 +84,7 @@ TEST_P(GPU_SigmoidFocalLoss_bwd_FP16, Test)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_SigmoidFocalLoss_bwd_FP16,
                          testing::ValuesIn(SigmoidFocalLossTestConfigs()));
 
@@ -94,6 +94,6 @@ TEST_P(GPU_SigmoidFocalLoss_bwd_BFP16, Test)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full,
+INSTANTIATE_TEST_SUITE_P(Smoke,
                          GPU_SigmoidFocalLoss_bwd_BFP16,
                          testing::ValuesIn(SigmoidFocalLossTestConfigs()));
