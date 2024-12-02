@@ -288,7 +288,7 @@ private:
     {
         EXPECT_FALSE(miopen::range_zero(ref)) << "Cpu data is all zeros";
         EXPECT_FALSE(miopen::range_zero(computed)) << "Gpu data is all zeros";
-        EXPECT_TRUE(miopen::range_distance(ref) == miopen::range_distance(computed));
+        EXPECT_EQ(miopen::range_distance(ref), miopen::range_distance(computed));
 
         /// \todo figure out a better threshold for error checking, esp. for bwd
         /// data and weight passes. --amberhassaan
@@ -303,11 +303,10 @@ private:
         }
         auto error = miopen::rms_range(ref, computed);
 
-        EXPECT_FALSE(miopen::find_idx(ref, miopen::not_finite) >= 0)
+        EXPECT_LT(miopen::find_idx(ref, miopen::not_finite), 0)
             << "Non finite number found in the reference output";
 
-        EXPECT_TRUE(error <= threshold)
-            << "Error beyond tolerance Error:" << error << ",  Threshold: " << threshold;
+        EXPECT_LE(error, threshold);
     }
 
     /// \todo had to pull out tensor and problem construction because the order of
@@ -324,19 +323,11 @@ private:
         std::cout << conv_config << std::endl;
         auto&& handle = get_handle();
 
-        // static_assert(cg == true, "Cg is  false");
-
         Solver solv{};
 
         auto ctx = miopen::ExecutionContext{};
 
         ctx.SetStream(&handle);
-
-        if(!solv.IsApplicable(ctx, problem))
-        {
-            test_skipped = true;
-            GTEST_SKIP() << solv.SolverDbId() << "Not Applicable for this problem" << conv_config;
-        }
 
         if(solv.MayNeedWorkspace())
         {
@@ -347,13 +338,7 @@ private:
             InvokeParamType{tensors, wspace.ptr(), wspace.size(), false, alpha, beta};
 
         ASSERT_TRUE(solv.IsApplicable(ctx, problem));
-        // auto sol = solv.GetSolution(ctx, problem);
-        // if(cg == false){ solv::foo = 1;}
         auto sol = solv.GetSolution(ctx, problem);
-        /**if constexpr(cg == false){
-                sol = solv.GetSolution(ctx, problem, solv.GetDefaultPerformanceConfig(ctx,
-        problem));
-        }**/
         ASSERT_TRUE(sol.Succeeded());
         ASSERT_TRUE(sol.invoker_factory);
         const auto invoker = handle.PrepareInvoker(*sol.invoker_factory, sol.construction_params);
@@ -544,24 +529,23 @@ std::vector<float> GetBetaValues()
     }
 }
 
-#define DEFINE_GROUP_CONV_TEST(ndim, type, naming_type, dir, cg)                            \
-    struct GPU_GroupConv##ndim##D_##dir##_##naming_type##_##cg                              \
-        : GroupConvTestFix<ndim, type, Direction::dir, cg>                                  \
-    {                                                                                       \
-    };                                                                                      \
-    TEST_P(GPU_GroupConv##ndim##D_##dir##_##naming_type##_##cg,                             \
-           GroupConv##ndim##D_##dir##_##type##_##cg##_Test)                                 \
-    {                                                                                       \
-        RunSolver();                                                                        \
-    }                                                                                       \
-    INSTANTIATE_TEST_SUITE_P(                                                               \
-        Full,                                                                               \
-        GPU_GroupConv##ndim##D_##dir##_##naming_type##_##cg,                                \
-        testing::Combine(                                                                   \
-            testing::ValuesIn(GroupConvTestConfig<ndim>::GetConfigs<Direction::dir, cg>()), \
-            testing::ValuesIn(GetAlphaValues<ndim>()),                                      \
-            testing::ValuesIn(GetBetaValues<ndim>()),                                       \
+#define DEFINE_GROUP_CONV_TEST(ndim, type, naming_type, dir)                                       \
+    struct GPU_GroupConv##ndim##D_##dir##_##naming_type                                            \
+        : GroupConvTestFix<ndim, type, Direction::dir>                                             \
+    {                                                                                              \
+    };                                                                                             \
+    TEST_P(GPU_GroupConv##ndim##D_##dir##_##naming_type, GroupConv##ndim##D_##dir##_##type##_Test) \
+    {                                                                                              \
+        RunSolver();                                                                               \
+    }                                                                                              \
+    INSTANTIATE_TEST_SUITE_P(                                                                      \
+        Full,                                                                                      \
+        GPU_GroupConv##ndim##D_##dir##_##naming_type,                                              \
+        testing::Combine(                                                                          \
+            testing::ValuesIn(GroupConvTestConfig<ndim>::GetConfigs<Direction::dir>()),            \
+            testing::ValuesIn(GetAlphaValues<ndim>()),                                             \
+            testing::ValuesIn(GetBetaValues<ndim>()),                                              \
             testing::ValuesIn(GetLayoutValues<ndim>())));
 
 #define DEFINE_CG_GROUP_CONV2D_TEST(type, naming_type, dir) \
-    DEFINE_GROUP_CONV_TEST(2, type, naming_type, dir, true)
+    DEFINE_GROUP_CONV_TEST(2, type, naming_type, dir)

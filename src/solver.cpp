@@ -686,11 +686,6 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
              fusion::ConvWinoFuryRxSFused<2, 3>{}.SolverDbId(),
              miopenConvolutionAlgoWinograd);
 
-    RegisterWithSolver(registry,
-                       ++id,
-                       conv::ConvHipImplicitGemmGroupFwdXdlopsCodegen{},
-                       miopenConvolutionAlgoImplicitGEMM);
-
     Register(registry, ++id, Primitive::RoPE, rope::RoPEForward{}.SolverDbId());
     Register(registry, ++id, Primitive::RoPE, rope::RoPEBackward{}.SolverDbId());
     Register(registry, ++id, Primitive::ReLU, prelu::MultiWeightsBackward{}.SolverDbId());
@@ -714,6 +709,11 @@ inline SolverRegistrar::SolverRegistrar(IdRegistryData& registry)
              multimarginloss::MultiMarginLossForward{}.SolverDbId());
 
     Register(registry, ++id, Primitive::Mha, mha::MhaCKFlashAttentionV2Forward{}.SolverDbId());
+
+    RegisterWithSolver(registry,
+                       ++id,
+                       conv::ConvHipImplicitGemmGroupFwdXdlopsCodegen{},
+                       miopenConvolutionAlgoImplicitGEMM);
     // IMPORTANT: New solvers should be added to the end of the function, and don't leave a white
     // space between this comment and the newly registered solver(s)!
 }

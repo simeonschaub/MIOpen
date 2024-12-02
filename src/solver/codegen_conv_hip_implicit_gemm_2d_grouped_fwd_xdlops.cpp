@@ -228,15 +228,14 @@ bool ConvHipImplicitGemmGroupFwdXdlopsCodegen::IsApplicable(
     }
     return true;
 #endif
-    return false;
 }
 
 ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     [[maybe_unused]] const ExecutionContext& ctx,
     [[maybe_unused]] const ProblemDescription& problem) const
 {
-    auto x = CKArgs(problem);
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
+    auto x = CKArgs(problem);
 
     const auto workspace_req = GetWorkspaceSize(ctx, problem);
 
@@ -258,11 +257,13 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     kernel_info.kernel_name = "run_" + name;
 
     // Grid size calculation
-    auto block_size = solution[0].GetTemplateParameter<ck::index_t>("BlockSize");
+    // FIXME: for some reason, the launch params that work in CK, don't work here.
+    // Launch params are hardcoded for now
+    // auto block_size = solution[0].GetTemplateParameter<ck::index_t>("BlockSize");
 
-    auto tmp = get_launch_params(solution[0], x.out_lengths, x.out_strides);
+    // auto tmp = get_launch_params(solution[0], x.out_lengths, x.out_strides);
 
-    auto grid_size = tmp * x.in_lengths[1];
+    // auto grid_size = tmp * x.in_lengths[1];
 
     kernel_info.l_wk = {256, 1, 1};
     kernel_info.g_wk = {16384, 1, 1};
@@ -277,7 +278,7 @@ ConvSolution ConvHipImplicitGemmGroupFwdXdlopsCodegen::GetSolution(
     soln.invoker_factory = [=](const std::vector<Kernel>& kernels) {
         return [=](const Handle& handle_, const AnyInvokeParams& raw_params) {
             decltype(auto) params = raw_params.CastTo<miopen::conv::DataInvokeParams>();
-            auto kernel = handle_.AddKernel("tmp",
+            auto kernel           = handle_.AddKernel("tmp",
                                             "tmp",
                                             "cg_main.cpp",
                                             kernel_info.kernel_name,
