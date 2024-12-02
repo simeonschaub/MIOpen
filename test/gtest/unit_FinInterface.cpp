@@ -33,7 +33,9 @@
 
 // batchnorm::ProblemDescription
 #include <miopen/batchnorm/problem_description.hpp>
+#if MIOPEN_ENABLE_FIN_INTERFACE
 #include <miopen/fin/fin_interface.hpp>
+#endif
 
 #include "get_handle.hpp"
 #include "unit_conv_solver.hpp"
@@ -51,7 +53,8 @@ struct TestParams
 
 struct SolverInfo
 {
-    SolverInfo() = default;
+    [[maybe_unused]] SolverInfo() = default;
+
     SolverInfo(uint64_t id_, bool dynamic_, bool tunable_)
         : id(id_), dynamic(dynamic_), tunable(tunable_)
     {
@@ -115,7 +118,7 @@ struct ConvSolverConfig : SolverConfig, private miopen::unit_tests::ConvTestCase
     {
     }
 
-    auto GetProblemDescription() const { return GetProblemDescription(direction); }
+    [[maybe_unused]] auto GetProblemDescription() const { return GetProblemDescription(direction); }
 
     friend std::ostream& operator<<(std::ostream& os, const ConvSolverConfig& config)
     {
@@ -144,7 +147,7 @@ struct BatchNormSolverConfig : SolverConfig
 {
     BatchNormSolverConfig(int dummy) : SolverConfig(false) { std::ignore = dummy; }
 
-    auto GetProblemDescription() const
+    [[maybe_unused]] auto GetProblemDescription() const
     {
         return miopen::batchnorm::ProblemDescription{{}, {}, {}, {}, {}, {}, {}, {}};
     }
@@ -382,8 +385,8 @@ const auto& GetTestCases()
 {
     static const auto test_cases = [] {
         std::vector<TestCase> test_cases;
-        const auto& sinfo   = GetSolversInfo<decltype(TestCase{}.info)>();
-        const auto& configs = GetSolverConfigs<decltype(TestCase{}.config)>();
+        const auto& sinfo   = GetSolversInfo<decltype(std::declval<TestCase>().info)>();
+        const auto& configs = GetSolverConfigs<decltype(std::declval<TestCase>().config)>();
         test_cases.reserve(sinfo.size());
         for(const auto& s : sinfo)
         {
@@ -397,6 +400,8 @@ const auto& GetTestCases()
     }();
     return test_cases;
 }
+
+#if MIOPEN_ENABLE_FIN_INTERFACE
 
 // Context
 template <class Problem>
@@ -508,6 +513,8 @@ auto InterfaceGetSolver<BatchNormTestCase>(const std::string& name)
     return miopen::fin_interface::GetBatchNormSolver(name);
 }
 
+#endif // MIOPEN_ENABLE_FIN_INTERFACE
+
 // Tests
 template <class TestCase>
 class TestGetAllSolvers : public ::testing::TestWithParam<TestParams>
@@ -515,8 +522,9 @@ class TestGetAllSolvers : public ::testing::TestWithParam<TestParams>
 public:
     void RunTest()
     {
+#if MIOPEN_ENABLE_FIN_INTERFACE
         const auto& solvers      = InterfaceGetAllSolvers<TestCase>();
-        const auto& solvers_info = GetSolversInfo<decltype(TestCase{}.info)>();
+        const auto& solvers_info = GetSolversInfo<decltype(std::declval<TestCase>().info)>();
 
         ASSERT_EQ(solvers.size(), solvers_info.size());
         for(const auto& solver : solvers)
@@ -530,6 +538,15 @@ public:
             }
             ASSERT_NO_FATAL_FAILURE(CheckSolverInfo(solver, solver_info->second));
         }
+#endif // MIOPEN_ENABLE_FIN_INTERFACE
+    }
+
+protected:
+    void SetUp() override
+    {
+#if !MIOPEN_ENABLE_FIN_INTERFACE
+        GTEST_SKIP();
+#endif // !MIOPEN_ENABLE_FIN_INTERFACE
     }
 };
 
@@ -539,8 +556,9 @@ class TestGetSolvers : public ::testing::TestWithParam<TestParams>
 public:
     void RunTest()
     {
-        const auto& solvers_info = GetSolversInfo<decltype(TestCase{}.info)>();
-        const auto& names        = GetSolverNames<decltype(TestCase{}.info)>();
+#if MIOPEN_ENABLE_FIN_INTERFACE
+        const auto& solvers_info = GetSolversInfo<decltype(std::declval<TestCase>().info)>();
+        const auto& names        = GetSolverNames<decltype(std::declval<TestCase>().info)>();
         const auto solvers       = InterfaceGetSolvers<TestCase>(names);
 
         ASSERT_EQ(solvers.size(), names.size());
@@ -555,6 +573,15 @@ public:
             }
             ASSERT_NO_FATAL_FAILURE(CheckSolver(solver, TestCase{name, solver_info->second, {}}));
         }
+#endif // MIOPEN_ENABLE_FIN_INTERFACE
+    }
+
+protected:
+    void SetUp() override
+    {
+#if !MIOPEN_ENABLE_FIN_INTERFACE
+        GTEST_SKIP();
+#endif // !MIOPEN_ENABLE_FIN_INTERFACE
     }
 };
 
@@ -564,10 +591,20 @@ class TestGetSolver : public ::testing::TestWithParam<std::tuple<TestParams, Tes
 public:
     void RunTest()
     {
+#if MIOPEN_ENABLE_FIN_INTERFACE
         TestCase test_case;
         std::tie(std::ignore, test_case) = this->GetParam();
         const auto solver                = InterfaceGetSolver<TestCase>(test_case.name);
         CheckSolver(solver, test_case);
+#endif // MIOPEN_ENABLE_FIN_INTERFACE
+    }
+
+protected:
+    void SetUp() override
+    {
+#if !MIOPEN_ENABLE_FIN_INTERFACE
+        GTEST_SKIP();
+#endif // !MIOPEN_ENABLE_FIN_INTERFACE
     }
 };
 

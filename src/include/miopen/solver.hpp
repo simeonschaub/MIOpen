@@ -95,19 +95,37 @@ protected:
     template <class Solver>
     static const std::string& GetSolverDbId()
     {
-        static const auto result = ComputeSolverDbId(get_type_name<Solver>());
+#if BUILD_SHARED_LIBS && MIOPEN_ENABLE_FIN_INTERFACE
+        /// When using this function outside of the shared library, the static local variable is
+        /// duplicated, both the library and the program using it have their own copy, but only one
+        /// of them is initialized, depending on which entity calls the function first—the library
+        /// or the program.
+        /// \todo This needs to be removed when the interface matures, and internal class/function
+        /// templates are no longer used by the fin.
+        static std::string result;
+        if(result.empty())
+        {
+            // The "new" operator is used here to avoid segmentation fault (since the variable is
+            // not initialized).
+            new(&result) std::string(ComputeSolverDbId(type_name_bare<Solver>()));
+        }
+#else  // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
+        static const auto result = ComputeSolverDbId(type_name_bare<Solver>());
+#endif // !BUILD_SHARED_LIBS || !MIOPEN_ENABLE_FIN_INTERFACE
         return result;
     }
     SolverBase()                  = default;
     SolverBase(const SolverBase&) = default;
 
 private:
-    static std::string ComputeSolverDbId(const std::string& type_name)
+    static std::string ComputeSolverDbId(std::string_view type_name)
     {
-        auto idx  = type_name.find_last_of(':');
-        auto name = type_name.substr(idx + 1);
-        std::replace(name.begin(), name.end(), ',', '-');
-        name.erase(std::remove(name.begin(), name.end(), ' '), name.end());
+        auto name = std::string(type_name);
+        if(name.back() == '>')
+        {
+            std::replace(name.begin(), name.end(), ',', '-');
+            name.erase(std::remove(name.begin(), name.end(), ' '), name.end());
+        }
 
         return name;
     }
