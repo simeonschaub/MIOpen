@@ -516,17 +516,17 @@ std::vector<float> GetBetaValues()
 }
 
 #define DEFINE_GROUP_CONV_TEST(ndim, type, naming_type, dir)                                       \
-    struct GPU_GroupConv##ndim##D_##dir##_##naming_type                                            \
+    struct GPU_CGGroupConv##ndim##D_##dir##_##naming_type                                            \
         : GroupConvTestFix<ndim, type, Direction::dir>                                             \
     {                                                                                              \
     };                                                                                             \
-    TEST_P(GPU_GroupConv##ndim##D_##dir##_##naming_type, GroupConv##ndim##D_##dir##_##type##_Test) \
+    TEST_P(GPU_CGGroupConv##ndim##D_##dir##_##naming_type, CGGroupConv##ndim##D_##dir##_##type##_Test) \
     {                                                                                              \
         RunSolver();                                                                               \
     }                                                                                              \
     INSTANTIATE_TEST_SUITE_P(                                                                      \
         Full,                                                                                      \
-        GPU_GroupConv##ndim##D_##dir##_##naming_type,                                              \
+        GPU_CGGroupConv##ndim##D_##dir##_##naming_type,                                              \
         testing::Combine(                                                                          \
             testing::ValuesIn(GroupConvTestConfig<ndim>::GetConfigs<Direction::dir>()),            \
             testing::ValuesIn(GetAlphaValues<ndim>()),                                             \
