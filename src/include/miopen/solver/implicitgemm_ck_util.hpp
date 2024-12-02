@@ -127,7 +127,8 @@ std::vector<std::string> FillValidKernelsIDs(const ProblemDescriptionType& probl
 
 template <typename DeviceOpType,
           typename CKArgsType,
-          typename ProblemDescriptionType = miopen::conv::ProblemDescription>
+          typename ProblemDescriptionType = miopen::conv::ProblemDescription,
+          bool CheckSplitK                = false>
 bool IsCKArgsSupported(const ProblemDescriptionType& problem, const std::string& kernel_id)
 {
 #if MIOPEN_BACKEND_HIP && MIOPEN_USE_COMPOSABLEKERNEL
@@ -137,10 +138,28 @@ bool IsCKArgsSupported(const ProblemDescriptionType& problem, const std::string&
         if constexpr(std::is_same_v<DeviceOpType, conv::DeviceOpGWrwPtrs<ck::half_t>> ||
                      std::is_same_v<DeviceOpType, conv::DeviceOpGWrwPtrs<float>> ||
                      std::is_same_v<DeviceOpType, conv::DeviceOpGWrwPtrs<int8_t>> ||
-                     std::is_same_v<DeviceOpType, conv::DeviceOpGWrwPtrs<ck::bhalf_t>>)
+                     std::is_same_v<DeviceOpType, conv::DeviceOpGWrwPtrs<ck::bhalf_t>> ||
+                     CheckSplitK)
         {
-            auto pos      = kernel_id.find_last_of('+');
-            int split_k   = std::stoi(kernel_id.substr(pos + 1));
+            auto pos = kernel_id.find_last_of('+');
+            if(pos == std::string::npos)
+            {
+                MIOPEN_LOG_WE("Unable to parse split_k from kernel_id for wrw: " << kernel_id);
+                return false;
+            }
+
+            int split_k = 1;
+            try
+            {
+                split_k = std::stoi(kernel_id.substr(pos + 1));
+            }
+            catch(std::exception& e)
+            {
+                MIOPEN_LOG_WE("Unable to parse split_k from kernel_id for wrw: "
+                              << kernel_id << " : " << e.what());
+                return false;
+            }
+
             auto ptr_iter = FindConvPtrByID(conv_ptrs, kernel_id.substr(0, pos));
             return (ptr_iter != conv_ptrs.end()) &&
                    CKArgsType{problem}.IsSupportedBySplitK(*ptr_iter, split_k);
@@ -602,7 +621,8 @@ inline bool CKWrwRequireWorkspace(
     size_t K_per_group = K / G;
 
     return (alpha_beta_case == BILINEAR || alpha_beta_case == SCALE) ||
-           (data_type == miopenHalf && (is_odd(C_per_group) || is_odd(K_per_group)));
+           ((data_type == miopenHalf || data_type == miopenBFloat16) &&
+            (is_odd(C_per_group) || is_odd(K_per_group)));
 }
 
 /// \todo move to a cpp file
@@ -632,6 +652,28 @@ inline size_t GetWorkspaceSizeLayoutTransformConv(const miopen::conv::ProblemDes
                                    GetPackedSize(problem.GetWeights()),
                                    GetPackedSize(problem.GetOut())});
     return wt.GetSize();
+}
+
+inline void
+ZeroOutTensor(const Handle& handle, const TensorDescriptor& tensorDesc, Data_t tensorData)
+{
+#if MIOPEN_BACKEND_HIP
+    // SetTensor is required for non-packed tensors, but is also slower.
+    // Use faster clear if possible.
+    if(tensorDesc.IsPacked())
+    {
+        auto status = hipMemsetAsync(tensorData, 0, tensorDesc.GetNumBytes(), handle.GetStream());
+        if(status != hipSuccess)
+        {
+            MIOPEN_THROW_HIP_STATUS(status, "hipMemsetAsync() failed");
+        }
+    }
+    else
+#endif
+    {
+        auto zero = 0.0f;
+        SetTensor(handle, tensorDesc, tensorData, &zero);
+    }
 }
 
 template <typename DeviceOpType,
@@ -734,10 +776,8 @@ ConvSolution InitInvokerFactoryNCHW(const ExecutionContext& ctx,
             output_init_tr_inst.ConvertFrom(handle, kernels, conv_tensors);
 
             /// \todo: Will need SetTensor() to properly zero out non-packed tensors
-            if(output_tr_inst.GetConvOperandTag() == internal::ConvOperandTag::Weights)
-            {
-                output_tr_inst.ZeroOutBuffer(handle);
-            }
+            /// Note: Need to clear buffer memory for output since all values may not be set.
+            output_tr_inst.ZeroOutBuffer(handle);
 
             std::array<internal::TransposeInstanceTagged*, 3> tr_ptrs = {
                 &input1_tr_inst, &input2_tr_inst, &output_tr_inst};
@@ -867,9 +907,7 @@ ConvSolution InitInvokerFactoryNHWC(const ExecutionContext&,
 
                 if(alpha_beta_case == DEFAULT)
                 {
-                    auto zero           = 0.0f;
-                    const auto& tensors = data_ctx.tensors;
-                    SetTensor(handle, tensors.dwDesc, tensors.dw, &zero);
+                    ZeroOutTensor(handle, data_ctx.tensors.dwDesc, data_ctx.tensors.dw);
                 }
                 // use captured value, other wise getting warning
                 // "lambda capture is not used" since this variable is only used in assert.
@@ -902,6 +940,14 @@ ConvSolution InitInvokerFactoryNHWC(const ExecutionContext&,
                                                        data_ctx.beta.GetAsFloat());
                 auto invoker_ptr     = sh_conv_ptr->MakeInvokerPointer();
                 HipEventProfiler pfr(handle);
+
+                // Zero out the buffer for output data since it won't always write all output
+                // values.
+                if constexpr(std::is_same_v<CastType, miopen::conv::DataInvokeParams>)
+                {
+                    ZeroOutTensor(handle, data_ctx.tensors.outDesc, data_ctx.tensors.out);
+                }
+
                 invoker_ptr->Run(argument_ptr.get(), {handle.GetStream(), false});
             };
         };

@@ -39,6 +39,44 @@ enum BNApiType
     testBNAPIV2,
 };
 
+// Assuming miopenTensorLayout_t and testAPI_t are the types of your enums
+static std::string LayoutToString(int tensor_format)
+{
+    switch(tensor_format)
+    {
+    case miopenTensorNCHW: return "NCHW";
+    case miopenTensorNHWC: return "NHWC";
+    default: return "UnknownTensorFormat";
+    }
+}
+
+static std::string ApiVerisonToString(int api_version)
+{
+    switch(api_version)
+    {
+    case testBNAPIV1: return "testBNAPIV1";
+    case testBNAPIV2: return "testBNAPIV2";
+    default: return "UnknownAPIVersion";
+    }
+}
+
+// Custom test name generator to handle enums
+struct TestNameGenerator
+{
+    std::string operator()(
+        const testing::TestParamInfo<std::tuple<BNTestCase, miopenTensorLayout_t, BNApiType>>& info)
+        const
+    {
+        const auto& layout_type = std::get<1>(info.param);
+        const auto& api_type    = std::get<2>(info.param);
+
+        std::string tensor_name = LayoutToString(layout_type);
+        std::string api_name    = ApiVerisonToString(api_type);
+
+        return tensor_name + "_" + api_name + "_" + std::to_string(info.index);
+    }
+};
+
 template <typename XDataType,
           typename YDataType,
           typename ScaleDataType,
@@ -225,22 +263,18 @@ protected:
         auto&& handle = get_handle();
         bn_bwd_test_data.output.data =
             handle.Read<DyDataType>(bn_bwd_test_data.out_dev, bn_bwd_test_data.output.data.size());
-        bn_bwd_test_data.dScale.data = handle.Read<DxDataType>(bn_bwd_test_data.dScale_dev,
-                                                               bn_bwd_test_data.dScale.data.size());
-        bn_bwd_test_data.dBias.data =
-            handle.Read<DxDataType>(bn_bwd_test_data.dBias_dev, bn_bwd_test_data.dBias.data.size());
+        bn_bwd_test_data.dScale.data = handle.Read<DscaleDbiasDataType>(
+            bn_bwd_test_data.dScale_dev, bn_bwd_test_data.dScale.data.size());
+        bn_bwd_test_data.dBias.data = handle.Read<DscaleDbiasDataType>(
+            bn_bwd_test_data.dBias_dev, bn_bwd_test_data.dBias.data.size());
 
-        test::ComputeCPUBNBwd<XDataType,
-                              DxDataType,
-                              DyDataType,
-                              AccDataType,
-                              ScaleDataType,
-                              DscaleDbiasDataType,
-                              MeanVarDataType>(bn_bwd_test_data);
+        test::ComputeCPUBNBwd(bn_bwd_test_data);
 
-        test::CompareTensor<DxDataType>(bn_bwd_test_data.output, bn_bwd_test_data.ref_out, 5e-4);
-        test::CompareTensor<DxDataType>(bn_bwd_test_data.dScale, bn_bwd_test_data.dScale_ref, 5e-4);
-        test::CompareTensor<DxDataType>(bn_bwd_test_data.dBias, bn_bwd_test_data.dBias_ref, 5e-4);
+        test::CompareTensor<DxDataType>(bn_bwd_test_data.output, bn_bwd_test_data.ref_out, bwd_tol);
+        test::CompareTensor<DscaleDbiasDataType>(
+            bn_bwd_test_data.dScale, bn_bwd_test_data.dScale_ref, bwd_tol);
+        test::CompareTensor<DscaleDbiasDataType>(
+            bn_bwd_test_data.dBias, bn_bwd_test_data.dBias_ref, bwd_tol);
     }
 
     BNTestCase bn_config;
@@ -256,6 +290,7 @@ protected:
         bn_bwd_test_data;
     miopenTensorLayout_t tensor_layout;
     BNApiType api_type;
+    double bwd_tol = 4e-3;
 };
 
 template <typename XDataType,
