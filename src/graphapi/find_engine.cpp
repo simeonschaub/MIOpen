@@ -431,6 +431,11 @@ public:
         auto s = miopenCreateMhaProblem(&mha_prob, &mha_desc, miopenProblemDirectionForward);
         MIOPEN_THROW_IF(s != miopenStatusSuccess, "failed while creating problem for mha fwd");
 
+        // Ensure miopenDestroyProblem() will be called even if an exception occurs
+        std::unique_ptr<miopenProblem_t, std::function<void(miopenProblem_t*)>>
+            exceptionSafeProblemStore(&mha_prob,
+                                      [](miopenProblem_t* prob) { miopenDestroyProblem(*prob); });
+
         for(auto& [k, v] : *tensor_map)
         {
             s = miopenSetProblemTensorDescriptor(mha_prob, v.mEnumId, v.mGraphTensor);
@@ -446,12 +451,23 @@ public:
 
         solutions.resize(num_found);
 
+        // Ensure miopenDestroySolution() will be called even if an exception occurs
+        std::unique_ptr<decltype(solutions), std::function<void(decltype(solutions)*)>>
+            exceptionSafeSolutionsStore(&solutions, [](decltype(solutions)* psols) {
+                for(miopenSolution_t sol : *psols)
+                {
+                    miopenDestroySolution(sol);
+                }
+            });
+
         std::vector<Engine> engines;
+        engines.reserve(num_found);
 
         size_t i = 0;
-        for(const auto& sol : solutions)
+        for(miopenSolution_t sol : solutions)
         {
-            std::shared_ptr<GraphPatternExecutor> exec = GraphExecutorFind20::make(sol, tensor_map);
+            std::shared_ptr<GraphPatternExecutor> exec =
+                std::make_shared<GraphExecutorFind20>(std::move(deref(sol)), tensor_map);
 
             engines.emplace_back(
                 EngineBuilder().setGraph(graph_ptr).setExecutor(exec).setGlobalIndex(i).build());
@@ -994,6 +1010,15 @@ public:
 
         solutions.resize(numFound);
 
+        // Ensure miopenDestroySolution() will be called even if an exception occurs
+        std::unique_ptr<decltype(solutions), std::function<void(decltype(solutions)*)>>
+            exceptionSaveSolutionsStore(&solutions, [](decltype(solutions)* psols) {
+                for(miopenSolution_t sol : *psols)
+                {
+                    miopenDestroySolution(sol);
+                }
+            });
+
         std::vector<Engine> engines;
         engines.reserve(numFound);
 
@@ -1004,7 +1029,8 @@ public:
                        [&i, tensorMap, graphPtr](miopenSolution_t sol) -> Engine {
                            return EngineBuilder()
                                .setGraph(graphPtr)
-                               .setExecutor(GraphExecutorFind20::make(sol, tensorMap))
+                               .setExecutor(std::make_shared<GraphExecutorFind20>(
+                                   std::move(deref(sol)), tensorMap))
                                .setGlobalIndex(i++)
                                .build();
                        });
