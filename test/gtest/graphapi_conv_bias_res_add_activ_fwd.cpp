@@ -339,6 +339,10 @@ public:
             plan =
                 gr::ExecutionPlanBuilder().setEngineCfg(engineConfig).setHandle(handlePtr).build());
 
+        ASSERT_NO_THROW(plan = gr::ExecutionPlanBuilder()
+                                   .setJsonRepresentation(plan.getJsonRepresentation())
+                                   .build());
+
         Workspace ws(plan.getWorkspaceSize());
 
         gr::VariantPack variantPack;

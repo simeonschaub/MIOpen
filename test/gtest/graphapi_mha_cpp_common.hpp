@@ -337,8 +337,11 @@ protected:
 
         auto engine_cfg = gr::EngineCfgBuilder().setEngine(engines[0]).build();
 
-        auto h    = static_cast<miopenHandle_t>(&handle);
+        auto h = static_cast<miopenHandle_t>(&handle);
+
         auto plan = gr::ExecutionPlanBuilder().setEngineCfg(engine_cfg).setHandle(h).build();
+        plan =
+            gr::ExecutionPlanBuilder().setJsonRepresentation(plan.getJsonRepresentation()).build();
 
         Workspace ws(plan.getWorkspaceSize());
 
