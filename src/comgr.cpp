@@ -999,7 +999,7 @@ void BuildHip(const std::string& name,
         if(rocm_path.empty())
         {
             rocm_path = "/opt/rocm";
-        } 
+        }
         opts.push_back("-I" + rocm_path + "/include");
 
         MIOPEN_LOG_I("HIPRTC compile options:");
