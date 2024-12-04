@@ -61,7 +61,7 @@ auto DbPreloadStates::GetPreloadedDb(const fs::path& path) -> std::unique_ptr<Db
 {
     std::unique_lock<std::mutex> lock{mutex, std::defer_lock};
 
-    // Mutex is need to ensure states.futures is not updated while we work
+    // Mutex is needed to ensure states.futures is not updated while we work
     // so we skip locking if it no more writes can happen
     const auto needs_lock = !started_loading.load(std::memory_order_relaxed);
 
@@ -96,10 +96,10 @@ auto MakeDbPreloader(DbKinds db_kind, bool is_system) -> DbPreloader
     if constexpr(std::is_same_v<Db, RamDb>)
     {
         return [=](const stop_token& stop, const fs::path& path) -> PreloadedDb {
-            auto db   = std::make_unique<RamDb>(db_kind, path, is_system);
-            auto lock = std::unique_lock<LockFile>(db->GetLockFile(), GetDbLockTimeout());
+            auto db         = std::make_unique<RamDb>(db_kind, path, is_system);
+            auto const lock = std::unique_lock<LockFile>(db->GetLockFile(), GetDbLockTimeout());
             if(!lock)
-                MIOPEN_THROW("Db lock has failed to lock.");
+                MIOPEN_THROW("Db has failed to lock file " << db->GetLockFile());
             db->Prefetch(stop);
             return {std::move(db)};
         };
@@ -156,20 +156,33 @@ DbPreloadStates::TryStartPreloadingDbs(const std::function<void()>& preload)
                 std::for_each(std::execution::par_unseq,
                               tasks.begin(),
                               tasks.end(),
-                              [token](auto&& task) { task(token); });
+                              [token = std::move(token)](auto&& task) {
+                                  try
+                                  {
+                                      task(token);
+                                  }
+                                  catch(std::exception const& ex)
+                                  {
+                                      MIOPEN_LOG_E("Error while preloading DBs: " << ex.what());
+                                  }
+                                  catch(...)
+                                  {
+                                      MIOPEN_LOG_E("Unknown error while preloading DBs");
+                                  }
+                              });
                 MIOPEN_LOG_I("DB preload thread finished");
             });
     }
 }
 
-MIOPEN_INTERNALS_EXPORT auto DbPreloadStates::GetPreloadedRamDb(const fs::path& path)
-    -> std::unique_ptr<RamDb>
+MIOPEN_INTERNALS_EXPORT auto
+DbPreloadStates::GetPreloadedRamDb(const fs::path& path) -> std::unique_ptr<RamDb>
 {
     return GetPreloadedDb<RamDb>(path);
 }
 
-MIOPEN_INTERNALS_EXPORT auto DbPreloadStates::GetPreloadedReadonlyRamDb(const fs::path& path)
-    -> std::unique_ptr<ReadonlyRamDb>
+MIOPEN_INTERNALS_EXPORT auto
+DbPreloadStates::GetPreloadedReadonlyRamDb(const fs::path& path) -> std::unique_ptr<ReadonlyRamDb>
 {
     return GetPreloadedDb<ReadonlyRamDb>(path);
 }
