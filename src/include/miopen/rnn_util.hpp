@@ -38,7 +38,7 @@ namespace miopen {
 
 struct RnnHipAutoProfiler
 {
-    RnnHipAutoProfiler(Handle const& handle) : is_profiling_active(handle.IsProfilingEnabled())
+    RnnHipAutoProfiler(const Handle& handle) : is_profiling_active(handle.IsProfilingEnabled())
     {
         if(is_profiling_active)
         {
@@ -93,7 +93,7 @@ private:
     }
 
 #if MIOPEN_BACKEND_HIP
-    Handle const* attached_handle = nullptr;
+    const Handle* attached_handle = nullptr;
     HipEventPtr start             = nullptr;
     HipEventPtr stop              = nullptr;
 #endif

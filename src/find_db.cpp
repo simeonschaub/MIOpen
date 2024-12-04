@@ -55,7 +55,7 @@ boost::optional<fs::path>& testing_find_db_path_override()
 
 #if MIOPEN_EMBED_DB
 template <class TDb>
-fs::path FindDbRecord_t<TDb>::GetInstalledPathEmbed(Handle const& handle,
+fs::path FindDbRecord_t<TDb>::GetInstalledPathEmbed(const Handle& handle,
                                                     const std::string& path_suffix)
 {
     static const auto embed_path = [&] {
@@ -122,7 +122,7 @@ fs::path FindDbRecord_t<TDb>::GetInstalledPathEmbed(Handle const& handle,
 #else
 
 template <class TDb>
-fs::path FindDbRecord_t<TDb>::GetInstalledPathFile(Handle const& handle,
+fs::path FindDbRecord_t<TDb>::GetInstalledPathFile(const Handle& handle,
                                                    const std::string& path_suffix)
 {
     static const auto installed_path = [&] {
@@ -199,7 +199,7 @@ fs::path FindDbRecord_t<TDb>::GetInstalledPathFile(Handle const& handle,
 }
 #endif
 template <class TDb>
-fs::path FindDbRecord_t<TDb>::GetInstalledPath(Handle const& handle, const std::string& path_suffix)
+fs::path FindDbRecord_t<TDb>::GetInstalledPath(const Handle& handle, const std::string& path_suffix)
 {
 #if !MIOPEN_DISABLE_SYSDB
 #if MIOPEN_EMBED_DB
@@ -215,7 +215,7 @@ fs::path FindDbRecord_t<TDb>::GetInstalledPath(Handle const& handle, const std::
 }
 
 template <class TDb>
-fs::path FindDbRecord_t<TDb>::GetUserPath(Handle const& handle, const std::string& path_suffix)
+fs::path FindDbRecord_t<TDb>::GetUserPath(const Handle& handle, const std::string& path_suffix)
 {
 #if !MIOPEN_DISABLE_USERDB
     return GetUserDbPath() / (handle.GetDbBasename() + '.' + GetUserDbSuffix() +
@@ -228,7 +228,7 @@ fs::path FindDbRecord_t<TDb>::GetUserPath(Handle const& handle, const std::strin
 }
 
 template <class TDb>
-bool FindDbRecord_t<TDb>::Validate(Handle const& handle, const NetworkConfig& config) const
+bool FindDbRecord_t<TDb>::Validate(const Handle& handle, const NetworkConfig& config) const
 {
     auto unbuilt = false;
     auto any     = false;

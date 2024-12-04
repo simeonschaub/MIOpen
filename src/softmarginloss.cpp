@@ -35,7 +35,7 @@
 
 namespace miopen {
 
-std::size_t GetSoftMarginLossForwardWorkspaceSize(Handle const& handle,
+std::size_t GetSoftMarginLossForwardWorkspaceSize(const Handle& handle,
                                                   const TensorDescriptor& iDesc,
                                                   const TensorDescriptor& tDesc,
                                                   const TensorDescriptor& oDesc,
@@ -50,7 +50,7 @@ std::size_t GetSoftMarginLossForwardWorkspaceSize(Handle const& handle,
     return pair_size_vector.empty() ? static_cast<size_t>(-1) : pair_size_vector.front().second;
 }
 
-miopenStatus_t SoftMarginLossForward(Handle const& handle,
+miopenStatus_t SoftMarginLossForward(const Handle& handle,
                                      Data_t workspace,
                                      size_t workspaceSizeInBytes,
                                      const TensorDescriptor& iDesc,
@@ -84,7 +84,7 @@ miopenStatus_t SoftMarginLossForward(Handle const& handle,
     return miopenStatusSuccess;
 }
 
-miopenStatus_t SoftMarginLossBackward(Handle const& handle,
+miopenStatus_t SoftMarginLossBackward(const Handle& handle,
                                       const TensorDescriptor& iDesc,
                                       ConstData_t i,
                                       const TensorDescriptor& tDesc,

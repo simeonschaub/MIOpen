@@ -57,7 +57,7 @@ miopen::PerformanceDb GetDb(const miopen::ExecutionContext& ctx,
 
 //============ BEGIN FORWARD TRAINING ===============
 
-void BatchNormForwardTraining(Handle const& handle,
+void BatchNormForwardTraining(const Handle& handle,
                               miopenBatchNormMode_t bn_mode,
                               const void* alpha,
                               const void* beta,
@@ -175,7 +175,7 @@ void BatchNormForwardTraining(Handle const& handle,
 //================== END FWD TRAIN ===================
 
 //============ BEGIN FORWARD INFERENCE ===============
-void BatchNormForwardInference(Handle const& handle,
+void BatchNormForwardInference(const Handle& handle,
                                miopenBatchNormMode_t bn_mode,
                                const void* alpha,
                                const void* beta,
@@ -290,7 +290,7 @@ void BatchNormForwardInference(Handle const& handle,
 
 //=============== BEGIN BACKWARDS PROPAGATION ================
 
-void BatchNormBackward(Handle const& handle,
+void BatchNormBackward(const Handle& handle,
                        miopenBatchNormMode_t bn_mode,
                        const void* alphaDataDiff,
                        const void* betaDataDiff,

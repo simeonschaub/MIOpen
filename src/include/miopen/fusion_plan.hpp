@@ -50,7 +50,7 @@ struct MIOPEN_INTERNALS_EXPORT FusionPlanDescriptor : miopenFusionPlanDescriptor
     bool isValid() const { return is_valid; };
     miopenStatus_t AddOp(std::shared_ptr<FusionOpDescriptor> desc);
     TensorDescriptor DeriveOutputDescriptor();
-    miopenStatus_t GetWorkspaceSizeImmed(Handle const& handle,
+    miopenStatus_t GetWorkspaceSizeImmed(const Handle& handle,
                                          size_t& workSpaceSize,
                                          miopenConvFwdAlgorithm_t algo);
     miopenStatus_t Execute(const Handle& handle,
@@ -59,8 +59,8 @@ struct MIOPEN_INTERNALS_EXPORT FusionPlanDescriptor : miopenFusionPlanDescriptor
                            const TensorDescriptor& outputDesc,
                            Data_t output,
                            const OperatorArgs& op_args);
-    miopenStatus_t Compile(Handle const& handle);
-    std::vector<Solution> Find(Handle const& handle,
+    miopenStatus_t Compile(const Handle& handle);
+    std::vector<Solution> Find(const Handle& handle,
                                const std::function<fusion::FusionInvokeParams()>& invoke_params,
                                const std::optional<FindOptions>& options = std::nullopt) const;
     friend std::ostream& operator<<(std::ostream& stream, const FusionPlanDescriptor& fpd);

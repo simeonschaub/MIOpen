@@ -29,7 +29,7 @@ namespace miopen {
 
 namespace rnn_base {
 
-void RNNModularSingleStreamFWD::ComputeFWD(Handle const& handle,
+void RNNModularSingleStreamFWD::ComputeFWD(const Handle& handle,
                                            const runtimeArgsFwd& runtimeArgs) const
 {
 

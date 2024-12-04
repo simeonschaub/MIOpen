@@ -34,14 +34,14 @@ struct Handle;
 struct TensorDescriptor;
 
 MIOPEN_INTERNALS_EXPORT std::size_t
-GetReduceCalculationWorkspaceSize(Handle const& handle,
+GetReduceCalculationWorkspaceSize(const Handle& handle,
                                   const TensorDescriptor& xDesc,
                                   const TensorDescriptor& yDesc,
                                   int32_t dim,
                                   miopenReduceCalculationOp_t reduceCalculationOp);
 
 MIOPEN_INTERNALS_EXPORT miopenStatus_t
-ReduceCalculationForward(Handle const& handle,
+ReduceCalculationForward(const Handle& handle,
                          Data_t workspace,
                          size_t workspaceSizeInBytes,
                          const TensorDescriptor& xDesc,

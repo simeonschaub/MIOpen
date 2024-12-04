@@ -65,7 +65,7 @@ bool RNNBwWeightMSIsFast(const int seqLen)
     return false;
 }
 
-void RNNDescriptor::ModularForward(Handle const& handle,
+void RNNDescriptor::ModularForward(const Handle& handle,
                                    miopenRNNFWDMode_t fwdMode,
                                    ConstData_t w,
                                    const SeqTensorDescriptor& xDesc,
@@ -88,7 +88,7 @@ void RNNDescriptor::ModularForward(Handle const& handle,
         handle, rnn_base::runtimeArgsFwd{x, hx, cx, y, hy, cy, w, workSpace, reserveSpace});
 }
 
-void RNNDescriptor::ModularBackward(Handle const& handle,
+void RNNDescriptor::ModularBackward(const Handle& handle,
                                     const SeqTensorDescriptor& yDesc,
                                     ConstData_t dy,
                                     const TensorDescriptor& hDesc,
@@ -122,7 +122,7 @@ void RNNDescriptor::ModularBackward(Handle const& handle,
     }
 }
 
-void RNNDescriptor::ModularBackwardWeights(Handle const& handle,
+void RNNDescriptor::ModularBackwardWeights(const Handle& handle,
                                            const SeqTensorDescriptor& xDesc,
                                            ConstData_t x,
                                            const TensorDescriptor& hDesc,

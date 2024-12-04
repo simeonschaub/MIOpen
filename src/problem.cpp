@@ -119,7 +119,7 @@ void VisitType(int id, Args... args)
     detail::VisitType<Visitor, Variant>{}(id, args...);
 }
 
-static Data_t AllocateTensor(Handle const& handle,
+static Data_t AllocateTensor(const Handle& handle,
                              const FindOptions& options,
                              std::vector<Allocator::ManageDataPtr>& owned,
                              std::vector<std::uint64_t>& owned_scalars,
@@ -160,7 +160,7 @@ static void SortFindResults(const FindOptions& options, std::vector<Solution>& r
               }());
 }
 
-std::vector<Solution> Problem::FindSolutions(Handle const& handle,
+std::vector<Solution> Problem::FindSolutions(const Handle& handle,
                                              const FindOptions& options,
                                              std::size_t max_solutions) const
 {
@@ -461,7 +461,7 @@ softmax::ProblemDescription Problem::AsSoftmax() const
     return problem_description;
 }
 
-std::vector<Solution> Problem::FindSolutionsImpl(Handle const& handle,
+std::vector<Solution> Problem::FindSolutionsImpl(const Handle& handle,
                                                  const FindOptions& options,
                                                  std::size_t max_solutions,
                                                  const Buffers& buffers,
@@ -542,7 +542,7 @@ std::vector<Solution> Problem::FindSolutionsImpl(Handle const& handle,
 }
 
 std::vector<Solution>
-Problem::FindSolutionsImpl(Handle const& handle,
+Problem::FindSolutionsImpl(const Handle& handle,
                            [[maybe_unused]] const FindOptions& options,
                            std::size_t max_solutions,
                            [[maybe_unused]] const Buffers& buffers,
@@ -597,7 +597,7 @@ Problem::FindSolutionsImpl(Handle const& handle,
 }
 
 std::vector<Solution>
-Problem::FindSolutionsImpl(Handle const& handle,
+Problem::FindSolutionsImpl(const Handle& handle,
                            [[maybe_unused]] const FindOptions& options,
                            std::size_t max_solutions,
                            [[maybe_unused]] const Buffers& buffers,
@@ -959,7 +959,7 @@ void FusedProblem::PropagateDescriptors()
     }
 }
 
-std::vector<Solution> FusedProblem::FindSolutions(Handle const& handle,
+std::vector<Solution> FusedProblem::FindSolutions(const Handle& handle,
                                                   const FindOptions& options,
                                                   std::size_t max_solutions) const
 {

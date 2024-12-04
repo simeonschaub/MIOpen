@@ -35,7 +35,7 @@ struct Handle;
 struct TensorDescriptor;
 
 MIOPEN_INTERNALS_EXPORT std::size_t
-GetMultiMarginLossForwardWorkspaceSize(Handle const& handle,
+GetMultiMarginLossForwardWorkspaceSize(const Handle& handle,
                                        const TensorDescriptor& iDesc,
                                        const TensorDescriptor& tDesc,
                                        const TensorDescriptor& wDesc,
@@ -44,7 +44,7 @@ GetMultiMarginLossForwardWorkspaceSize(Handle const& handle,
                                        float margin,
                                        miopenLossReductionMode_t reduction);
 
-MIOPEN_INTERNALS_EXPORT miopenStatus_t MultiMarginLossForward(Handle const& handle,
+MIOPEN_INTERNALS_EXPORT miopenStatus_t MultiMarginLossForward(const Handle& handle,
                                                               Data_t workspace,
                                                               size_t workspaceSizeInBytes,
                                                               const TensorDescriptor& iDesc,

@@ -34,7 +34,7 @@ struct Handle;
 struct TensorDescriptor;
 
 MIOPEN_INTERNALS_EXPORT miopenStatus_t
-ReduceExtremeForward(Handle const& handle,
+ReduceExtremeForward(const Handle& handle,
                      const TensorDescriptor& xDesc,
                      ConstData_t x,
                      const TensorDescriptor& indiceDesc,
@@ -43,7 +43,7 @@ ReduceExtremeForward(Handle const& handle,
                      miopenReduceExtremeOp_t reduceExtremeOp);
 
 MIOPEN_INTERNALS_EXPORT miopenStatus_t
-ReduceExtremeForward(Handle const& handle,
+ReduceExtremeForward(const Handle& handle,
                      const TensorDescriptor& xDesc,
                      ConstData_t x,
                      const TensorDescriptor& yDesc,

@@ -546,7 +546,7 @@ public:
     // TODO
     static size_t GetWsSize() { return 0; };
 
-    void ComputeFWD(Handle const& handle, const runtimeArgsFwd& runtimeArgs) const;
+    void ComputeFWD(const Handle& handle, const runtimeArgsFwd& runtimeArgs) const;
 
     const rnn_base::RNNForwardDataModularAlgo rnnAlgoModules;
 
@@ -580,7 +580,7 @@ public:
     // TODO
     static size_t GetWsSize() { return 0; };
 
-    void ComputeBWD(Handle const& handle,
+    void ComputeBWD(const Handle& handle,
                     ConstData_t dy,
                     ConstData_t dhy,
                     Data_t dhx,
@@ -638,7 +638,7 @@ public:
         Data_t reserveSpace;
     };
 
-    void ComputeBWD(Handle const& handle,
+    void ComputeBWD(const Handle& handle,
                     ConstData_t dy,
                     ConstData_t dhy,
                     Data_t dhx,
