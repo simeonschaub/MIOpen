@@ -285,11 +285,13 @@ bool PerformanceConfigHipImplicitGemmGroupWrwXdlops::ModelApplyToken(
         }
         if(idx > 0)
             idx--;
-        if(idx >= 12)
-            idx += 2;
+        if(idx >= 13)
+            idx += 1;
         if(((idx == 15 && (heuristic_kernels[heuristic_indexes[0]].size() == 15)) || idx == 18))
         {
-            kernel_id          = valid_kernels[heuristic_indexes[0]] + "+" + value;
+            std::cout << " !!!";
+            kernel_id =
+                valid_kernels[heuristic_indexes[0]] + "+" + value + "+" + std::to_string(split_k);
             index              = heuristic_indexes[0];
             bool valid_split_k = false;
             switch(problem.GetInDataType())
@@ -354,14 +356,22 @@ static std::vector<float> GetFeatures(const ProblemDescription& problem, const s
         features[17 * n + 17] = problem.GetGroupCount();
         return features;
     }
+
+    const bool isFwd      = problem.GetDirection() == miopen::conv::Direction::Forward;
+    float precision = 2.0;
+    if (problem.GetInDataType() == miopenFloat)
+        precision = 3.0;
+    else if (problem.GetInDataType() == miopenBFloat16)
+        precision = 1.0;
+
     std::size_t n = 17; // takes 17 convolution parameters as inputs
     std::vector<float> features(n * n, 0.0f);
-    features[0]           = problem.GetOutChannels();
-    features[n + 1]       = problem.GetOutHeight();
-    features[2 * n + 2]   = problem.GetOutWidth();
-    features[3 * n + 3]   = problem.GetInChannels();
-    features[4 * n + 4]   = problem.GetInHeight();
-    features[5 * n + 5]   = problem.GetInWidth();
+    features[0]           = isFwd ? problem.GetInChannels() : problem.GetOutChannels();
+    features[n + 1]       = isFwd ? problem.GetInHeight() : problem.GetOutHeight();
+    features[2 * n + 2]   = isFwd ? problem.GetInWidth() : problem.GetOutWidth();
+    features[3 * n + 3]   = isFwd ? problem.GetOutChannels() : problem.GetInChannels();
+    features[4 * n + 4]   = isFwd ? problem.GetOutHeight() : problem.GetInHeight();
+    features[5 * n + 5]   = isFwd ? problem.GetOutWidth() : problem.GetInWidth();
     features[6 * n + 6]   = problem.GetWeightsHeight();
     features[7 * n + 7]   = problem.GetWeightsWidth();
     features[8 * n + 8]   = problem.GetPadH();
@@ -371,7 +381,7 @@ static std::vector<float> GetFeatures(const ProblemDescription& problem, const s
     features[12 * n + 12] = problem.GetDilationH();
     features[13 * n + 13] = problem.GetDilationW();
     features[14 * n + 14] = problem.GetBatchSize();
-    features[15 * n + 15] = problem.GetInDataType() == miopenFloat ? 2.0 : 1.0;
+    features[15 * n + 15] = precision;
     features[16 * n + 16] = problem.GetGroupCount();
     return features;
 }
@@ -433,6 +443,11 @@ void PerformanceConfigHipImplicitGemmGroupWrwXdlops::HeuristicInit(
         if(problem.GetInDataType() == miopenFloat)
         {
             if(RunParameterPredictionModel<float>(ctx, problem))
+                return;
+        }
+        else if(problem.GetInDataType() == miopenBFloat16)
+        {
+            if(RunParameterPredictionModel<ck::bhalf_t>(ctx, problem))
                 return;
         }
         else
