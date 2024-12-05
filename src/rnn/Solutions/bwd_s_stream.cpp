@@ -148,19 +148,19 @@ void RNNDynamicModularSingleStreamBWD::ComputeBWD(Handle& handle,
     auto sequence_directions =
         rnnDesc.dirMode == miopenRNNDirectionMode_t::miopenRNNbidirection ? 2 : 1;
 
-    const auto runtimeArgsExt = rnnAlgoModules.createRuntimeArgsExt(realRuntimeArgs);
+    const auto runtimeArgsExt  = rnnAlgoModules.createRuntimeArgsExt(realRuntimeArgs);
     const auto& [real_dy,
-                temp_dy,
-                dhy,
-                dhx,
-                cx,
-                dcy,
-                dcx,
-                real_dx,
-                temp_dx,
-                w,
-                workSpace,
-                reserveSpace] = runtimeArgsExt;
+                 temp_dy,
+                 dhy,
+                 dhx,
+                 cx,
+                 dcy,
+                 dcx,
+                 real_dx,
+                 temp_dx,
+                 w,
+                 workSpace,
+                 reserveSpace] = runtimeArgsExt;
 
     rnnAlgoModules.PrepareWriteBuffers(handle, runtimeArgsExt);
 
