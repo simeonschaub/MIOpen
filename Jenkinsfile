@@ -1,3 +1,6 @@
+
+library "jenkins-shared@$BRANCH_NAME"
+
 /// Stage name format:
 /// [DataType] Backend[/Compiler] BuildType [TestSet] [Target]
 ///
