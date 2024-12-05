@@ -179,7 +179,6 @@ pipeline {
                         script {
                         utils.buildHipClangJobAndReboot( package_build: "true", needs_gpu:false, needs_reboot:false)
                         }
-                        }
                     }
                 }
             }
