@@ -803,9 +803,9 @@ pipeline {
                 //     }
                 //     agent{ label utils.rocmnode("gfx90a") }
                 //     steps{
-                        script {
+                //        script {
                 //         utils.buildHipClangJobAndReboot(setup_flags: Full_test, enforce_xnack_on: true)
-                        }
+                //        }
                 //     }
                 // }
                 stage('Fp32 Hip All gfx94X') {
