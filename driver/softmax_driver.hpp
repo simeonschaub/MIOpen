@@ -115,6 +115,7 @@ private:
     float beta;
     miopenSoftmaxAlgorithm_t algo;
     miopenSoftmaxMode_t mode;
+    bool isForward = false;
 };
 
 template <typename Tgpu, typename Tref>
@@ -181,6 +182,8 @@ std::vector<int> SoftmaxDriver<Tgpu, Tref>::GetInputTensorLengthsFromCmdLine()
     int in_h = inflags.GetValueInt("in_h");
     int in_w = inflags.GetValueInt("in_w");
 
+    isForward = inflags.GetValueInt("forw") == 1;
+
     return std::vector<int>({in_n, in_c, in_h, in_w});
 }
 
@@ -219,6 +222,15 @@ int SoftmaxDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     {
         dout[i] = Data_scale * prng::gen_A_to_B(static_cast<Tgpu>(-0.5), static_cast<Tgpu>(0.5));
     }
+
+    if bwd
+        initialize the y if(!isForward)
+        {
+            for(int i = 0; i < out_sz; i++)
+            {
+                out[i] = prng::gen_A_to_B(static_cast<Tgpu>(-5.0), static_cast<Tgpu>(5.0));
+            }
+        }
 
     status_t status;
     status = in_dev->ToGPU(q, in.data());
