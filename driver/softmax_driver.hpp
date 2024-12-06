@@ -223,14 +223,14 @@ int SoftmaxDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
         dout[i] = Data_scale * prng::gen_A_to_B(static_cast<Tgpu>(-0.5), static_cast<Tgpu>(0.5));
     }
 
-    if bwd
-        initialize the y if(!isForward)
+    // if bwd then initialize the y
+    if(!isForward)
+    {
+        for(int i = 0; i < out_sz; i++)
         {
-            for(int i = 0; i < out_sz; i++)
-            {
-                out[i] = prng::gen_A_to_B(static_cast<Tgpu>(-5.0), static_cast<Tgpu>(5.0));
-            }
+            out[i] = prng::gen_A_to_B(static_cast<Tgpu>(-5.0), static_cast<Tgpu>(5.0));
         }
+    }
 
     status_t status;
     status = in_dev->ToGPU(q, in.data());
