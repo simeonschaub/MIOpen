@@ -640,16 +640,4 @@ pipeline {
             }
         }
   }
-  post {
-    always {
-      script {
-          echo "clean up container"
-          utils.killContainer()
-      }
-    run
-
-  }
 }
-
-
-
