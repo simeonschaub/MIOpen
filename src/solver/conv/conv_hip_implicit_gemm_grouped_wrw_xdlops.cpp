@@ -362,7 +362,7 @@ static std::vector<float> GetFeatures(const ProblemDescription& problem, const s
     }
 
     const bool isFwd      = problem.GetDirection() == miopen::conv::Direction::Forward;
-    float precision = 2.0;
+    float precision = 2.0; // miopenHalf
     if (problem.GetInDataType() == miopenFloat)
         precision = 3.0;
     else if (problem.GetInDataType() == miopenBFloat16)
