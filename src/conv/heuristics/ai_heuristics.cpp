@@ -707,6 +707,11 @@ bool ModelSetParams(const std::string& arch,
 {
     auto model = GetModel(arch, solver);
 
+    std::cout << "\nFeatures: ";
+    for (int i = 0; i < 17; ++i)
+        std::cout << features[i * 17 + i] << ", ";
+    std::cout << "\n";
+
     // get context
     int dim = 0;
     if(transform_features)
@@ -727,10 +732,11 @@ bool ModelSetParams(const std::string& arch,
     default: return false;
     }
 
+    std::cout << "\n PREDICT TYPE: " << model->metadata.predict_type << "\n";
+
     // run decoder to set kernel parameters
     for(size_t i = 0, num_tuning_params = 1; i < num_tuning_params; ++i)
     {
-
         if(i == 0 && (model->metadata.predict_type == 0u))
             num_tuning_params = model->metadata.num_tuning_params[dir];
 

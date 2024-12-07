@@ -32,8 +32,10 @@
             "28": "-1"
         }
     },
-    "predict_type": 1,
+    "predict_type": 0,
     "num_tuning_params": {
-        "DeviceGroupedConvBwdDataMultipleD_Xdl_CShuffle_v1": 15
+        "fwd": 15,
+        "bwd": 15,
+        "wrw": 15        
     }
 }
