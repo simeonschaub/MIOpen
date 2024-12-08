@@ -47,6 +47,12 @@
 #endif
 #endif
 
+#if USE_SOFTMAX_LOG && MIOPEN_USE_FP16
+#define _FLOAT_ACCUM float
+#else
+#define _FLOAT_ACCUM _FLOAT
+#endif
+
 #define _FLOAT2 PPCAT(_FLOAT, TWO)
 #define _FLOAT4 PPCAT(_FLOAT, FOUR)
 #define _FLOAT8 PPCAT(_FLOAT, EIGHT)
@@ -690,11 +696,7 @@ __kernel void SoftmaxBackward(global _FLOAT* y,
 
 #if NUM_BATCH == 1 // CSR-Vector like appraoch
 
-#if USE_SOFTMAX_LOG && MIOPEN_USE_FP16
-    local float l_helper[256];
-#else
-    local _FLOAT l_helper[256];
-#endif
+    local _FLOAT_ACCUM l_helper[256];
 
     int gid = get_group_id(0);
     int lid = get_local_id(0);
@@ -710,11 +712,8 @@ __kernel void SoftmaxBackward(global _FLOAT* y,
         int s1 = s % input_w;
 #endif
 
-#if USE_SOFTMAX_LOG && MIOPEN_USE_FP16
-        float channel_dot = (float)0; // thread_local helper var
-#else
-        _FLOAT channel_dot = (_FLOAT)0; // thread_local helper var
-#endif
+        _FLOAT_ACCUM channel_dot = (_FLOAT_ACCUM)0; // thread_local helper var
+
         // Compute dot product per channel
         // Iterate over all the channels one thread is supposed to loop over
         // and compute dot-product
@@ -843,11 +842,7 @@ __kernel void SoftmaxBackward(global _FLOAT* y,
 
 #else
 
-#if USE_SOFTMAX_LOG && MIOPEN_USE_FP16
-    local float l_helper[256];
-#else
-    local _FLOAT l_helper[256];
-#endif
+    _FLOAT_ACCUM l_helper[256];
 
     int gid = get_group_id(0);
     int lid = get_local_id(0);
@@ -857,17 +852,13 @@ __kernel void SoftmaxBackward(global _FLOAT* y,
     int batch     = lid / BATCH_SIZE;       // which spatial_dim or pixel
 
     // Batch specific n and s
-    int batch_n       = (NUM_BATCH * gid + batch) / spatial_dim; // nth image
-    int batch_s       = (NUM_BATCH * gid + batch) % spatial_dim; // which spatial_dim/pixel
+    int batch_n              = (NUM_BATCH * gid + batch) / spatial_dim; // nth image
+    int batch_s              = (NUM_BATCH * gid + batch) % spatial_dim; // which spatial_dim/pixel
 #if(!IS_DINPUT_PACKED || !IS_DOUTPUT_PACKED || !IS_OUTPUT_PACKED) && USE_SOFTMAX_MODE_CHANNEL
-    int batch_s0      = batch_s / input_w;
-    int batch_s1      = batch_s % input_w;
+    int batch_s0             = batch_s / input_w;
+    int batch_s1             = batch_s % input_w;
 #endif
-#if USE_SOFTMAX_LOG && MIOPEN_USE_FP16
-    float channel_dot = (float)0; // thread_local helper var
-#else
-    _FLOAT channel_dot = (_FLOAT)0; // thread_local helper var
-#endif
+    _FLOAT_ACCUM channel_dot = (_FLOAT)0; // thread_local helper var
 
 // stores all the values touched by one thread so that we do not have load
 // again as the CSR-Vector approach
