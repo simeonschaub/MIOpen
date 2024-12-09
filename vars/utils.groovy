@@ -4,16 +4,16 @@ def rocmnode(name) {
     return '(rocmtest || miopen) && (' + name + ')'
 }
 
-def miopenCheckout()
-{
-    checkout([
-        $class: 'GitSCM',
-        branches: scm.branches,
-        doGenerateSubmoduleConfigurations: true,
-        extensions: scm.extensions + [[$class: 'SubmoduleOption', parentCredentials: true]],
-        userRemoteConfigs: scm.userRemoteConfigs
-    ])
-}
+//def miopenCheckout()
+//{
+//    checkout([
+//        $class: 'GitSCM',
+//        branches: scm.branches,
+//        doGenerateSubmoduleConfigurations: true,
+//        extensions: scm.extensions + [[$class: 'SubmoduleOption', parentCredentials: true]],
+ //       userRemoteConfigs: scm.userRemoteConfigs
+ //   ])
+//}
 
 def show_node_info() {
     sh """
