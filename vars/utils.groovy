@@ -1,4 +1,5 @@
-//import groovy.transform.Field
+import groovy.transform.Field
+
 def rocmnode(name) {
     return '(rocmtest || miopen) && (' + name + ')'
 }
@@ -243,7 +244,8 @@ def getDockerImage(Map conf=[:])
 
 def buildHipClangJob(Map conf=[:]){
         show_node_info()
-        miopenCheckout()
+        //miopenCheckout()
+        checkout scm
         env.HSA_ENABLE_SDMA=0
         env.DOCKER_BUILDKIT=1
         def image

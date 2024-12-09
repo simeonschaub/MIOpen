@@ -111,28 +111,9 @@ pipeline {
             defaultValue: true,
             description: "")
         booleanParam(
-            name: "PERF_TEST",
-            defaultValue: false,
-            description: "Enable performance testing stages")
-        booleanParam(
-            name: "PERF_TEST_FP16",
-            defaultValue: false,
-            description: "Enable performance testing stages")
-        booleanParam(
-            name: "PERF_TEST_FP32",
-            defaultValue: false,
-            description: "Enable performance testing stages")
-        booleanParam(
-            name: "PERF_TEST_BRANCH_OVERRIDE",
-            defaultValue: false,
-            description: "Enable performance testing stages")
-        booleanParam(
             name: "DBSYNC_TEST",
             defaultValue: true,
             description: "Enable database synchronization testing stages")
-        string(name: "PERF_TEST_OVERRIDE",
-            defaultValue: '',
-            description: "Add extra env vars for the MIOpenDriver cmd, comma separated")
         string(name: "DOCKER_IMAGE_OVERRIDE",
             defaultValue: '',
             description: "")
