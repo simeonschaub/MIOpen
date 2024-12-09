@@ -182,9 +182,10 @@ std::vector<Solution> Problem::FindSolutions(const Handle& handle,
             [&](const ConvolutionDescriptor& op_desc) {
                 if(op_desc.mode == miopenTranspose)
                     return MakeTransposed().FindSolutionsImpl(
-                        handle, options, max_solutions, buffers, op_desc);
+                        handle, options, max_solutions, buffers, op_desc, *this);
                 else
-                    return FindSolutionsImpl(handle, options, max_solutions, buffers, op_desc);
+                    return FindSolutionsImpl(
+                        handle, options, max_solutions, buffers, op_desc, *this);
             },
             [&](const SoftmaxDescriptor& op_desc) {
                 return FindSolutionsImpl(handle, options, max_solutions, buffers, op_desc);
@@ -465,7 +466,8 @@ std::vector<Solution> Problem::FindSolutionsImpl(const Handle& handle,
                                                  const FindOptions& options,
                                                  std::size_t max_solutions,
                                                  const Buffers& buffers,
-                                                 const ConvolutionDescriptor& conv_desc) const
+                                                 const ConvolutionDescriptor& conv_desc,
+                                                 const Problem& original) const
 {
     if(tensor_descriptors.size() != 3)
     {
@@ -519,7 +521,7 @@ std::vector<Solution> Problem::FindSolutionsImpl(const Handle& handle,
 
     for(auto& result : results)
     {
-        result.SetProblem({*this});
+        result.SetProblem({original});
 
         if(result.GetKernels().empty())
         {
