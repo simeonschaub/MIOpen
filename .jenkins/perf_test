@@ -23,7 +23,7 @@ pipeline {
   parameters {
     string(name: 'BRANCH_NAME', defaultValue: 'develop', description: '')
     string(name: 'MIOPEN_GOLDEN_PERF_BRANCH', defaultValue: 'develop', description: '')
-    choice(name: 'PERF_TEST_OVERRIDE', defaultValue: '',  description: 'Add extra env vars for the MIOpenDriver cmd, comma separated')
+    string(name: 'PERF_TEST_OVERRIDE', defaultValue: '',  description: 'Add extra env vars for the MIOpenDriver cmd, comma separated')
     choice(name: 'PERF_TEST_FP16', choices: ['Yes', 'No'], description: 'Overwrite baseline')
     choice(name: 'PERF_TEST_FP32', choices: ['Yes', 'No'], description: 'Overwrite baseline')
     choice(name: 'PERF_TEST', choices: ['Yes', 'No'], description: 'Overwrite baseline')
