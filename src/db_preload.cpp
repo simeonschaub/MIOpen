@@ -99,7 +99,7 @@ auto MakeDbPreloader(DbKinds db_kind, bool is_system) -> DbPreloader
             auto db         = std::make_unique<RamDb>(db_kind, path, is_system);
             auto const lock = std::unique_lock<LockFile>(db->GetLockFile(), GetDbLockTimeout());
             if(!lock)
-                MIOPEN_THROW("Db has failed to lock file " << db->GetLockFile());
+                MIOPEN_THROW("Db has failed to lock file " + db->GetLockFile().GetPath().string());
             db->Prefetch(stop);
             return {std::move(db)};
         };

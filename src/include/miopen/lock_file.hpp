@@ -63,6 +63,8 @@ public:
     LockFile(const LockFile&) = delete;
     LockFile operator=(const LockFile&) = delete;
 
+    const fs::path& GetPath() const { return path; }
+
     bool timed_lock(const boost::posix_time::ptime& abs_time)
     {
         access_mutex.lock();
