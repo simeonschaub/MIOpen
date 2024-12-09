@@ -175,14 +175,14 @@ DbPreloadStates::TryStartPreloadingDbs(const std::function<void()>& preload)
     }
 }
 
-MIOPEN_INTERNALS_EXPORT auto
-DbPreloadStates::GetPreloadedRamDb(const fs::path& path) -> std::unique_ptr<RamDb>
+MIOPEN_INTERNALS_EXPORT auto DbPreloadStates::GetPreloadedRamDb(const fs::path& path)
+    -> std::unique_ptr<RamDb>
 {
     return GetPreloadedDb<RamDb>(path);
 }
 
-MIOPEN_INTERNALS_EXPORT auto
-DbPreloadStates::GetPreloadedReadonlyRamDb(const fs::path& path) -> std::unique_ptr<ReadonlyRamDb>
+MIOPEN_INTERNALS_EXPORT auto DbPreloadStates::GetPreloadedReadonlyRamDb(const fs::path& path)
+    -> std::unique_ptr<ReadonlyRamDb>
 {
     return GetPreloadedDb<ReadonlyRamDb>(path);
 }
