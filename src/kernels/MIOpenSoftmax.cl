@@ -47,12 +47,6 @@
 #endif
 #endif
 
-#if USE_SOFTMAX_LOG && MIOPEN_USE_FP16
-#define _FLOAT_ACCUM float
-#else
-#define _FLOAT_ACCUM _FLOAT
-#endif
-
 #define _FLOAT2 PPCAT(_FLOAT, TWO)
 #define _FLOAT4 PPCAT(_FLOAT, FOUR)
 #define _FLOAT8 PPCAT(_FLOAT, EIGHT)
@@ -69,6 +63,12 @@
 
 #ifndef USE_SOFTMAX_LOG
 #define USE_SOFTMAX_LOG 0
+#endif
+
+#if USE_SOFTMAX_LOG && MIOPEN_USE_FP16
+#define _FLOAT_ACCUM float
+#else
+#define _FLOAT_ACCUM _FLOAT
 #endif
 
 #ifndef USE_SOFTMAX_ACCURATE
