@@ -34,6 +34,7 @@
 #include <ostream>
 
 #include "miopen/env.hpp"
+#include "miopen/rnn/solvers.hpp"
 
 // Disable specific warnings
 #define MIO_RNN_DEBUG 0
@@ -475,15 +476,7 @@ size_t RNNDescriptor::GetWorkspaceSize(Handle& handle,
         transformer_tmp_space = RNNTransformerWorkspaceSize(xDesc, fwdMode);
     }
 
-    const std::size_t total_sequence_len = xDesc.GetTotalSequenceLen();
-
-    size_t reduction_ws = ReductionWorkspaceSize(handle,
-                                                 total_sequence_len,
-                                                 nHiddenTensorsPerLayer,
-                                                 workspaceScale,
-                                                 hsize,
-                                                 dirMode == miopenRNNbidirection,
-                                                 dataType);
+    std::size_t total_sequence_len = 0;
 
     size_t solution_ws = 0;
 
@@ -491,12 +484,23 @@ size_t RNNDescriptor::GetWorkspaceSize(Handle& handle,
     {
         auto [ws, rs] = GetTmpSpaceSizeDynamicAlgo(handle, xDesc, miopenRNNTraining);
         solution_ws   = ws;
+        auto lens     = rnn_base::roundedDynamicLengths(xDesc);
+
+        total_sequence_len = lens[0] * lens[1];
     }
     else
     {
+        total_sequence_len = xDesc.GetTotalSequenceLen();
         solution_ws =
             GetMainSolWorkspaceSize(total_sequence_len, fwdMode, miopenRNNDataSeqMajorNotPadded);
     }
+    size_t reduction_ws = ReductionWorkspaceSize(handle,
+                                                 total_sequence_len,
+                                                 nHiddenTensorsPerLayer,
+                                                 workspaceScale,
+                                                 hsize,
+                                                 dirMode == miopenRNNbidirection,
+                                                 dataType);
 
     return transformer_tmp_space + reduction_ws + solution_ws;
 }
@@ -539,16 +543,30 @@ size_t RNNDescriptor::GetWorkspaceSize(Handle& handle,
     SeqTensorDescriptor xSeqTDesc =
         makeSeqTensorDescriptor(xDesc, seqLength, miopenRNNDataSeqMajorNotPadded);
 
+    std::size_t total_sequence_len = 0;
+
     if(CheckDynamicAlgoSelection(handle, xSeqTDesc, miopenRNNTraining))
     {
         auto [ws, rs] = GetTmpSpaceSizeDynamicAlgo(handle, xSeqTDesc, miopenRNNTraining);
-        return ws + padding_converter_tmp_space;
+
+        auto lens = rnn_base::roundedDynamicLengths(xSeqTDesc);
+
+        total_sequence_len = lens[0] * lens[1];
+
+        return ws + padding_converter_tmp_space +
+               ReductionWorkspaceSize(handle,
+                                      total_sequence_len,
+                                      nHiddenTensorsPerLayer,
+                                      workspaceScale,
+                                      hsize,
+                                      dirMode == miopenRNNbidirection,
+                                      dataType);
+        ;
     }
     else
     {
 
-        std::size_t total_sequence_len = 0;
-        total_sequence_len             = std::accumulate(
+        total_sequence_len = std::accumulate(
             xDesc.data, xDesc.data + seqLength, 0ULL, [](size_t x, miopenTensorDescriptor_t y) {
                 return x + deref(y).GetLengths()[0];
             });
