@@ -842,7 +842,7 @@ __kernel void SoftmaxBackward(global _FLOAT* y,
 
 #else
 
-    _FLOAT_ACCUM l_helper[256];
+    local _FLOAT_ACCUM l_helper[256];
 
     int gid = get_group_id(0);
     int lid = get_local_id(0);
