@@ -1,5 +1,5 @@
 
-library "jenkins-shared@$BRANCH_NAME"
+library "jenkins-shared@$branch_name"
 
 /// Stage name format:
 /// [DataType] Backend[/Compiler] BuildType [TestSet] [Target]
