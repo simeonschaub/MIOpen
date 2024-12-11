@@ -1,5 +1,7 @@
 def rocmnode(name) {
     checkout scm
+    def rootDir = pwd()
+    def utils = load "${rootDir}@script/utils.groovy "
     return '(rocmtest || miopen) && (' + name + ')'
 }
 
