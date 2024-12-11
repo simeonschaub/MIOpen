@@ -1,5 +1,3 @@
-import groovy.transform.Field
-
 def rocmnode(name) {
     return '(rocmtest || miopen) && (' + name + ')'
 }
@@ -385,6 +383,7 @@ def evaluate(params)
 }
 
 def RunPerfTest(Map conf=[:]){
+    checkout scm
     def dockerOpts="--device=/dev/kfd --device=/dev/dri --group-add video --group-add render --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
     try {
         (retimage, image) = getDockerImage(conf)
