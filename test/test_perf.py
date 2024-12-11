@@ -31,15 +31,173 @@ import re
 import subprocess
 import argparse
 import csv
+import time
 from decimal import Decimal
+import multiprocessing as mp
 
 results_path = f"{os.path.dirname(__file__)}/perf_results"
+print(results_path)
 TOLERANCE = -5  #tolerance 5%
 
 re_Elapsed = re.compile(r"(\d*\.*\d+)")
 re_Solver = re.compile(r"^MIOpen .* Algorithm: (\d+), Solution: (\d+)/(\w+)")
 re_GPU = re.compile(r"^GPU Kernel Time .* Elapsed: (\d+\.\d+) ms")
 re_Key = re.compile(r"^.*Key match: ([\w\-]*)")
+
+queue = mp.Queue()  #gpu idx queue, used in HIP_VISIBLE_DEVICES
+results_queue = mp.Queue()
+
+
+class Manager(mp.Process):
+  """Queue manager"""
+
+  def __init__(self, **kwargs):
+    allowed_keys: Set = set(['filename', 'install_path', 'overrride'])
+    self.filename = None
+    self.install_path = None
+    self.override = False
+    self.results_path = f"{os.path.dirname(__file__)}/perf_results"
+    self.__dict__.update(
+        (key, value) for key, value in kwargs.items() if key in allowed_keys)
+
+    self.in_qs = {}
+    self.num_gpus = int(get_num_gpus())
+    self.resfile = f"{self.results_path}/{self.filename}"
+    print(self.resfile)
+    print('install_path: %s', self.install_path)
+    self.model_path = f"{self.install_path}/share/miopen/perf_models/{self.filename}"
+    print(self.resfile)
+    self.model_path
+    self.driver_cmds = []
+    self.set_driver_cmds(self.filename)
+
+  def get_num_gpus(self):
+    """Get num_gpus"""
+    cmd = "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l"
+    ps = subprocess.Popen(cmd,
+                          shell=True,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT)
+    output = ps.communicate()[0]
+    return output.decode('utf-8').strip()
+
+  def set_driver_cmds(self, filename):
+    with open(os.path.expanduser(self.model_path), "r",
+              encoding='utf-8') as infile:
+      for line in infile:
+        try:
+          if (line.find('MIOpenDriver') == -1):
+            print(f"Skipping line '{line}'")
+            continue
+          idx = line.index('MIOpenDriver')
+          driver_cmd = line[idx:-1]
+          if self.override:
+            cmd = f"export LD_LIBRARY_PATH={self.install_path}/lib && export MIOPEN_LOG_LEVEL=6 && "\
+                  f"export MIOPEN_SYSTEM_DB_PATH={self.install_path}/share/miopen/db && "\
+                  f"export HIP_VISIBLE_DEVICES=GPU_ID && "\
+                  f"{var_str} "\
+                  f"{self.install_path}/bin/{driver_cmd} -V 0 -i 10 -w 1 -t 1 -G 1"
+          else:
+            cmd = f"export LD_LIBRARY_PATH={self.install_path}/lib && export MIOPEN_LOG_LEVEL=6 && "\
+                  f"export MIOPEN_SYSTEM_DB_PATH={self.install_path}/share/miopen/db && "\
+                  f"export HIP_VISIBLE_DEVICES=GPU_ID && "\
+                  f"{self.install_path}/bin/{driver_cmd} -V 0 -i 10 -w 1 -t 1 -G 1"
+          print(f'Appending cm: {cmd}')
+          self.driver_cmds.append(cmd)
+
+        except Exception as err:
+          print(f"Could not get driver commands: {err}")
+
+    print('#driver commands: %s', len(self.driver_cmds))
+
+  def run(self):
+    for gpu_id in range(self.num_gpus):
+      queue.put(gpu_id)
+    self.launch_pool()
+
+  def launch_pool(self):
+    """Launch pool of driver cmds"""
+    pool = mp.Pool(processes=self.num_gpus)
+    for result in pool.imap_unordered(self.run_driver_cmd, self.driver_cmds):
+      self.parse_result(result)
+    pool.close()
+    pool.join()
+    print(f"Size of results Q: {results_queue.qsize()}")
+    while not results_queue.empty():
+      print(results_queue.get())
+
+  def parse_result(self, result):
+    print(result)
+
+  def run_driver_cmd(self, driver_cmd):
+    while (queue.empty()):
+      time.sleep(2)
+      print('GPUs busy, sleeping')
+    gpu_id = queue.get()
+    cmd = driver_cmd.replace('GPU_ID', str(gpu_id))
+    ret = None
+    try:
+      print(f"Starting process on GPU {gpu_id}")
+      print(cmd)
+
+      proc = subprocess.Popen(cmd,
+                              shell=True,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT)
+      p_out = proc.stdout.readlines()
+      k_time = -1
+      res = None
+      e = Entry()
+      for line in p_out:
+        line = line.decode("utf-8")
+        line = line.strip()
+        print(line)
+        if (line.find('MIOpenDriver') != -1) and (line.find('MIOpen(HIP)')
+                                                  == -1):  #fragile solution
+          e.cmd = line
+          print(e.cmd)
+          continue
+        if (line.find('Wall-clock Time') != -1):
+          res = re_Elapsed.findall(line)
+          print("")
+          print(res)
+          e.wall_elapsed = res[0]
+          e.wall_aux = res[1]
+          e.wall_gwss = res[2]
+          continue
+        if (re_Solver.match(line)):
+          res = re_Solver.findall(line)[0]
+          print(res)
+          e.algo = res[0]
+          e.sol_id = res[1]
+          e.sol_name = res[2]
+          continue
+        if (re_Key.match(line)):
+          e.fdb_key = re_Key.findall(line)[0]
+        if (re_GPU.match(line)):
+          res = re_GPU.findall(line)
+          print(res)
+          e.sol_time = res[0]
+          print()
+          print('k_time: %s', e.sol_time)
+        if line.find('error') != -1:
+          raise ValueError(p_out)
+
+      res_dict = {
+          'Driver': e.cmd,
+          'k_time': e.sol_time,
+          'wall_time': e.wall_elapsed,
+          'solver_id': e.sol_id,
+          'solver_name': e.sol_name,
+          'fdb_key': e.fdb_key
+      }
+      results_queue.put(res_dict)
+      ret = res_dict
+      print(f"k_time: {e.sol_time}")
+      print(f"driver: {e.cmd}")
+    finally:
+      queue.put(gpu_id)
+    return res
 
 
 class Entry:
@@ -61,6 +219,17 @@ class Entry:
         self.sol_id, self.sol_name, self.sol_time, self.fdb_key
     ]
     return ",".join(atrs)
+
+
+def get_num_gpus():
+  """Get num_gpus"""
+  cmd = "/opt/rocm/bin/rocminfo | grep ${arch}:sramecc+:xnack | wc -l"
+  ps = subprocess.Popen(cmd,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT)
+  output = ps.communicate()[0]
+  return output.decode('utf-8').strip()
 
 
 def parse_args():
@@ -95,100 +264,6 @@ def parse_args():
         '--old_results_path and --compare_results must both be specified')
 
   return args
-
-
-def run_driver_cmds(filename, install_path, override=None):
-  """Parse model file and launch Driver cmds"""
-  resfile = f"{results_path}/{filename}"
-  model_path = f"{install_path}/share/miopen/perf_models/{filename}"
-  if override:
-    var_list = override.split(',')
-    var_str = ""
-    for var in var_list:
-      var_str += var + " &&"
-
-  try:
-    outfile = open(os.path.expanduser(resfile), 'w+', encoding='utf-8')
-    results = []
-    field_names = [
-        'Driver', 'k_time', 'wall_time', 'solver_id', 'solver_name', 'fdb_key'
-    ]
-    writer = csv.DictWriter(outfile, fieldnames=field_names)
-    writer.writeheader()
-    with open(os.path.expanduser(model_path), "r", encoding='utf-8') as infile:
-      for line in infile:
-        try:
-          if (line.find('MIOpenDriver') == -1):
-            print(f"Skipping line '{line}'")
-            continue
-          idx = line.index('MIOpenDriver')
-          driver_cmd = line[idx:-1]
-          if override:
-            cmd = f"export LD_LIBRARY_PATH={install_path}/lib && export MIOPEN_LOG_LEVEL=6 && "\
-                  f"export MIOPEN_SYSTEM_DB_PATH={install_path}/share/miopen/db && "\
-                  f"{var_str} "\
-                  f"{install_path}/bin/{driver_cmd} -V 0 -i 10 -w 1 -t 1 -G 1"
-          else:
-            cmd = f"export LD_LIBRARY_PATH={install_path}/lib && export MIOPEN_LOG_LEVEL=6 && "\
-                  f"export MIOPEN_SYSTEM_DB_PATH={install_path}/share/miopen/db && "\
-                  f"{install_path}/bin/{driver_cmd} -V 0 -i 10 -w 1 -t 1 -G 1"
-          print(f'Running cm: {cmd}')
-          proc = subprocess.Popen(cmd,
-                                  shell=True,
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT)
-          p_out = proc.stdout.readlines()
-          k_time = -1
-          res = None
-          e = None
-          for line in p_out:
-            line = line.decode("utf-8")
-            line = line.strip()
-            print(line)
-            if (line.find('MIOpenDriver') != -1):
-              e = Entry()
-              e.cmd = line
-              continue
-            if (line.find('Wall-clock Time') != -1):
-              res = re_Elapsed.findall(line)
-              e.wall_elapsed = res[0]
-              e.wall_aux = res[1]
-              e.wall_gwss = res[2]
-              continue
-            if (re_Solver.match(line)):
-              res = re_Solver.findall(line)[0]
-              e.algo = res[0]
-              e.sol_id = res[1]
-              e.sol_name = res[2]
-              continue
-            if (re_Key.match(line)):
-              e.fdb_key = re_Key.findall(line)[0]
-            if (re_GPU.match(line)):
-              res = re_GPU.findall(line)
-              e.sol_time = res[0]
-              print(e)
-            if line.find('error') != -1:
-              raise ValueError(p_out)
-          results.append({
-              'Driver': e.cmd,
-              'k_time': e.sol_time,
-              'wall_time': e.wall_elapsed,
-              'solver_id': e.sol_id,
-              'solver_name': e.sol_name,
-              'fdb_key': e.fdb_key
-          })
-          print(f'k_time: {e.sol_time}')
-
-        except Exception as ex:
-          raise ValueError(f"Could not get kernel time: {ex}")
-
-    writer.writerows(results)
-    print(f"Perf results written to: {resfile}")
-    outfile.close()
-
-  except Exception as err:
-    outfile.close()
-    raise ValueError(f"Could not perform performance measurement: {err}")
 
 
 def compare_results(args):
@@ -237,6 +312,7 @@ def compare_file(new_results, old_results):
 def main():
   """Main function"""
   args = parse_args()
+  get_num_gpus()
 
   if args.compare_results:
     try:
@@ -249,7 +325,11 @@ def main():
       os.makedirs(results_path)
 
     try:
-      run_driver_cmds(f"{args.filename}", args.install_path, args.override)
+      #run_driver_cmds(f"{args.filename}", args.install_path, args.override)
+      manager = Manager(filename=args.filename,
+                        install_path=args.install_path,
+                        override=args.override)
+      manager.run()
     except Exception as ex:
       print(f'ERR: {ex}')
       sys.exit(1)
