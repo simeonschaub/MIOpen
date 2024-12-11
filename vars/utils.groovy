@@ -389,7 +389,7 @@ def RunPerfTest(Map conf=[:]){
     try {
         (retimage, image) = getDockerImage(conf)
         withDockerContainer(image: image, args: dockerOpts + ' -v=/var/jenkins/:/var/jenkins') {
-        timeout(time: 600, unit: 'MINUTES')
+        timeout(time: 100, unit: 'MINUTES')
         {
             //unstash 'miopen_tar'
             //sh "tar -zxvf build/miopen-hip-*-Linux-runtime.tar.gz"
