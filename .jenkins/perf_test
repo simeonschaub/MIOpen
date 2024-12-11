@@ -4,7 +4,6 @@ pipeline {
       docker_args="--device=/dev/kfd --device=/dev/dri --group-add video --group-add render --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v=/var/jenkins/:/var/jenkins"
   }
   parameters {
-    string(name: 'MIOPEN_GOLDEN_PERF_BRANCH', defaultValue: 'develop', description: '')
     string(name: 'PERF_TEST_OVERRIDE', defaultValue: '',  description: 'Add extra env vars for the MIOpenDriver cmd, comma separated')
     booleanParam(name: 'PERF_TEST_FP32', defaultValue : true, description: 'Run FP16 tests')
     booleanParam(name: 'PERF_TEST_FP16', defaultValue : true, description: 'Run FP16 tests')
