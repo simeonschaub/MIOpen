@@ -63,7 +63,6 @@ struct TensorInfo
     TensorInfo(miopenTensorArgumentId_t enum_id, Tensor* tens_ptr)
         : mEnumId(enum_id), mGraphTensor(tens_ptr)
     {
-        assert(tens_ptr);
         assert(mEnumId != miopenTensorArgumentIdInvalid);
     }
 
