@@ -1,4 +1,5 @@
 def rocmnode(name) {
+    checkout scm
     return '(rocmtest || miopen) && (' + name + ')'
 }
 
