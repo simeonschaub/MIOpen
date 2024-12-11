@@ -2,7 +2,6 @@ pipeline {
   agent { node { label 'austin' } }
     environment {
       docker_args="--device=/dev/kfd --device=/dev/dri --group-add video --group-add render --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v=/var/jenkins/:/var/jenkins"
-      CREDS = credentials("$DOCKER_CRED")
   }
   parameters {
     string(name: 'MIOPEN_GOLDEN_PERF_BRANCH', defaultValue: 'develop', description: '')
