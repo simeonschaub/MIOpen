@@ -6,10 +6,9 @@ pipeline {
   parameters {
     string(name: 'MIOPEN_GOLDEN_PERF_BRANCH', defaultValue: 'develop', description: '')
     string(name: 'PERF_TEST_OVERRIDE', defaultValue: '',  description: 'Add extra env vars for the MIOpenDriver cmd, comma separated')
-    choice(name: 'PERF_TEST_FP16', choices: ['Yes', 'No'], description: 'Overwrite baseline')
-    choice(name: 'PERF_TEST_FP32', choices: ['Yes', 'No'], description: 'Overwrite baseline')
-    choice(name: 'PERF_TEST', choices: ['Yes', 'No'], description: 'Overwrite baseline')
-    choice(name: 'PERF_TEST_BRANCH_OVERRIDE', choices: ['Yes', 'No'], description: 'Overwrite baseline results with results from this branch')
+    booleanParam(name: 'PERF_TEST_FP32', defaultValue : true, description: 'Run FP16 tests')
+    booleanParam(name: 'PERF_TEST_FP16', defaultValue : true, description: 'Run FP16 tests')
+    booleanParam(name: 'PERF_TEST_ARCHIVE', defaultValue : true, description: 'Archive results from this run')
   }
   stages {
         stage("Performance Tests - gfx942") {
