@@ -1,10 +1,3 @@
-def VerifyArgs()
-{
-    if(params.session_id == '')
-    {
-      error "Please specify a session_id"
-    }
-}
 pipeline {
   agent { node { label 'austin' } }
     environment {
@@ -31,6 +24,7 @@ pipeline {
                     }
                     agent{ label utils.rocmnode("austin")}
                     steps{
+                        sh "TEST"
                         RunPerfTest(gpu_arch: "gfx90a", filename: "Resnet50_v1.5_FP32_BS128.txt" )
                     }
                 }
