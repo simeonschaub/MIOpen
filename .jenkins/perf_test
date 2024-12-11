@@ -13,9 +13,9 @@ pipeline {
   }
   stages {
         stage("Performance Tests - gfx942") {
-            when {
-                expression {params.PERF_TEST && params.TARGET_GFX90A}
-            }
+            //when {
+            //    expression {params.PERF_TEST && params.TARGET_GFX90A}
+            //}
             parallel{
                 stage('Fp32 BS128 Hip Performance Resnet50_v1.5 gfx90a'){
                     when {
