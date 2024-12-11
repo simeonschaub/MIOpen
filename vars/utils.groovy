@@ -391,8 +391,8 @@ def RunPerfTest(Map conf=[:]){
         withDockerContainer(image: image, args: dockerOpts + ' -v=/var/jenkins/:/var/jenkins') {
         timeout(time: 600, unit: 'MINUTES')
         {
-            unstash 'miopen_tar'
-            sh "tar -zxvf build/miopen-hip-*-Linux-runtime.tar.gz"
+            //unstash 'miopen_tar'
+            //sh "tar -zxvf build/miopen-hip-*-Linux-runtime.tar.gz"
             ld_lib="${env.WORKSPACE}/opt/rocm/lib"
             def filename = conf.get("filename", "")
             if(params.PERF_TEST_OVERRIDE != '')
