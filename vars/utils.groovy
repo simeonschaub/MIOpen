@@ -428,3 +428,5 @@ def RunPerfTest(Map conf=[:]){
         throw e
     }
 }
+
+return this
