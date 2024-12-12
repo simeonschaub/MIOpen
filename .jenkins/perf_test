@@ -8,7 +8,6 @@
 //library "${util_lib}"
 
 pipeline {
-  def utils = load "vars/utils.groovy"
   agent{ label utils.rocmnode("austin")}
     environment {
       docker_args="--device=/dev/kfd --device=/dev/dri --group-add video --group-add render --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v=/var/jenkins/:/var/jenkins"
@@ -32,6 +31,7 @@ pipeline {
                     steps{
                         sh "TEST"
                         script {
+                        def utils = load "vars/utils.groovy"
                         utils.RunPerfTest(gpu_arch: "gfx90a", filename: "Resnet50_v1.5_FP32_BS128.txt" )
                         }
                     }
