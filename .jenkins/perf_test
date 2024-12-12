@@ -32,7 +32,6 @@ pipeline {
                         echo "TEST"
                         script {
                         def utils = load "vars/utils.groovy"
-                        library ${utils}
                         utils.RunPerfTest(gpu_arch: "gfx1201", filename: "Resnet50_v1.5_FP32_BS128.txt" )
                         }
                     }
