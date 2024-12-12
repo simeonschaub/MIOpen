@@ -357,15 +357,31 @@ GetConv2DFWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 512;
+    size_t block_size = 256;
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
     {
-        grid_size = (static_cast<size_t>(n) * k + block_size - 1) / block_size;
+        size_t all_workload = static_cast<size_t>(n) * k;
+        if(all_workload <= block_size)
+        {
+            grid_size = all_workload;
+        }
+        else
+        {
+            grid_size = (all_workload + block_size - 1) / block_size;
+        }
     }
     else if(problem.IsLayoutNHWC())
     {
-        grid_size = (static_cast<size_t>(group) * n * ho + block_size - 1) / block_size;
+        size_t all_workload = static_cast<size_t>(group) * n * ho;
+        if(all_workload <= block_size)
+        {
+            grid_size = all_workload;
+        }
+        else
+        {
+            grid_size = (all_workload + block_size - 1) / block_size;
+        }
     }
     else
         MIOPEN_THROW("Unsupported layout");
@@ -507,15 +523,30 @@ GetConv3DFWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
 
     size_t block_size = 512;
     size_t grid_size  = 1;
+
     if(problem.IsLayoutDefault())
     {
-        grid_size = (static_cast<size_t>(n) * k + block_size - 1) / block_size;
-        ;
+        size_t all_workload = static_cast<size_t>(n) * k;
+        if(all_workload <= block_size)
+        {
+            grid_size = all_workload;
+        }
+        else
+        {
+            grid_size = (all_workload + block_size - 1) / block_size;
+        }
     }
     else if(problem.IsLayoutNHWC())
     {
-        grid_size = (static_cast<size_t>(group) * n * do_ + block_size - 1) / block_size;
-        ;
+        size_t all_workload = static_cast<size_t>(group) * n * do_;
+        if(all_workload <= block_size)
+        {
+            grid_size = all_workload;
+        }
+        else
+        {
+            grid_size = (all_workload + block_size - 1) / block_size;
+        }
     }
     else
         MIOPEN_THROW("Unsupported layout");
@@ -869,11 +900,27 @@ GetConv2DBWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
     {
-        grid_size = (static_cast<size_t>(n) * c + block_size - 1) / block_size;
+        size_t all_workload = static_cast<size_t>(n) * c;
+        if(all_workload <= block_size)
+        {
+            grid_size = all_workload;
+        }
+        else
+        {
+            grid_size = (all_workload + block_size - 1) / block_size;
+        }
     }
     else if(problem.IsLayoutNHWC())
     {
-        grid_size = (static_cast<size_t>(group) * n * hi + block_size - 1) / block_size;
+        size_t all_workload = static_cast<size_t>(group) * n * hi;
+        if(all_workload <= block_size)
+        {
+            grid_size = all_workload;
+        }
+        else
+        {
+            grid_size = (all_workload + block_size - 1) / block_size;
+        }
     }
     else
     {
@@ -1019,13 +1066,27 @@ GetConv3DBWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
     {
-        grid_size = (static_cast<size_t>(n) * c + block_size - 1) / block_size;
-        ;
+        size_t all_workload = static_cast<size_t>(n) * c;
+        if(all_workload <= block_size)
+        {
+            grid_size = all_workload;
+        }
+        else
+        {
+            grid_size = (all_workload + block_size - 1) / block_size;
+        }
     }
     else if(problem.IsLayoutNHWC())
     {
-        grid_size = (static_cast<size_t>(group) * n * di + block_size - 1) / block_size;
-        ;
+        size_t all_workload = static_cast<size_t>(group) * n * di;
+        if(all_workload <= block_size)
+        {
+            grid_size = all_workload;
+        }
+        else
+        {
+            grid_size = (all_workload + block_size - 1) / block_size;
+        }
     }
     else
     {
