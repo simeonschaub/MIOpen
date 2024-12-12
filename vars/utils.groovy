@@ -185,7 +185,7 @@ def getDockerImageName(dockerArgs)
     sh "rm factors.txt"
     echo "Docker tag hash: ${docker_hash}"
     image = "${image}:ci_${docker_hash}"
-    if(params.DOCKER_IMAGE_OVERRIDE != '')
+    if(params.DOCKER_IMAGE_OVERRIDE && !params.DOCKER_IMAGE_OVERRIDE.empty)
     {
         echo "Overriding the base docker image with ${params.DOCKER_IMAGE_OVERRIDE}"
         image = "${params.DOCKER_IMAGE_OVERRIDE}"
