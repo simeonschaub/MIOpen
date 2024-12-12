@@ -401,8 +401,8 @@ def RunPerfTest(Map conf=[:]){
             }else
             {
                 sh "ls ${env.WORKSPACE}"
-                sg "ls ${env.WORKSPACE}/opt/rocm"
-                sg "ls ${env.WORKSPACE}/opt/rocm/bin"
+                sh "ls ${env.WORKSPACE}/opt/rocm"
+                sh "ls ${env.WORKSPACE}/opt/rocm/bin"
                 sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/opt/rocm/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/opt/rocm"
             }
             //sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/opt/rocm/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/opt/rocm"
