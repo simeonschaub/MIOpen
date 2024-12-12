@@ -521,7 +521,7 @@ GetConv3DFWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 512;
+    size_t block_size = 256;
     size_t grid_size  = 1;
 
     if(problem.IsLayoutDefault())
@@ -654,7 +654,7 @@ GetConv2DWRWSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 512;
+    size_t block_size = 256;
     size_t grid_size  = static_cast<size_t>(k);
 
     KernelInfo kernel;
@@ -791,7 +791,7 @@ GetConv3DWRWSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 512;
+    size_t block_size = 256;
     size_t grid_size  = static_cast<size_t>(k);
 
     KernelInfo kernel;
@@ -896,7 +896,7 @@ GetConv2DBWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 512;
+    size_t block_size = 256;
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
     {
@@ -1062,7 +1062,7 @@ GetConv3DBWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 512;
+    size_t block_size = 256;
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
     {
