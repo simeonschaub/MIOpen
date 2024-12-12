@@ -1,11 +1,11 @@
-//def shared_library_branch = scm.branches[0].name
-//if (shared_library_branch .contains("*/")) {
-//    shared_library_branch  = shared_library_branch.split("\\*/")[1]
-//   }
-//def util_lib="jenkins-shared@${shared_library_branch}"
-//echo "${util_lib}"
+def shared_library_branch = scm.branches[0].name
+if (shared_library_branch .contains("*/")) {
+    shared_library_branch  = shared_library_branch.split("\\*/")[1]
+   }
+def util_lib="jenkins-shared@${shared_library_branch}"
+echo "${util_lib}"
 
-//library "${util_lib}"
+library "${util_lib}"
 
 library "jenkins-shared@$branch_name"
 def utils = load "vars/utils.groovy"
