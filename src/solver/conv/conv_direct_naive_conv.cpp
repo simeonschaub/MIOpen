@@ -505,15 +505,17 @@ GetConv3DFWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 256;
+    size_t block_size = 512;
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
     {
-        grid_size = static_cast<size_t>(n) * k;
+        grid_size = (static_cast<size_t>(n) * k + block_size - 1) / block_size;
+        ;
     }
     else if(problem.IsLayoutNHWC())
     {
-        grid_size = static_cast<size_t>(group) * n * do_;
+        grid_size = (static_cast<size_t>(group) * n * do_ + block_size - 1) / block_size;
+        ;
     }
     else
         MIOPEN_THROW("Unsupported layout");
@@ -621,7 +623,7 @@ GetConv2DWRWSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 256;
+    size_t block_size = 512;
     size_t grid_size  = static_cast<size_t>(k);
 
     KernelInfo kernel;
@@ -758,7 +760,7 @@ GetConv3DWRWSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 256;
+    size_t block_size = 512;
     size_t grid_size  = static_cast<size_t>(k);
 
     KernelInfo kernel;
@@ -863,15 +865,15 @@ GetConv2DBWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 256;
+    size_t block_size = 512;
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
     {
-        grid_size = static_cast<size_t>(n) * c;
+        grid_size = (static_cast<size_t>(n) * c + block_size - 1) / block_size;
     }
     else if(problem.IsLayoutNHWC())
     {
-        grid_size = static_cast<size_t>(group) * n * hi;
+        grid_size = (static_cast<size_t>(group) * n * hi + block_size - 1) / block_size;
     }
     else
     {
@@ -1013,15 +1015,17 @@ GetConv3DBWDSolution(const ExecutionContext& ctx, const ::miopen::conv::ProblemD
     int c_per_group = c / group;
     int k_per_group = k / group;
 
-    size_t block_size = 256;
+    size_t block_size = 512;
     size_t grid_size  = 1;
     if(problem.IsLayoutDefault())
     {
-        grid_size = static_cast<size_t>(n) * c;
+        grid_size = (static_cast<size_t>(n) * c + block_size - 1) / block_size;
+        ;
     }
     else if(problem.IsLayoutNHWC())
     {
-        grid_size = static_cast<size_t>(group) * n * di;
+        grid_size = (static_cast<size_t>(group) * n * di + block_size - 1) / block_size;
+        ;
     }
     else
     {
