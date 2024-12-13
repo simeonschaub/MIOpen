@@ -290,9 +290,6 @@ public:
         }
     }
 
-    static Derived& GetCached(const fs::path& path, bool is_system);
-    // TODO: Fix this for the overhead of having fields per record
-
     inline auto CheckTableColumns(const std::string& tableName,
                                   const std::vector<std::string>& goldenList) const
     {
@@ -370,25 +367,6 @@ public:
     SQLite sql;
     bool is_system;
 };
-
-template <typename Derived>
-Derived& SQLiteBase<Derived>::GetCached(const fs::path& path, bool is_system)
-{
-    // NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
-    static std::mutex mutex;
-    const std::lock_guard<std::mutex> lock{mutex};
-
-    // NOLINTNEXTLINE (cppcoreguidelines-avoid-non-const-global-variables)
-    static auto instances = std::map<fs::path, Derived>{};
-    const auto it         = instances.find(path);
-
-    if(it != instances.end())
-        return it->second;
-
-    instances.emplace(path, Derived{path, is_system});
-    return instances.at(path);
-}
-
 class SQLitePerfDb : public SQLiteBase<SQLitePerfDb>
 {
 public:
