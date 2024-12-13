@@ -34,6 +34,7 @@
 #include <miopen/adam.hpp>
 #include <miopen/miopen.h>
 
+//temp comment to test changes
 struct AdamTestCase
 {
     std::vector<int> input;

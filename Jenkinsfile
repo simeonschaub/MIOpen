@@ -601,7 +601,7 @@ pipeline {
                 stage('Check GTest Format') {
                 agent { label rocmnode("nogpu") }
                 when {
-                    changeset "**/test/utils/**"
+                    changeset "**/test/gtest/**"
                 }
                 steps {
                     script {
