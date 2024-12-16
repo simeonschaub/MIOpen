@@ -38,6 +38,7 @@
 #include <miopen/graphapi/variant_pack.hpp>
 #include <miopen/graphapi/convolution.hpp>
 #include <miopen/graphapi/conv_bias_res_add_activ_forward_executor.hpp>
+#include <miopen/utility/scope.hpp>
 
 namespace miopen {
 namespace graphapi {
@@ -432,9 +433,7 @@ public:
         MIOPEN_THROW_IF(s != miopenStatusSuccess, "failed while creating problem for mha fwd");
 
         // Ensure miopenDestroyProblem() will be called even if an exception occurs
-        std::unique_ptr<miopenProblem_t, std::function<void(miopenProblem_t*)>>
-            exceptionSafeProblemStore(&mha_prob,
-                                      [](miopenProblem_t* prob) { miopenDestroyProblem(*prob); });
+        scope_exit finallyForProblem([=]() { miopenDestroyProblem(mha_prob); });
 
         for(auto& [k, v] : *tensor_map)
         {
@@ -452,13 +451,12 @@ public:
         solutions.resize(num_found);
 
         // Ensure miopenDestroySolution() will be called even if an exception occurs
-        std::unique_ptr<decltype(solutions), std::function<void(decltype(solutions)*)>>
-            exceptionSafeSolutionsStore(&solutions, [](decltype(solutions)* psols) {
-                for(miopenSolution_t sol : *psols)
-                {
-                    miopenDestroySolution(sol);
-                }
-            });
+        scope_exit finallyForSolutions([&]() {
+            for(miopenSolution_t sol : solutions)
+            {
+                miopenDestroySolution(sol);
+            }
+        });
 
         std::vector<Engine> engines;
         engines.reserve(num_found);
@@ -991,9 +989,7 @@ public:
         MIOPEN_THROW_IF(s != miopenStatusSuccess, "failed while creating problem for mha bwd");
 
         // Ensure miopenDestroyProblem() will be called even if an exception occurs
-        std::unique_ptr<miopenProblem_t, std::function<void(miopenProblem_t*)>>
-            exceptionSafeProblemStore(&mhaProblem,
-                                      [](miopenProblem_t* p) { miopenDestroyProblem(*p); });
+        scope_exit finallyForProblem([=]() { miopenDestroyProblem(mhaProblem); });
 
         for(auto& [k, v] : *tensorMap)
         {
@@ -1011,13 +1007,12 @@ public:
         solutions.resize(numFound);
 
         // Ensure miopenDestroySolution() will be called even if an exception occurs
-        std::unique_ptr<decltype(solutions), std::function<void(decltype(solutions)*)>>
-            exceptionSaveSolutionsStore(&solutions, [](decltype(solutions)* psols) {
-                for(miopenSolution_t sol : *psols)
-                {
-                    miopenDestroySolution(sol);
-                }
-            });
+        scope_exit finallyForSolutions([&]() {
+            for(miopenSolution_t sol : solutions)
+            {
+                miopenDestroySolution(sol);
+            }
+        });
 
         std::vector<Engine> engines;
         engines.reserve(numFound);
