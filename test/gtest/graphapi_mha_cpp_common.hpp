@@ -340,6 +340,8 @@ protected:
         auto h = static_cast<miopenHandle_t>(&handle);
 
         auto plan = gr::ExecutionPlanBuilder().setEngineCfg(engine_cfg).setHandle(h).build();
+
+        // Serialize and deserialize the plan to test JSON attribute
         plan =
             gr::ExecutionPlanBuilder().setJsonRepresentation(plan.getJsonRepresentation()).build();
 

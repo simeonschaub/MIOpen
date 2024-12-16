@@ -28,6 +28,8 @@
 #include <miopen/graphapi/conv_bias_res_add_activ_forward_executor.hpp>
 #include <miopen/graphapi/engine.hpp>
 #include <miopen/graphapi/opgraph.hpp>
+#include <miopen/utility/base64.hpp>
+#include <miopen/utility/scope.hpp>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -43,124 +45,6 @@ GraphPatternExecutor::~GraphPatternExecutor() = default;
 
 size_t GraphExecutorFind20::getWorkspaceSize() const { return mSolution.GetWorkspaceSize(); }
 
-namespace {
-
-const std::string_view base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                     "abcdefghijklmnopqrstuvwxyz"
-                                     "0123456789+/";
-
-std::string base64Encode(const char* data, size_t length)
-{
-    // Calculate the exact size of the resulting Base64 string
-    size_t outputSize = ((length + 2) / 3) * 4;
-    std::string encodedString;
-    encodedString.reserve(outputSize); // Preallocate memory for the result
-
-    size_t i = 0;
-    unsigned char charArray3[3];
-    unsigned char charArray4[4];
-
-    while(length-- != 0U)
-    {
-        charArray3[i++] = *(data++);
-        if(i == 3)
-        {
-            charArray4[0] = (charArray3[0] & 0xfc) >> 2;
-            charArray4[1] = ((charArray3[0] & 0x03) << 4) + ((charArray3[1] & 0xf0) >> 4);
-            charArray4[2] = ((charArray3[1] & 0x0f) << 2) + ((charArray3[2] & 0xc0) >> 6);
-            charArray4[3] = charArray3[2] & 0x3f;
-
-            std::transform(std::begin(charArray4),
-                           std::end(charArray4),
-                           std::back_inserter(encodedString),
-                           [](unsigned char c) { return base64Chars[c]; });
-            i = 0;
-        }
-    }
-
-    if(i != 0U)
-    {
-        for(size_t j = i; j < 3; j++)
-        {
-            charArray3[j] = '\0';
-        }
-
-        charArray4[0] = (charArray3[0] & 0xfc) >> 2;
-        charArray4[1] = ((charArray3[0] & 0x03) << 4) + ((charArray3[1] & 0xf0) >> 4);
-        charArray4[2] = ((charArray3[1] & 0x0f) << 2) + ((charArray3[2] & 0xc0) >> 6);
-        charArray4[3] = charArray3[2] & 0x3f;
-
-        for(size_t j = 0; j < i + 1; j++)
-        {
-            encodedString += base64Chars[charArray4[j]];
-        }
-
-        while(i++ < 3)
-        {
-            encodedString += '=';
-        }
-    }
-
-    return encodedString;
-}
-
-std::string base64Decode(const std::string& encodedString)
-{
-    size_t length = encodedString.size();
-    if(length % 4 != 0)
-    {
-        throw std::invalid_argument("Invalid Base64 input");
-    }
-
-    std::string decodedString;
-    unsigned char charArray4[4], charArray3[3];
-    size_t i = 0;
-
-    for(char c : encodedString)
-    {
-        if(c == '=')
-            break;
-
-        auto it = std::find(base64Chars.begin(), base64Chars.end(), c);
-        if(it == base64Chars.end())
-        {
-            throw std::invalid_argument("Invalid character in Base64 string");
-        }
-
-        charArray4[i++] = static_cast<unsigned char>(std::distance(base64Chars.begin(), it));
-        if(i == 4)
-        {
-            charArray3[0] = (charArray4[0] << 2) + ((charArray4[1] & 0x30) >> 4);
-            charArray3[1] = ((charArray4[1] & 0xf) << 4) + ((charArray4[2] & 0x3c) >> 2);
-            charArray3[2] = ((charArray4[2] & 0x3) << 6) + charArray4[3];
-
-            decodedString.append(std::begin(charArray3), std::end(charArray3));
-            i = 0;
-        }
-    }
-
-    if(i != 0U)
-    {
-        for(size_t j = i; j < 4; j++)
-        {
-            charArray4[j] = 0;
-        }
-
-        charArray3[0] = (charArray4[0] << 2) + ((charArray4[1] & 0x30) >> 4);
-        charArray3[1] = ((charArray4[1] & 0xf) << 4) + ((charArray4[2] & 0x3c) >> 2);
-        charArray3[2] = ((charArray4[2] & 0x3) << 6) + charArray4[3];
-
-        for(size_t j = 0; j < i - 1; j++)
-        {
-            decodedString += charArray3[j];
-        }
-    }
-
-    return decodedString;
-}
-
-} // namespace
-
 nlohmann::json GraphExecutorFind20::getJson()
 {
     std::map<int64_t, miopenTensorArgumentId_t> id2ArgumentMap{};
@@ -175,12 +59,11 @@ nlohmann::json GraphExecutorFind20::getJson()
     MIOPEN_THROW_IF(status != miopenStatusSuccess,
                     "Serialization size for Solution wasn't obtained");
 
-    std::vector<char> serializedSolution(size);
-    status = ::miopenSaveSolution(&mSolution, serializedSolution.data());
+    std::vector<uint8_t> serializedSolution(size);
+    status = miopenSaveSolution(&mSolution, reinterpret_cast<char*>(serializedSolution.data()));
     MIOPEN_THROW_IF(status != miopenStatusSuccess, "Solution failed to be serialized");
 
-    std::string base64edSolution =
-        base64Encode(serializedSolution.data(), serializedSolution.size());
+    std::string base64edSolution = base64Encode(serializedSolution);
 
     return {
         {GraphPatternExecutor::JsonFields::Name, name},
@@ -195,14 +78,13 @@ GraphExecutorFind20::GraphExecutorFind20(const nlohmann::json& json)
     auto serializedSolution = base64Decode(base64edSolution);
 
     miopenSolution_t solutionDescriptor;
-    auto status = miopenLoadSolution(
-        &solutionDescriptor, serializedSolution.data(), serializedSolution.size());
+    auto status = miopenLoadSolution(&solutionDescriptor,
+                                     reinterpret_cast<char*>(serializedSolution.data()),
+                                     serializedSolution.size());
     MIOPEN_THROW_IF(status != miopenStatusSuccess, "Failed to deserialize Solution");
 
     // Ensure miopenDestroySolution() will be called
-    std::unique_ptr<miopenSolution_t, std::function<void(miopenSolution_t*)>>
-        exceptionSafeSolutionStore(&solutionDescriptor,
-                                   [](miopenSolution_t* sol) { miopenDestroySolution(*sol); });
+    scope_exit finallyForSolution([=]() { miopenDestroySolution(solutionDescriptor); });
 
     mSolution = std::move(deref(solutionDescriptor));
 
