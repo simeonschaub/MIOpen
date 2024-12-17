@@ -28,7 +28,6 @@ pipeline {
   }
   stages {
         stage('Build Docker'){
-            agent{ label utils.rocmnode("gfx90a") }
             steps{
                 script {
                  echo "Build Docker Stage"
@@ -40,7 +39,7 @@ pipeline {
         stage("Packages") {
             parallel {
                 stage("HIP Package") {
-                    agent{ label utils.rocmnode("nogpu") }
+                    agent{ node { label 'nogpu'} }
                     steps{
                         script {
                         echo "Packages Stage"
