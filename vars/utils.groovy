@@ -178,6 +178,7 @@ def cmake_fin_build_cmd(prefixpath){
 
 def getDockerImageName(dockerArgs)
 {
+    checkout scm
     sh "echo ${dockerArgs} > factors.txt"
     def image = "${env.MIOPEN_DOCKER_IMAGE_URL}"
     sh "md5sum Dockerfile requirements.txt dev-requirements.txt >> factors.txt"
@@ -196,6 +197,7 @@ def getDockerImageName(dockerArgs)
 
 def getDockerImage(Map conf=[:])
 {
+    checkout scm
     env.DOCKER_BUILDKIT=1
     def prefixpath = conf.get("prefixpath", "/opt/rocm") // one image for each prefix 1: /usr/local 2:/opt/rocm
     def gpu_arch = "gfx908;gfx90a;gfx942;gfx1100;1201" // prebuilt dockers should have all the architectures enabled so one image can be used for all stages
