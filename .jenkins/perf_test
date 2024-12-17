@@ -11,14 +11,6 @@ pipeline {
   agent { node { label 'austin' } }
     environment {
       docker_args="--device=/dev/kfd --device=/dev/dri --group-add video --group-add render --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v=/var/jenkins/:/var/jenkins"
-  }
-  parameters {
-    string(name: 'PERF_TEST_OVERRIDE', defaultValue: '',  description: 'Add extra env vars for the MIOpenDriver cmd, comma separated')
-    booleanParam(name: 'PERF_TEST_FP32', defaultValue : true, description: 'Run FP16 tests')
-    booleanParam(name: 'PERF_TEST_FP16', defaultValue : true, description: 'Run FP16 tests')
-    booleanParam(name: 'PERF_TEST_ARCHIVE', defaultValue : true, description: 'Archive results from this run')
-  }
-  environment{
       extra_log_env   = " MIOPEN_LOG_LEVEL=5 "
       Fp16_flags      = " -DMIOPEN_TEST_HALF=Off"
       Bf16_flags      = " -DMIOPEN_TEST_BFLOAT16=Off"
@@ -27,6 +19,12 @@ pipeline {
       Smoke_targets   = " check MIOpenDriver"
       NOCOMGR_flags   = " -DMIOPEN_USE_COMGR=Off"
       NOMLIR_flags    = " -DMIOPEN_USE_MLIR=Off"
+  }
+  parameters {
+    string(name: 'PERF_TEST_OVERRIDE', defaultValue: '',  description: 'Add extra env vars for the MIOpenDriver cmd, comma separated')
+    booleanParam(name: 'PERF_TEST_FP32', defaultValue : true, description: 'Run FP16 tests')
+    booleanParam(name: 'PERF_TEST_FP16', defaultValue : true, description: 'Run FP16 tests')
+    booleanParam(name: 'PERF_TEST_ARCHIVE', defaultValue : true, description: 'Archive results from this run')
   }
   stages {
         stage('Build Docker'){
