@@ -28,9 +28,6 @@ pipeline {
   }
   stages {
         stage('Build Docker'){
-            when {
-                expression { params.BUILD_DOCKER && params.TARGET_NOGPU && params.DATATYPE_NA }
-            }
             agent{ label utils.rocmnode("gfx90a") }
             steps{
                 script {
@@ -39,14 +36,12 @@ pipeline {
             }
         }
         stage("Packages") {
-            when {
-                expression { params.BUILD_PACKAGES && params.TARGET_NOGPU && params.DATATYPE_NA }
-            }
             parallel {
                 stage("HIP Package") {
                     agent{ label utils.rocmnode("nogpu") }
                     steps{
                         script {
+                        def utils = load "vars/utils.groovy"
                         utils.buildHipClangJobAndReboot( package_build: "true", needs_gpu:false, needs_reboot:false)
                         }
                     }
