@@ -18,7 +18,43 @@ pipeline {
     booleanParam(name: 'PERF_TEST_FP16', defaultValue : true, description: 'Run FP16 tests')
     booleanParam(name: 'PERF_TEST_ARCHIVE', defaultValue : true, description: 'Archive results from this run')
   }
+  environment{
+      extra_log_env   = " MIOPEN_LOG_LEVEL=5 "
+      Fp16_flags      = " -DMIOPEN_TEST_HALF=Off"
+      Bf16_flags      = " -DMIOPEN_TEST_BFLOAT16=Off"
+      Int8_flags      = " -DMIOPEN_TEST_INT8=Off"
+      Full_test       = " -DMIOPEN_TEST_ALL=Off"
+      Smoke_targets   = " check MIOpenDriver"
+      NOCOMGR_flags   = " -DMIOPEN_USE_COMGR=Off"
+      NOMLIR_flags    = " -DMIOPEN_USE_MLIR=Off"
+  }
   stages {
+        stage('Build Docker'){
+            when {
+                expression { params.BUILD_DOCKER && params.TARGET_NOGPU && params.DATATYPE_NA }
+            }
+            agent{ label utils.rocmnode("gfx90a") }
+            steps{
+                script {
+                utils.getDockerImage()
+                }
+            }
+        }
+        stage("Packages") {
+            when {
+                expression { params.BUILD_PACKAGES && params.TARGET_NOGPU && params.DATATYPE_NA }
+            }
+            parallel {
+                stage("HIP Package") {
+                    agent{ label utils.rocmnode("nogpu") }
+                    steps{
+                        script {
+                        utils.buildHipClangJobAndReboot( package_build: "true", needs_gpu:false, needs_reboot:false)
+                        }
+                    }
+                }
+            }
+        }
         stage("Performance Tests - gfx942") {
             //when {
             //    expression {params.PERF_TEST && params.TARGET_GFX90A}
