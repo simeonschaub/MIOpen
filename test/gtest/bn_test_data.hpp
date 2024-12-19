@@ -216,12 +216,12 @@ private:
     void InitTensorsWithRandValue()
     {
         // -2.0 to 2.0
-        auto gen_value = [](auto...) {
-            return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000);
-        };
-        scale.generate(gen_value);
-        shift.generate(gen_value);
-        estMean.generate(gen_value);
+        scale.generate(
+            [](auto...) { return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000); });
+        shift.generate(
+            [](auto...) { return prng::gen_descreet_uniform_sign<BiasDataType>(2e-3, 1000); });
+        estMean.generate(
+            [](auto...) { return prng::gen_descreet_uniform_sign<MeanVarDataType>(2e-3, 1000); });
 
         // 0.0 to 2.0
         auto gen_var = [](auto...) {
@@ -309,17 +309,16 @@ private:
     void InitTensorsWithRandValue()
     {
         // -2.0 to 2.0
-        auto gen_value = [](auto...) {
-            return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000);
-        };
-        dy.generate(gen_value);
-        bnScale.generate(gen_value);
-        savedMean.generate(gen_value);
+        dy.generate(
+            [](auto...) { return prng::gen_descreet_uniform_sign<DyDataType>(2e-3, 1000); });
+        bnScale.generate(
+            [](auto...) { return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000); });
+        savedMean.generate(
+            [](auto...) { return prng::gen_descreet_uniform_sign<MeanVarDataType>(2e-3, 1000); });
         // 0.0 to 2.0
-        auto gen_var = [](auto...) {
+        savedInvVar.generate([](auto...) {
             return static_cast<MeanVarDataType>(2e-3 * (prng::gen_0_to_B(1000) + 1));
-        };
-        savedInvVar.generate(gen_var);
+        });
 
         std::fill(dScale.begin(), dScale.end(), 0.);
         std::fill(dBias.begin(), dBias.end(), 0.);
@@ -407,11 +406,10 @@ private:
     void InitTensorsWithRandValue()
     {
         // -2.0 to 2.0
-        auto gen_value = [](auto...) {
-            return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000);
-        };
-        scale.generate(gen_value);
-        shift.generate(gen_value);
+        scale.generate(
+            [](auto...) { return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000); });
+        shift.generate(
+            [](auto...) { return prng::gen_descreet_uniform_sign<BiasDataType>(2e-3, 1000); });
         // 0.0 to 2.0
         auto gen_var = [](auto...) {
             return static_cast<AccDataType>(2e-3 * (prng::gen_0_to_B(1000) + 1));

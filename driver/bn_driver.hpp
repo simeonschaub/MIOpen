@@ -210,10 +210,10 @@ int BatchNormDriver<TInput, Tref, TAcc, TScaleBias, TOut>::GetandSetData()
         bias.AllocOnHost(tensor<TScaleBias>{bn_layout, derivedBnDesc.GetLengths()});
         // -2.0 to 2.0
         scale.GetTensor().generate([](auto...) {
-            return prng::gen_descreet_uniform_sign<TInput>(2e-3 /*scale*/, 1000 /*range*/);
+            return prng::gen_descreet_uniform_sign<TScaleBias>(2e-3 /*scale*/, 1000 /*range*/);
         });
         bias.GetTensor().generate([](auto...) {
-            return prng::gen_descreet_uniform_sign<TInput>(2e-3 /*scale*/, 1000 /*range*/);
+            return prng::gen_descreet_uniform_sign<TScaleBias>(2e-3 /*scale*/, 1000 /*range*/);
         });
     }
     if(isFwdInfer)
@@ -237,10 +237,10 @@ int BatchNormDriver<TInput, Tref, TAcc, TScaleBias, TOut>::GetandSetData()
 
         // -2.0 to 2.0
         runMean.GetTensor().generate([](auto...) {
-            return prng::gen_descreet_uniform_sign<TInput>(2e-3 /*scale*/, 1000 /*range*/);
+            return prng::gen_descreet_uniform_sign<TAcc>(2e-3 /*scale*/, 1000 /*range*/);
         });
         runVariance.GetTensor().generate([](auto...) {
-            return prng::gen_descreet_uniform_sign<TInput>(2e-3 /*scale*/, 1000 /*range*/);
+            return prng::gen_descreet_uniform_sign<TAcc>(2e-3 /*scale*/, 1000 /*range*/);
         });
     }
     else if(isBwd)
