@@ -67,6 +67,7 @@ inline std::vector<BNTestCase> NetworkLarge()
     // pyt_mlperf_resnet50v1.5
     return {
         {192, 1, 8, 8, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
+        {12, 40, 122, 122, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
         {64, 2048, 7, 7, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 0, 1},
         {64, 2048, 7, 7, miopenBNSpatial, miopen::batchnorm::Direction::ForwardTraining, 1, 1},
         {64, 2048, 7, 7, miopenBNSpatial, miopen::batchnorm::Direction::ForwardInference, 1, 0},
@@ -101,7 +102,7 @@ inline std::vector<BNTestCase> NetworkSmall()
 {
     // pyt_mlperf_resnet50v1.5
     return {
-        {192, 2, 8, 8, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
+        {12, 40, 122, 122, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
         {16, 8, 132, 28, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 1, 0},
         {16, 8, 128, 256, miopenBNSpatial, miopen::batchnorm::Direction::ForwardTraining, 1, 0},
         {64, 2048, 17, 17, miopenBNSpatial, miopen::batchnorm::Direction::Backward, 0, 1},
@@ -148,8 +149,8 @@ private:
 
     void InitTensorsWithRandValue()
     {
-        input.generate(
-            [](auto...) { return prng::gen_descreet_uniform_sign<XDataType>(1e-2, 100); });
+        // 0.0 to 2.0 (since unsigned)
+        input.generate([](auto...) { return prng::gen_descreet_unsigned<XDataType>(2e-3 /*scale*/, 1000 /*range*/); });
     }
 
     void SetDirection() { direction = bn_config.Direction; }
@@ -212,15 +213,17 @@ private:
 
     void InitTensorsWithRandValue()
     {
+        // -2.0 to 2.0
         auto gen_value = [](auto...) {
-            return prng::gen_descreet_uniform_sign<ScaleDataType>(1e-2, 100);
+            return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000);
         };
         scale.generate(gen_value);
         shift.generate(gen_value);
         estMean.generate(gen_value);
 
+        // 0.0 to 2.0
         auto gen_var = [](auto...) {
-            return static_cast<MeanVarDataType>(1e-2 * (prng::gen_0_to_B(100) + 1));
+            return static_cast<MeanVarDataType>(2e-3 * (prng::gen_0_to_B(1000) + 1));
         };
         estVariance.generate(gen_var);
     }
@@ -303,15 +306,16 @@ private:
 
     void InitTensorsWithRandValue()
     {
+        // -2.0 to 2.0
         auto gen_value = [](auto...) {
-            return prng::gen_descreet_uniform_sign<ScaleDataType>(1e-2, 100);
+            return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000);
         };
         dy.generate(gen_value);
         bnScale.generate(gen_value);
         savedMean.generate(gen_value);
-
+        // 0.0 to 2.0
         auto gen_var = [](auto...) {
-            return static_cast<MeanVarDataType>(1e-2 * (prng::gen_0_to_B(100) + 1));
+            return static_cast<MeanVarDataType>(2e-3 * (prng::gen_0_to_B(1000) + 1));
         };
         savedInvVar.generate(gen_var);
 
@@ -400,14 +404,15 @@ private:
 
     void InitTensorsWithRandValue()
     {
+        // -2.0 to 2.0
         auto gen_value = [](auto...) {
-            return prng::gen_descreet_uniform_sign<ScaleDataType>(1e-2, 100);
+            return prng::gen_descreet_uniform_sign<ScaleDataType>(2e-3, 1000);
         };
         scale.generate(gen_value);
         shift.generate(gen_value);
-
+        // 0.0 to 2.0
         auto gen_var = [](auto...) {
-            return static_cast<AccDataType>(1e-2 * (prng::gen_0_to_B(100) + 1));
+            return static_cast<AccDataType>(2e-3 * (prng::gen_0_to_B(1000) + 1));
         };
         runMean.generate(gen_var);
         runVariance.generate(gen_var);
