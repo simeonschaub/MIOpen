@@ -150,7 +150,9 @@ private:
     void InitTensorsWithRandValue()
     {
         // 0.0 to 2.0 (since unsigned)
-        input.generate([](auto...) { return prng::gen_descreet_unsigned<XDataType>(2e-3 /*scale*/, 1000 /*range*/); });
+        input.generate([](auto...) {
+            return prng::gen_descreet_unsigned<XDataType>(2e-3 /*scale*/, 1000 /*range*/);
+        });
     }
 
     void SetDirection() { direction = bn_config.Direction; }
