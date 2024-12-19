@@ -395,21 +395,21 @@ def RunPerfTest(Map conf=[:]){
         {
             //unstash 'miopen_tar'
             //sh "tar -zxvf build/miopen-hip-*-Linux-runtime.tar.gz"
-            ld_lib="${env.WORKSPACE}/opt/rocm/lib"
+            ld_lib="${env.WORKSPACE}/install/lib"
             def filename = conf.get("filename", "")
             if(params.PERF_TEST_OVERRIDE != '')
             {
                 echo "Appending MIOpenDriver cmd env vars: ${params.PERF_TEST_OVERRIDE}"
-                sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/opt/rocm/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/opt/rocm --override ${params.PERF_TEST_OVERRRIDE}"
+                sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/install/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/install/ --override ${params.PERF_TEST_OVERRRIDE}"
             }else
             {
-                sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/opt/rocm/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/opt/rocm"
+                sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/install/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/opt/rocm"
             }
-            //sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/opt/rocm/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/opt/rocm"
+            //sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/install/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/install/"
             jenkins_url = "${env.artifact_path}/${env.BRANCH_NAME}/lastSuccessfulBuild/artifact"
             try {
-                sh "rm -rf ${env.WORKSPACE}/opt/rocm/bin/old_results/"
-                sh "wget -P ${env.WORKSPACE}/opt/rocm/bin/old_results/ ${jenkins_url}/opt/rocm/bin/perf_results/${filename}"
+                sh "rm -rf ${env.WORKSPACE}/install/bin/old_results/"
+                sh "wget -P ${env.WORKSPACE}/install/bin/old_results/ ${jenkins_url}/install/bin/perf_results/${filename}"
             }
             catch (Exception err){
                 currentBuild.result = 'SUCCESS'
@@ -417,7 +417,7 @@ def RunPerfTest(Map conf=[:]){
 
             archiveArtifacts artifacts: "opt/rocm/bin/perf_results/${filename}", allowEmptyArchive: true, fingerprint: true
             try{
-               sh "${env.WORKSPACE}/opt/rocm/bin/test_perf.py --compare_results --old_results_path ${env.WORKSPACE}/opt/rocm/bin/old_results --filename ${filename}"
+               sh "${env.WORKSPACE}/opt/rocm/bin/test_perf.py --compare_results --old_results_path ${env.WORKSPACE}/install/bin/old_results --filename ${filename}"
             }
             catch (Exception err){
                 currentBuild.result = 'SUCCESS'
