@@ -44,11 +44,12 @@ class scope_exit
 public:
     explicit scope_exit(const ExitHandler& eh) noexcept : mHandler(eh)
     {
-        static_assert(noexcept(ExitHandler(eh)));
+        static_assert(noexcept(ExitHandler(eh)), "A Handler with throwing ctor is useless");
     }
     explicit scope_exit(ExitHandler&& eh) noexcept : mHandler(std::move(eh))
     {
-        static_assert(noexcept(ExitHandler(std::move(eh))));
+        static_assert(noexcept(ExitHandler(std::move(eh))),
+                      "A Handler with throwing ctor is useless");
     }
 
     ~scope_exit()
