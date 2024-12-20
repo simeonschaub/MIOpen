@@ -55,9 +55,9 @@ using GPU_UnitTestConvOclBwdWrW2SolverWrw_FP16  = GPU_UnitTestConvSolverWrw_FP16
 using GPU_UnitTestConvOclBwdWrW2SolverWrw_BFP16 = GPU_UnitTestConvSolverWrw_BFP16;
 using GPU_UnitTestConvOclBwdWrW2SolverWrw_FP32  = GPU_UnitTestConvSolverWrw_FP32;
 using CPU_UnitTestConvOclBwdWrW2SolverDevApplicabilityWrw_NONE =
-    CPU_UnitTestConvSolverDevApplicabilityWrw_NONE
+    CPU_UnitTestConvSolverDevApplicabilityWrw_NONE;
 
-        TEST_P(GPU_UnitTestConvOclBwdWrW2SolverWrw_FP16, ConvOclBwdWrW2NonTunable)
+TEST_P(GPU_UnitTestConvOclBwdWrW2SolverWrw_FP16, ConvOclBwdWrW2NonTunable)
 {
     this->RunTest(miopen::solver::conv::ConvOclBwdWrW2NonTunable{});
 };
