@@ -395,6 +395,7 @@ def RunPerfTest(Map conf=[:]){
         withDockerContainer(image: image, args: dockerOpts + ' -v=/var/jenkins/:/var/jenkins') {
         timeout(time: 100, unit: 'MINUTES')
         {
+            cmake_build(conf)
             //unstash 'miopen_tar'
             //sh "tar -zxvf build/miopen-hip-*-Linux-runtime.tar.gz"
             ld_lib="${env.WORKSPACE}/install/lib"
