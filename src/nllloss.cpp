@@ -40,8 +40,8 @@ size_t GetNLLLossForwardWorkspaceSize(Handle& handle,
                                       const TensorDescriptor& targetDesc,
                                       const TensorDescriptor& weightDesc,
                                       const TensorDescriptor& outputDesc,
-                                      int32_t ignore_index,
-                                      miopenLossReductionMode_t reduction)
+                                      const uint64_t ignore_index,
+                                      const miopenLossReductionMode_t reduction)
 {
     auto ctx           = ExecutionContext{&handle};
     const auto problem = nllloss::ProblemDescription{
@@ -66,7 +66,7 @@ miopenStatus_t NLLLossForward(Handle& handle,
                               ConstData_t weight,
                               const TensorDescriptor& outputDesc,
                               Data_t output,
-                              int32_t ignore_index,
+                              uint64_t ignore_index,
                               miopenLossReductionMode_t reduction)
 {
     const auto problem = nllloss::ProblemDescription{
@@ -113,7 +113,7 @@ miopenStatus_t NLLLossBackward(Handle& handle,
                                ConstData_t weight,
                                const TensorDescriptor& outputGradDesc,
                                ConstData_t output_grad,
-                               int32_t ignore_index,
+                               uint64_t ignore_index,
                                miopenLossReductionMode_t reduction)
 {
     const auto problem = nllloss::ProblemDescription{

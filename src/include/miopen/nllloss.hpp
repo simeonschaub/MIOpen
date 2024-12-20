@@ -23,10 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#include <miopen/miopen.h>
-#ifndef MIOPEN_NLLLOSS_HPP_
-#define MIOPEN_NLLLOSS_HPP_
-
+#pragma once
 #include <miopen/common.hpp>
 
 namespace miopen {
@@ -41,7 +38,7 @@ MIOPEN_INTERNALS_EXPORT size_t GetNLLLossForwardWorkspaceSize(Handle& handle,
                                                               const TensorDescriptor& targetDesc,
                                                               const TensorDescriptor& weightDesc,
                                                               const TensorDescriptor& outputDesc,
-                                                              int32_t ignore_index,
+                                                              uint64_t ignore_index,
                                                               miopenLossReductionMode_t reduction);
 
 MIOPEN_INTERNALS_EXPORT miopenStatus_t NLLLossForward(Handle& handle,
@@ -55,7 +52,7 @@ MIOPEN_INTERNALS_EXPORT miopenStatus_t NLLLossForward(Handle& handle,
                                                       ConstData_t weight,
                                                       const TensorDescriptor& outputDesc,
                                                       Data_t output,
-                                                      int32_t ignore_index,
+                                                      uint64_t ignore_index,
                                                       miopenLossReductionMode_t reduction);
 
 MIOPEN_INTERNALS_EXPORT miopenStatus_t NLLLossBackward(Handle& handle,
@@ -67,10 +64,9 @@ MIOPEN_INTERNALS_EXPORT miopenStatus_t NLLLossBackward(Handle& handle,
                                                        ConstData_t weight,
                                                        const TensorDescriptor& outputGradDesc,
                                                        ConstData_t output_grad,
-                                                       int32_t ignore_index,
+                                                       uint64_t ignore_index,
                                                        miopenLossReductionMode_t reduction);
 
 } // namespace nllloss
 
 } // namespace miopen
-#endif // _MIOPEN_NLLLOSS_HPP_

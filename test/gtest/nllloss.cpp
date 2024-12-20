@@ -32,19 +32,19 @@ using GPU_Nllloss_fwd_FP32  = NLLLossTestFwd<float>;
 using GPU_Nllloss_fwd_FP16  = NLLLossTestFwd<float16>;
 using GPU_Nllloss_fwd_BFP16 = NLLLossTestFwd<bfloat16>;
 
-TEST_P(GPU_Nllloss_fwd_FP32, NLLLossTestFwd)
+TEST_P(GPU_Nllloss_fwd_FP32, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(GPU_Nllloss_fwd_FP16, NLLLossTestFwd)
+TEST_P(GPU_Nllloss_fwd_FP16, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(GPU_Nllloss_fwd_BFP16, NLLLossTestFwd)
+TEST_P(GPU_Nllloss_fwd_BFP16, Test)
 {
     RunTest();
     Verify();
@@ -59,19 +59,19 @@ using GPU_Nllloss_bwd_FP32  = NLLLossTestBwd<float>;
 using GPU_Nllloss_bwd_FP16  = NLLLossTestBwd<float16>;
 using GPU_Nllloss_bwd_BFP16 = NLLLossTestBwd<bfloat16>;
 
-TEST_P(GPU_Nllloss_bwd_FP32, NLLLossTestBwd)
+TEST_P(GPU_Nllloss_bwd_FP32, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(GPU_Nllloss_bwd_FP16, NLLLossTestBwd)
+TEST_P(GPU_Nllloss_bwd_FP16, Test)
 {
     RunTest();
     Verify();
 };
 
-TEST_P(GPU_Nllloss_bwd_BFP16, NLLLossTestBwd)
+TEST_P(GPU_Nllloss_bwd_BFP16, Test)
 {
     RunTest();
     Verify();

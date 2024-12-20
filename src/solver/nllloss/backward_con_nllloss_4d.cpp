@@ -24,10 +24,9 @@
  *
  *******************************************************************************/
 
-#include "miopen/conv_solution.hpp"
-#include "miopen/execution_context.hpp"
-#include "miopen/invoke_params.hpp"
-#include "miopen/miopen.h"
+#include <miopen/conv_solution.hpp>
+#include <miopen/execution_context.hpp>
+#include <miopen/invoke_params.hpp>
 #include <miopen/nllloss/solvers.hpp>
 
 #include <miopen/nllloss/invoke_params.hpp>
@@ -63,10 +62,8 @@ ConvSolution NLLLossUnreduceBackwardContiguous4d::GetSolution(
 {
     std::ignore = context;
 
-    auto result            = ConvSolution{miopenStatusSuccess};
-    auto input_grad_dtype  = miopen::GetDataType(problem.GetInputDesc().GetType());
-    auto output_grad_dtype = miopen::GetDataType(problem.GetOutputDesc().GetType());
-
+    auto result           = ConvSolution{miopenStatusSuccess};
+    auto input_grad_dtype = miopen::GetDataType(problem.GetInputDesc().GetType());
     {
         auto dtype     = problem.GetInputDesc().GetType();
         size_t N_total = problem.GetNtotal();
@@ -76,8 +73,7 @@ ConvSolution NLLLossUnreduceBackwardContiguous4d::GetSolution(
             {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
             {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
             {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-            {"INPUT_TYPE", input_grad_dtype == "bfloat16" ? "ushort" : input_grad_dtype},
-            {"OUTPUT_TYPE", output_grad_dtype == "bfloat16" ? "ushort" : output_grad_dtype},
+            {"D_TYPE", input_grad_dtype == "bfloat16" ? "ushort" : input_grad_dtype},
         };
 
         result.construction_params.push_back(
@@ -94,7 +90,6 @@ ConvSolution NLLLossUnreduceBackwardContiguous4d::GetSolution(
             decltype(auto) params = raw_params.CastTo<miopen::nllloss::BwdInvokeParams>();
 
             auto input_grad_tv  = get_inner_expanded_tv<4>(deref(params.inputGradDesc));
-            auto target_tv      = get_inner_expanded_tv<3>(deref(params.targetDesc));
             auto weight_tv      = get_inner_expanded_tv<1>(deref(params.weightDesc));
             auto output_grad_tv = get_inner_expanded_tv<3>(deref(params.outputGradDesc));
 
@@ -104,7 +99,6 @@ ConvSolution NLLLossUnreduceBackwardContiguous4d::GetSolution(
                    params.output_grad,
                    params.ignore_index,
                    input_grad_tv,
-                   target_tv,
                    weight_tv,
                    output_grad_tv);
         };

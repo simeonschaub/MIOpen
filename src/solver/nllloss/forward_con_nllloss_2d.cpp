@@ -24,9 +24,9 @@
  *
  *******************************************************************************/
 
-#include "miopen/conv_solution.hpp"
-#include "miopen/execution_context.hpp"
-#include "miopen/invoke_params.hpp"
+#include <miopen/conv_solution.hpp>
+#include <miopen/execution_context.hpp>
+#include <miopen/invoke_params.hpp>
 #include <miopen/nllloss/solvers.hpp>
 
 #include <miopen/nllloss/invoke_params.hpp>
@@ -62,10 +62,8 @@ ConvSolution NLLLossUnreduceForwardContiguous2d::GetSolution(
 {
     std::ignore = context;
 
-    auto result       = ConvSolution{miopenStatusSuccess};
-    auto input_dtype  = miopen::GetDataType(problem.GetInputDesc().GetType());
-    auto output_dtype = miopen::GetDataType(problem.GetOutputDesc().GetType());
-
+    auto result      = ConvSolution{miopenStatusSuccess};
+    auto input_dtype = miopen::GetDataType(problem.GetInputDesc().GetType());
     {
         auto dtype     = problem.GetOutputDesc().GetType();
         size_t N_total = problem.GetNtotal();
@@ -75,8 +73,7 @@ ConvSolution NLLLossUnreduceForwardContiguous2d::GetSolution(
             {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
             {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
             {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
-            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
+            {"D_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
         };
 
         result.construction_params.push_back(
@@ -92,8 +89,6 @@ ConvSolution NLLLossUnreduceForwardContiguous2d::GetSolution(
             decltype(auto) kernel = handle_.Run(kernels.front());
             decltype(auto) params = raw_params.CastTo<miopen::nllloss::FwdInvokeParams>();
 
-            auto input_tv  = get_inner_expanded_tv<2>(deref(params.inputDesc));
-            auto target_tv = get_inner_expanded_tv<1>(deref(params.targetDesc));
             auto weight_tv = get_inner_expanded_tv<1>(deref(params.weightDesc));
             auto output_tv = get_inner_expanded_tv<1>(deref(params.outputDesc));
 
@@ -102,8 +97,6 @@ ConvSolution NLLLossUnreduceForwardContiguous2d::GetSolution(
                    params.weight,
                    params.output,
                    params.ignore_index,
-                   input_tv,
-                   target_tv,
                    weight_tv,
                    output_tv);
         };

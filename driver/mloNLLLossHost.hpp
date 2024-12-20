@@ -23,8 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef MLO_NLLLOSSHOST_H_
-#define MLO_NLLLOSSHOST_H_
+#pragma once
 
 #include <miopen/tensor.hpp>
 #include <miopen/nllloss/utils.hpp>
@@ -35,10 +34,10 @@ int32_t mloNLLLossUnreduceForwardRunHost(const miopenTensorDescriptor_t inputDes
                                          const miopenTensorDescriptor_t weightDesc,
                                          const miopenTensorDescriptor_t outputDesc,
                                          const Tgpu* input,
-                                         const int32_t* target,
+                                         const uint64_t* target,
                                          const Tgpu* weight,
                                          Tcheck* output,
-                                         const int32_t ignore_index)
+                                         const uint64_t ignore_index)
 {
     auto num_dims = miopen::deref(inputDesc).GetNumDims();
     if(num_dims == 2)
@@ -86,22 +85,22 @@ int32_t mloNLLLossReduceForward5dRunHost(const miopenTensorDescriptor_t inputDes
                                          const miopenTensorDescriptor_t targetDesc,
                                          const miopenTensorDescriptor_t weightDesc,
                                          const Tgpu* input,
-                                         const int32_t* target,
+                                         const uint64_t* target,
                                          const Tgpu* weight,
                                          Tcheck* output,
                                          Tcheck* workspace,
-                                         const int32_t ignore_index,
+                                         const uint64_t ignore_index,
                                          const float divisor)
 {
-    auto dims  = miopen::deref(inputDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<5>(miopen::deref(inputDesc));
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<4>(target_tv, i);
         uint64_t n[4];
@@ -110,14 +109,14 @@ int32_t mloNLLLossReduceForward5dRunHost(const miopenTensorDescriptor_t inputDes
         n[2] = tensor_layout.layout[2];
         n[3] = tensor_layout.layout[3];
 
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
+        uint64_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             workspace[i] = static_cast<Tcheck>(0);
         }
@@ -131,20 +130,20 @@ int32_t mloNLLLossReduceForward5dRunHost(const miopenTensorDescriptor_t inputDes
         }
     }
 
-    auto size            = numel;
-    const int local_size = 256;
-    int offset_a         = 0;
-    int offset_b         = size;
-    size_t _size         = size;
+    uint64_t size             = numel;
+    const uint64_t local_size = 256;
+    int offset_a              = 0;
+    int offset_b              = size;
+    uint64_t _size            = size;
     do
     {
-        for(int i = 0; i < _size; i += local_size)
+        for(uint64_t i = 0; i < _size; i += local_size)
         {
             float shared[local_size];
-            for(int j = 0; j < local_size; ++j)
+            for(uint64_t j = 0; j < local_size; ++j)
                 shared[j] = i + j < _size ? static_cast<float>(workspace[offset_a + i + j]) : 0.0f;
             for(int offset = local_size / 2; offset > 0; offset >>= 1)
-                for(int j = 0; j < local_size; ++j)
+                for(uint64_t j = 0; j < local_size; ++j)
                     if(j < offset)
                         shared[j] += shared[j + offset];
             if(_size <= local_size)
@@ -165,10 +164,10 @@ int32_t mloNLLLossUnreduceBackwardRunHost(const miopenTensorDescriptor_t inputGr
                                           const miopenTensorDescriptor_t weightDesc,
                                           const miopenTensorDescriptor_t outputGradDesc,
                                           Tcheck* input_grad,
-                                          const int32_t* target,
+                                          const uint64_t* target,
                                           const Tgpu* weight,
                                           const Tgpu* output_grad,
-                                          const int32_t ignore_index)
+                                          const uint64_t ignore_index)
 {
     auto num_dims = miopen::deref(inputGradDesc).GetNumDims();
     if(num_dims == 2)
@@ -216,10 +215,10 @@ int32_t mloNLLLossReduceBackwardRunHost(const miopenTensorDescriptor_t inputGrad
                                         const miopenTensorDescriptor_t targetDesc,
                                         const miopenTensorDescriptor_t weightDesc,
                                         Tcheck* input_grad,
-                                        const int32_t* target,
+                                        const uint64_t* target,
                                         const Tgpu* weight,
                                         const Tgpu* output_grad,
-                                        const int32_t ignore_index,
+                                        const uint64_t ignore_index,
                                         const float divisor)
 {
     auto num_dims = miopen::deref(inputGradDesc).GetNumDims();
@@ -257,32 +256,32 @@ int32_t mloNLLLossUnreduceForwardRunHost2d(const miopenTensorDescriptor_t inputD
                                            const miopenTensorDescriptor_t weightDesc,
                                            const miopenTensorDescriptor_t outputDesc,
                                            const Tgpu* input,
-                                           const int32_t* target,
+                                           const uint64_t* target,
                                            const Tgpu* weight,
                                            Tcheck* output,
-                                           const int32_t ignore_index)
+                                           const uint64_t ignore_index)
 {
-    auto dims  = miopen::deref(inputDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<2>(miopen::deref(inputDesc));
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(targetDesc));
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
     auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(outputDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
-        size_t target_index = target_tv.get_tensor_view_idx({i});
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx({i});
+        uint64_t t            = target[target_index];
 
-        size_t input_index = input_tv.get_tensor_view_idx({i, t});
+        uint64_t input_index = input_tv.get_tensor_view_idx({i, t});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_index = output_tv.get_tensor_view_idx({i});
+        uint64_t output_index = output_tv.get_tensor_view_idx({i});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             output[output_index] = static_cast<Tcheck>(0);
         }
@@ -304,37 +303,37 @@ int32_t mloNLLLossUnreduceForwardRunHost4d(const miopenTensorDescriptor_t inputD
                                            const miopenTensorDescriptor_t weightDesc,
                                            const miopenTensorDescriptor_t outputDesc,
                                            const Tgpu* input,
-                                           const int32_t* target,
+                                           const uint64_t* target,
                                            const Tgpu* weight,
                                            Tcheck* output,
-                                           const int32_t ignore_index)
+                                           const uint64_t ignore_index)
 {
-    auto dims  = miopen::deref(inputDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(inputDesc));
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(miopen::deref(targetDesc));
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
     auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(miopen::deref(outputDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<3>(output_tv, i);
         uint64_t n[3];
-        n[0]                = tensor_layout.layout[0];
-        n[1]                = tensor_layout.layout[1];
-        n[2]                = tensor_layout.layout[2];
-        size_t target_index = target_tv.get_tensor_view_idx({n[0], n[1], n[2]});
-        int32_t t           = target[target_index];
+        n[0]                  = tensor_layout.layout[0];
+        n[1]                  = tensor_layout.layout[1];
+        n[2]                  = tensor_layout.layout[2];
+        uint64_t target_index = target_tv.get_tensor_view_idx({n[0], n[1], n[2]});
+        uint64_t t            = target[target_index];
 
-        size_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2]});
+        uint64_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_index = output_tv.get_tensor_view_idx({n[0], n[1], n[2]});
+        uint64_t output_index = output_tv.get_tensor_view_idx({n[0], n[1], n[2]});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             output[output_index] = static_cast<Tcheck>(0);
         }
@@ -356,21 +355,21 @@ int32_t mloNLLLossUnreduceForwardRunHost5d(const miopenTensorDescriptor_t inputD
                                            const miopenTensorDescriptor_t weightDesc,
                                            const miopenTensorDescriptor_t outputDesc,
                                            const Tgpu* input,
-                                           const int32_t* target,
+                                           const uint64_t* target,
                                            const Tgpu* weight,
                                            Tcheck* output,
-                                           const int32_t ignore_index)
+                                           const uint64_t ignore_index)
 {
-    auto dims  = miopen::deref(inputDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<5>(miopen::deref(inputDesc));
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
     auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(outputDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<4>(output_tv, i);
         uint64_t n[4];
@@ -379,16 +378,16 @@ int32_t mloNLLLossUnreduceForwardRunHost5d(const miopenTensorDescriptor_t inputD
         n[2] = tensor_layout.layout[2];
         n[3] = tensor_layout.layout[3];
 
-        size_t target_index = target_tv.get_tensor_view_idx({n[0], n[1], n[2], n[3]});
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx({n[0], n[1], n[2], n[3]});
+        uint64_t t            = target[target_index];
 
-        size_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
+        uint64_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_index = output_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t output_index = output_tv.get_tensor_view_idx(tensor_layout);
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             output[output_index] = static_cast<Tcheck>(0);
         }
@@ -410,14 +409,14 @@ int32_t mloNLLLossUnreduceBackwardRunHost2d(const miopenTensorDescriptor_t input
                                             const miopenTensorDescriptor_t weightDesc,
                                             const miopenTensorDescriptor_t outputGradDesc,
                                             Tcheck* input_grad,
-                                            const int32_t* target,
+                                            const uint64_t* target,
                                             const Tgpu* weight,
                                             const Tgpu* output_grad,
-                                            const int32_t ignore_index)
+                                            const uint64_t ignore_index)
 {
-    auto dims  = miopen::deref(inputGradDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputGradDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_grad_tv =
         miopen::solver::nllloss::get_inner_expanded_tv<2>(miopen::deref(inputGradDesc));
@@ -426,19 +425,19 @@ int32_t mloNLLLossUnreduceBackwardRunHost2d(const miopenTensorDescriptor_t input
     auto output_grad_tv =
         miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(outputGradDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
-        auto tensor_layout  = tensor_layout_t<1>(target_tv, i);
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        auto tensor_layout    = tensor_layout_t<1>(target_tv, i);
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_grad_tv.get_tensor_view_idx({i, t});
+        uint64_t input_grad_index = input_grad_tv.get_tensor_view_idx({i, t});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<Tcheck>(0);
         }
@@ -461,14 +460,14 @@ int32_t mloNLLLossUnreduceBackwardRunHost4d(const miopenTensorDescriptor_t input
                                             const miopenTensorDescriptor_t weightDesc,
                                             const miopenTensorDescriptor_t outputGradDesc,
                                             Tcheck* input_grad,
-                                            const int32_t* target,
+                                            const uint64_t* target,
                                             const Tgpu* weight,
                                             const Tgpu* output_grad,
-                                            const int32_t ignore_index)
+                                            const uint64_t ignore_index)
 {
-    auto dims  = miopen::deref(inputGradDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputGradDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(inputGradDesc));
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(miopen::deref(targetDesc));
@@ -476,7 +475,7 @@ int32_t mloNLLLossUnreduceBackwardRunHost4d(const miopenTensorDescriptor_t input
     auto output_grad_tv =
         miopen::solver::nllloss::get_inner_expanded_tv<3>(miopen::deref(outputGradDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<3>(output_grad_tv, i);
         uint64_t n[3];
@@ -484,16 +483,16 @@ int32_t mloNLLLossUnreduceBackwardRunHost4d(const miopenTensorDescriptor_t input
         n[1] = tensor_layout.layout[1];
         n[2] = tensor_layout.layout[2];
 
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2]});
+        uint64_t input_grad_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<Tcheck>(0);
         }
@@ -516,14 +515,14 @@ int32_t mloNLLLossUnreduceBackwardRunHost5d(const miopenTensorDescriptor_t input
                                             const miopenTensorDescriptor_t weightDesc,
                                             const miopenTensorDescriptor_t outputGradDesc,
                                             Tcheck* input_grad,
-                                            const int32_t* target,
+                                            const uint64_t* target,
                                             const Tgpu* weight,
                                             const Tgpu* output_grad,
-                                            const int32_t ignore_index)
+                                            const uint64_t ignore_index)
 {
-    auto dims  = miopen::deref(inputGradDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputGradDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_grad_tv =
         miopen::solver::nllloss::get_inner_expanded_tv<5>(miopen::deref(inputGradDesc));
@@ -532,7 +531,7 @@ int32_t mloNLLLossUnreduceBackwardRunHost5d(const miopenTensorDescriptor_t input
     auto output_grad_tv =
         miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(outputGradDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<4>(output_grad_tv, i);
         uint64_t n[4];
@@ -541,16 +540,16 @@ int32_t mloNLLLossUnreduceBackwardRunHost5d(const miopenTensorDescriptor_t input
         n[2] = tensor_layout.layout[2];
         n[3] = tensor_layout.layout[3];
 
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_grad_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
+        uint64_t input_grad_index = input_grad_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<Tcheck>(0);
         }
@@ -572,31 +571,31 @@ int32_t mloNLLLossReduceBackwardRunHost2d(const miopenTensorDescriptor_t inputGr
                                           const miopenTensorDescriptor_t targetDesc,
                                           const miopenTensorDescriptor_t weightDesc,
                                           Tcheck* input_grad,
-                                          const int32_t* target,
+                                          const uint64_t* target,
                                           const Tgpu* weight,
                                           const Tgpu* output_grad,
-                                          const int32_t ignore_index,
+                                          const uint64_t ignore_index,
                                           const float divisor)
 {
-    auto dims  = miopen::deref(inputGradDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputGradDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_grad_tv =
         miopen::solver::nllloss::get_inner_expanded_tv<2>(miopen::deref(inputGradDesc));
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(targetDesc));
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
-        size_t target_index = target_tv.get_tensor_view_idx({i});
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx({i});
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_grad_tv.get_tensor_view_idx({i, t});
+        uint64_t input_grad_index = input_grad_tv.get_tensor_view_idx({i, t});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<Tcheck>(0);
         }
@@ -618,22 +617,22 @@ int32_t mloNLLLossReduceBackwardRunHost5d(const miopenTensorDescriptor_t inputGr
                                           const miopenTensorDescriptor_t targetDesc,
                                           const miopenTensorDescriptor_t weightDesc,
                                           Tcheck* input_grad,
-                                          const int32_t* target,
+                                          const uint64_t* target,
                                           const Tgpu* weight,
                                           const Tgpu* output_grad,
-                                          const int32_t ignore_index,
+                                          const uint64_t ignore_index,
                                           const float divisor)
 {
-    auto dims  = miopen::deref(inputGradDesc).GetLengths();
-    auto numel = miopen::deref(targetDesc).GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = miopen::deref(inputGradDesc).GetLengths();
+    uint64_t numel = miopen::deref(targetDesc).GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_grad_tv =
         miopen::solver::nllloss::get_inner_expanded_tv<5>(miopen::deref(inputGradDesc));
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<4>(target_tv, i);
         uint64_t n[4];
@@ -642,14 +641,14 @@ int32_t mloNLLLossReduceBackwardRunHost5d(const miopenTensorDescriptor_t inputGr
         n[2] = tensor_layout.layout[2];
         n[3] = tensor_layout.layout[3];
 
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_grad_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
+        uint64_t input_grad_index = input_grad_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<Tcheck>(0);
         }
@@ -665,5 +664,3 @@ int32_t mloNLLLossReduceBackwardRunHost5d(const miopenTensorDescriptor_t inputGr
 
     return 0;
 }
-
-#endif // MLO_NLLLOSSHOST_H_

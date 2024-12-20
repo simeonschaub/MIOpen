@@ -24,18 +24,17 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GUARD_CPU_NLLLOSS_HPP
-#define GUARD_CPU_NLLLOSS_HPP
+#pragma once
 
 #include "tensor_holder.hpp"
 #include <miopen/nllloss/utils.hpp>
 
 template <class T>
 void cpu_nllloss_unreduce_forward(tensor<T> input,
-                                  tensor<int32_t> target,
+                                  tensor<uint64_t> target,
                                   tensor<T> weight,
                                   tensor<T>& output,
-                                  int32_t ignore_index)
+                                  uint64_t ignore_index)
 {
     auto num_dims = input.desc.GetNumDims();
     if(num_dims == 2)
@@ -54,22 +53,22 @@ void cpu_nllloss_unreduce_forward(tensor<T> input,
 
 template <class T>
 void cpu_nllloss_reduce_forward_5d(tensor<T> input,
-                                   tensor<int32_t> target,
+                                   tensor<uint64_t> target,
                                    tensor<T> weight,
                                    tensor<T>& output,
                                    tensor<T>& workspace,
-                                   int32_t ignore_index,
+                                   uint64_t ignore_index,
                                    float divisor)
 {
-    auto dims  = input.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<5>(input.desc);
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(target.desc);
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<4>(target_tv, i);
         uint64_t n[4];
@@ -78,14 +77,14 @@ void cpu_nllloss_reduce_forward_5d(tensor<T> input,
         n[2] = tensor_layout.layout[2];
         n[3] = tensor_layout.layout[3];
 
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
+        uint64_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             workspace[i] = static_cast<T>(0);
         }
@@ -103,7 +102,7 @@ void cpu_nllloss_reduce_forward_5d(tensor<T> input,
     const int local_size = 256;
     int offset_a         = 0;
     int offset_b         = size;
-    size_t _size         = size;
+    uint64_t _size       = size;
     do
     {
         for(int i = 0; i < _size; i += local_size)
@@ -127,10 +126,10 @@ void cpu_nllloss_reduce_forward_5d(tensor<T> input,
 
 template <class T>
 void cpu_nllloss_unreduce_backward(tensor<T>& input_grad,
-                                   tensor<int32_t> target,
+                                   tensor<uint64_t> target,
                                    tensor<T> weight,
                                    tensor<T> output_grad,
-                                   int32_t ignore_index)
+                                   uint64_t ignore_index)
 {
     auto num_dims = input_grad.desc.GetNumDims();
     if(num_dims == 2)
@@ -149,10 +148,10 @@ void cpu_nllloss_unreduce_backward(tensor<T>& input_grad,
 
 template <class T>
 void cpu_nllloss_reduce_backward(tensor<T>& input_grad,
-                                 tensor<int32_t> target,
+                                 tensor<uint64_t> target,
                                  tensor<T> weight,
                                  tensor<T> output_grad,
-                                 int32_t ignore_index,
+                                 uint64_t ignore_index,
                                  float divisor)
 {
     auto num_dims = input_grad.desc.GetNumDims();
@@ -170,32 +169,32 @@ void cpu_nllloss_reduce_backward(tensor<T>& input_grad,
 
 template <class T>
 void cpu_nllloss_unreduce_forward_2d(tensor<T> input,
-                                     tensor<int32_t> target,
+                                     tensor<uint64_t> target,
                                      tensor<T> weight,
                                      tensor<T>& output,
-                                     int32_t ignore_index)
+                                     uint64_t ignore_index)
 {
-    auto dims  = input.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<2>(input.desc);
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(target.desc);
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
     auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(output.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
-        size_t target_index = target_tv.get_tensor_view_idx({i});
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx({i});
+        uint64_t t            = target[target_index];
 
-        size_t input_index = input_tv.get_tensor_view_idx({i, t});
+        uint64_t input_index = input_tv.get_tensor_view_idx({i, t});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_index = output_tv.get_tensor_view_idx({i});
+        uint64_t output_index = output_tv.get_tensor_view_idx({i});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             output[output_index] = static_cast<T>(0);
         }
@@ -211,37 +210,37 @@ void cpu_nllloss_unreduce_forward_2d(tensor<T> input,
 
 template <class T>
 void cpu_nllloss_unreduce_forward_4d(tensor<T> input,
-                                     tensor<int32_t> target,
+                                     tensor<uint64_t> target,
                                      tensor<T> weight,
                                      tensor<T>& output,
-                                     int32_t ignore_index)
+                                     uint64_t ignore_index)
 {
-    auto dims  = input.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<4>(input.desc);
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(target.desc);
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
     auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(output.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<3>(output_tv, i);
         uint64_t n[3];
-        n[0]                = tensor_layout.layout[0];
-        n[1]                = tensor_layout.layout[1];
-        n[2]                = tensor_layout.layout[2];
-        size_t target_index = target_tv.get_tensor_view_idx({n[0], n[1], n[2]});
-        int32_t t           = target[target_index];
+        n[0]                  = tensor_layout.layout[0];
+        n[1]                  = tensor_layout.layout[1];
+        n[2]                  = tensor_layout.layout[2];
+        uint64_t target_index = target_tv.get_tensor_view_idx({n[0], n[1], n[2]});
+        uint64_t t            = target[target_index];
 
-        size_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2]});
+        uint64_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_index = output_tv.get_tensor_view_idx({n[0], n[1], n[2]});
+        uint64_t output_index = output_tv.get_tensor_view_idx({n[0], n[1], n[2]});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             output[output_index] = static_cast<T>(0);
         }
@@ -257,21 +256,21 @@ void cpu_nllloss_unreduce_forward_4d(tensor<T> input,
 
 template <class T>
 void cpu_nllloss_unreduce_forward_5d(tensor<T> input,
-                                     tensor<int32_t> target,
+                                     tensor<uint64_t> target,
                                      tensor<T> weight,
                                      tensor<T>& output,
-                                     int32_t ignore_index)
+                                     uint64_t ignore_index)
 {
-    auto dims  = input.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<5>(input.desc);
     auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(target.desc);
     auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
     auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(output.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<4>(output_tv, i);
         uint64_t n[4];
@@ -280,16 +279,16 @@ void cpu_nllloss_unreduce_forward_5d(tensor<T> input,
         n[2] = tensor_layout.layout[2];
         n[3] = tensor_layout.layout[3];
 
-        size_t target_index = target_tv.get_tensor_view_idx({n[0], n[1], n[2], n[3]});
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx({n[0], n[1], n[2], n[3]});
+        uint64_t t            = target[target_index];
 
-        size_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
+        uint64_t input_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_index = output_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t output_index = output_tv.get_tensor_view_idx(tensor_layout);
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             output[output_index] = static_cast<T>(0);
         }
@@ -305,33 +304,33 @@ void cpu_nllloss_unreduce_forward_5d(tensor<T> input,
 
 template <class T>
 void cpu_nllloss_unreduce_backward_2d(tensor<T>& input_grad,
-                                      tensor<int32_t> target,
+                                      tensor<uint64_t> target,
                                       tensor<T> weight,
                                       tensor<T> output_grad,
-                                      int32_t ignore_index)
+                                      uint64_t ignore_index)
 {
-    auto dims  = input_grad.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input_grad.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_grad_tv  = miopen::solver::nllloss::get_inner_expanded_tv<2>(input_grad.desc);
     auto target_tv      = miopen::solver::nllloss::get_inner_expanded_tv<1>(target.desc);
     auto weight_tv      = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
     auto output_grad_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(output_grad.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
-        auto tensor_layout  = tensor_layout_t<1>(target_tv, i);
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        auto tensor_layout    = tensor_layout_t<1>(target_tv, i);
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_grad_tv.get_tensor_view_idx({i, t});
+        uint64_t input_grad_index = input_grad_tv.get_tensor_view_idx({i, t});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<T>(0);
         }
@@ -348,21 +347,21 @@ void cpu_nllloss_unreduce_backward_2d(tensor<T>& input_grad,
 
 template <class T>
 void cpu_nllloss_unreduce_backward_4d(tensor<T>& input_grad,
-                                      tensor<int32_t> target,
+                                      tensor<uint64_t> target,
                                       tensor<T> weight,
                                       tensor<T> output_grad,
-                                      int32_t ignore_index)
+                                      uint64_t ignore_index)
 {
-    auto dims  = input_grad.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input_grad.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_tv       = miopen::solver::nllloss::get_inner_expanded_tv<4>(input_grad.desc);
     auto target_tv      = miopen::solver::nllloss::get_inner_expanded_tv<3>(target.desc);
     auto weight_tv      = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
     auto output_grad_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(output_grad.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<3>(output_grad_tv, i);
         uint64_t n[3];
@@ -370,16 +369,16 @@ void cpu_nllloss_unreduce_backward_4d(tensor<T>& input_grad,
         n[1] = tensor_layout.layout[1];
         n[2] = tensor_layout.layout[2];
 
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2]});
+        uint64_t input_grad_index = input_tv.get_tensor_view_idx({n[0], t, n[1], n[2]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<T>(0);
         }
@@ -396,21 +395,21 @@ void cpu_nllloss_unreduce_backward_4d(tensor<T>& input_grad,
 
 template <class T>
 void cpu_nllloss_unreduce_backward_5d(tensor<T>& input_grad,
-                                      tensor<int32_t> target,
+                                      tensor<uint64_t> target,
                                       tensor<T> weight,
                                       tensor<T> output_grad,
-                                      int32_t ignore_index)
+                                      uint64_t ignore_index)
 {
-    auto dims  = input_grad.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input_grad.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_grad_tv  = miopen::solver::nllloss::get_inner_expanded_tv<5>(input_grad.desc);
     auto target_tv      = miopen::solver::nllloss::get_inner_expanded_tv<4>(target.desc);
     auto weight_tv      = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
     auto output_grad_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(output_grad.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<4>(output_grad_tv, i);
         uint64_t n[4];
@@ -419,16 +418,16 @@ void cpu_nllloss_unreduce_backward_5d(tensor<T>& input_grad,
         n[2] = tensor_layout.layout[2];
         n[3] = tensor_layout.layout[3];
 
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_grad_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
+        uint64_t input_grad_index = input_grad_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        size_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t output_grad_index = output_grad_tv.get_tensor_view_idx(tensor_layout);
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<T>(0);
         }
@@ -445,30 +444,30 @@ void cpu_nllloss_unreduce_backward_5d(tensor<T>& input_grad,
 
 template <class T>
 void cpu_nllloss_reduce_backward_2d(tensor<T>& input_grad,
-                                    tensor<int32_t> target,
+                                    tensor<uint64_t> target,
                                     tensor<T> weight,
                                     tensor<T> output_grad,
-                                    int32_t ignore_index,
+                                    uint64_t ignore_index,
                                     float divisor)
 {
-    auto dims  = input_grad.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input_grad.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_grad_tv = miopen::solver::nllloss::get_inner_expanded_tv<2>(input_grad.desc);
     auto target_tv     = miopen::solver::nllloss::get_inner_expanded_tv<1>(target.desc);
     auto weight_tv     = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
-        size_t target_index = target_tv.get_tensor_view_idx({i});
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx({i});
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_grad_tv.get_tensor_view_idx({i, t});
+        uint64_t input_grad_index = input_grad_tv.get_tensor_view_idx({i, t});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<T>(0);
         }
@@ -485,21 +484,21 @@ void cpu_nllloss_reduce_backward_2d(tensor<T>& input_grad,
 
 template <class T>
 void cpu_nllloss_reduce_backward_5d(tensor<T>& input_grad,
-                                    tensor<int32_t> target,
+                                    tensor<uint64_t> target,
                                     tensor<T> weight,
                                     tensor<T> output_grad,
-                                    int32_t ignore_index,
+                                    uint64_t ignore_index,
                                     float divisor)
 {
-    auto dims  = input_grad.desc.GetLengths();
-    auto numel = target.desc.GetElementSize();
-    size_t C   = dims[1];
+    auto dims      = input_grad.desc.GetLengths();
+    uint64_t numel = target.desc.GetElementSize();
+    uint64_t C     = dims[1];
 
     auto input_grad_tv = miopen::solver::nllloss::get_inner_expanded_tv<5>(input_grad.desc);
     auto target_tv     = miopen::solver::nllloss::get_inner_expanded_tv<4>(target.desc);
     auto weight_tv     = miopen::solver::nllloss::get_inner_expanded_tv<1>(weight.desc);
 
-    for(size_t i = 0; i < numel; i++)
+    for(uint64_t i = 0; i < numel; i++)
     {
         auto tensor_layout = tensor_layout_t<4>(target_tv, i);
         uint64_t n[4];
@@ -508,14 +507,14 @@ void cpu_nllloss_reduce_backward_5d(tensor<T>& input_grad,
         n[2] = tensor_layout.layout[2];
         n[3] = tensor_layout.layout[3];
 
-        size_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
-        int32_t t           = target[target_index];
+        uint64_t target_index = target_tv.get_tensor_view_idx(tensor_layout);
+        uint64_t t            = target[target_index];
 
-        size_t input_grad_index = input_grad_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
+        uint64_t input_grad_index = input_grad_tv.get_tensor_view_idx({n[0], t, n[1], n[2], n[3]});
 
-        size_t weight_index = weight_tv.get_tensor_view_idx({t});
+        uint64_t weight_index = weight_tv.get_tensor_view_idx({t});
 
-        if(t < 0 || t == ignore_index || t >= C)
+        if(t == ignore_index || t >= C)
         {
             input_grad[input_grad_index] = static_cast<T>(0);
         }
@@ -529,4 +528,3 @@ void cpu_nllloss_reduce_backward_5d(tensor<T>& input_grad,
         }
     }
 }
-#endif

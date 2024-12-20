@@ -24,9 +24,9 @@
  *
  *******************************************************************************/
 
-#include "miopen/conv_solution.hpp"
-#include "miopen/execution_context.hpp"
-#include "miopen/invoke_params.hpp"
+#include <miopen/conv_solution.hpp>
+#include <miopen/execution_context.hpp>
+#include <miopen/invoke_params.hpp>
 #include <miopen/nllloss/solvers.hpp>
 
 #include <miopen/nllloss/invoke_params.hpp>
@@ -63,10 +63,8 @@ NLLLossUnreduceForward4d::GetSolution(const ExecutionContext& context,
 {
     std::ignore = context;
 
-    auto result       = ConvSolution{miopenStatusSuccess};
-    auto input_dtype  = miopen::GetDataType(problem.GetInputDesc().GetType());
-    auto output_dtype = miopen::GetDataType(problem.GetOutputDesc().GetType());
-
+    auto result      = ConvSolution{miopenStatusSuccess};
+    auto input_dtype = miopen::GetDataType(problem.GetInputDesc().GetType());
     {
         auto dtype     = problem.GetOutputDesc().GetType();
         size_t N_total = problem.GetNtotal();
@@ -78,8 +76,7 @@ NLLLossUnreduceForward4d::GetSolution(const ExecutionContext& context,
             {"MIOPEN_USE_FP32", static_cast<int>(dtype == miopenFloat)},
             {"MIOPEN_USE_FP64", static_cast<int>(dtype == miopenDouble)},
             {"MIOPEN_USE_BFP16", static_cast<int>(dtype == miopenBFloat16)},
-            {"INPUT_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
-            {"OUTPUT_TYPE", output_dtype == "bfloat16" ? "ushort" : output_dtype},
+            {"D_TYPE", input_dtype == "bfloat16" ? "ushort" : input_dtype},
         };
 
         result.construction_params.push_back(make_hip_kernel({LOCAL_SIZE_NON_CON_FWD},

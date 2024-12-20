@@ -23,8 +23,7 @@
  * SOFTWARE.
  *
  *******************************************************************************/
-#ifndef GUARD_MIOPEN_NLLLOSS_DRIVER_HPP
-#define GUARD_MIOPEN_NLLLOSS_DRIVER_HPP
+#pragma once
 
 #include "InputFlags.hpp"
 #include "driver.hpp"
@@ -32,7 +31,6 @@
 #include "random.hpp"
 #include "tensor_driver.hpp"
 #include "timer.hpp"
-#include "util_driver.hpp"
 
 #include <../test/tensor_holder.hpp>
 #include <../test/verify.hpp>
@@ -137,7 +135,7 @@ private:
     size_t ws_sizeInBytes;
 
     std::vector<int> input_sizes;
-    int32_t ignore_index;
+    uint64_t ignore_index;
     float divisor;
     miopenLossReductionMode_t reduction;
 };
@@ -192,7 +190,7 @@ int NLLLossDriver<Tgpu, Tref>::GetandSetData()
         return miopenStatusInvalidValue;
 
     input_sizes  = GetInputTensorDimsFromCmd();
-    ignore_index = static_cast<int32_t>(inflags.GetValueInt("ignore_index"));
+    ignore_index = static_cast<uint64_t>(inflags.GetValueInt("ignore_index"));
 
     std::vector<int> in_len     = input_sizes;
     std::vector<int> target_len = in_len;
@@ -320,19 +318,19 @@ int NLLLossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 
     int status;
 
-    for(int i = 0; i < in_sz; i++)
+    for(size_t i = 0; i < in_sz; i++)
     {
         in[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(-1.0), static_cast<Tgpu>(-(1e-2)));
     }
     status = in_dev->ToGPU(q, in.data());
 
-    for(int i = 0; i < target_sz; i++)
+    for(size_t i = 0; i < target_sz; i++)
     {
         target[i] = prng::gen_A_to_B<int>(static_cast<int>(0), static_cast<int>(weight_sz - 1));
     }
     status |= target_dev->ToGPU(q, target.data());
 
-    for(int i = 0; i < weight_sz; i++)
+    for(size_t i = 0; i < weight_sz; i++)
     {
         weight[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(-1.0), static_cast<Tgpu>(1.0));
     }
@@ -342,14 +340,17 @@ int NLLLossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 
     status |= in_grad_dev->ToGPU(q, in_grad.data());
 
-    for(int i = 0; i < out_sz; i++)
+    for(size_t i = 0; i < out_sz; i++)
     {
         out_grad[i] = prng::gen_A_to_B<Tgpu>(static_cast<Tgpu>(-1.0), static_cast<Tgpu>(1.0));
     }
     status |= out_grad_dev->ToGPU(q, out_grad.data());
 
     if(status != 0)
+    {
         std::cout << "Error copying data to GPU\n" << std::endl;
+        return miopenStatusInternalError;
+    }
 
     return miopenStatusSuccess;
 }
@@ -365,19 +366,20 @@ int NLLLossDriver<Tgpu, Tref>::RunForwardGPU()
 
     for(int i = 0; i < inflags.GetValueInt("iter"); i++)
     {
-        miopenNLLLossForward(GetHandle(),
-                             workspace_dev->GetMem(),
-                             ws_sizeInBytes,
-                             inputDesc,
-                             in_dev->GetMem(),
-                             targetDesc,
-                             target_dev->GetMem(),
-                             weightDesc,
-                             weight_dev->GetMem(),
-                             outputDesc,
-                             out_dev->GetMem(),
-                             ignore_index,
-                             reduction);
+        auto status = miopenNLLLossForward(GetHandle(),
+                                           workspace_dev->GetMem(),
+                                           ws_sizeInBytes,
+                                           inputDesc,
+                                           in_dev->GetMem(),
+                                           targetDesc,
+                                           target_dev->GetMem(),
+                                           weightDesc,
+                                           weight_dev->GetMem(),
+                                           outputDesc,
+                                           out_dev->GetMem(),
+                                           ignore_index,
+                                           reduction);
+        MIOPEN_THROW_IF(status != miopenStatusSuccess, "Error in miopenNLLLossForward");
 
         float time = 0.0;
         miopenGetKernelTime(GetHandle(), &time);
@@ -391,14 +393,20 @@ int NLLLossDriver<Tgpu, Tref>::RunForwardGPU()
         STOP_TIME
         int iter = inflags.GetValueInt("iter");
         if(WALL_CLOCK)
-            printf("Wall-clock Time Forward NLLLoss Elapsed: %f ms\n", t.gettime_ms() / iter);
+            std::cout << "Wall-clock Time Forward NLLLoss Elapsed: " << t.gettime_ms() / iter
+                      << " ms" << std::endl;
 
         float kernel_average_time =
             iter > 1 ? (kernel_total_time - kernel_first_time) / (iter - 1) : kernel_first_time;
-        printf("GPU Kernel Time Forward NLLLoss Elapsed: %f ms\n", kernel_average_time);
+        std::cout << "GPU Kernel Time Forward NLLLoss Elapsed: " << kernel_average_time << " ms"
+                  << std::endl;
     }
 
-    out_dev->FromGPU(GetStream(), out.data());
+    if(out_dev->FromGPU(GetStream(), out.data()) != 0)
+    {
+        std::cerr << "Error copying (out_dev) from GPU, size: " << out_dev->GetSize() << std::endl;
+        return miopenStatusInternalError;
+    }
 
     return miopenStatusSuccess;
 }
@@ -406,32 +414,37 @@ int NLLLossDriver<Tgpu, Tref>::RunForwardGPU()
 template <typename Tgpu, typename Tref>
 int NLLLossDriver<Tgpu, Tref>::RunForwardCPU()
 {
+    int status = miopenStatusSuccess;
     if(!std::isnan(divisor))
     {
-        mloNLLLossReduceForward5dRunHost<Tgpu, Tref>(inputDesc,
-                                                     targetDesc,
-                                                     weightDesc,
-                                                     in.data(),
-                                                     target.data(),
-                                                     weight.data(),
-                                                     out_host.data(),
-                                                     workspace_host.data(),
-                                                     ignore_index,
-                                                     divisor);
+
+        status = mloNLLLossReduceForward5dRunHost<Tgpu, Tref>(inputDesc,
+                                                              targetDesc,
+                                                              weightDesc,
+                                                              in.data(),
+                                                              target.data(),
+                                                              weight.data(),
+                                                              out_host.data(),
+                                                              workspace_host.data(),
+                                                              ignore_index,
+                                                              divisor);
+        MIOPEN_THROW_IF(status != miopenStatusSuccess, "Error in mloNLLLossReduceForward5dRunHost");
     }
     else
     {
-        mloNLLLossUnreduceForwardRunHost<Tgpu, Tref>(inputDesc,
-                                                     targetDesc,
-                                                     weightDesc,
-                                                     outputDesc,
-                                                     in.data(),
-                                                     target.data(),
-                                                     weight.data(),
-                                                     out_host.data(),
-                                                     ignore_index);
+        status = mloNLLLossUnreduceForwardRunHost<Tgpu, Tref>(inputDesc,
+                                                              targetDesc,
+                                                              weightDesc,
+                                                              outputDesc,
+                                                              in.data(),
+                                                              target.data(),
+                                                              weight.data(),
+                                                              out_host.data(),
+                                                              ignore_index);
+        MIOPEN_THROW_IF(status != miopenStatusSuccess, "Error in mloNLLLossUnreduceForwardRunHost");
     }
-    return miopenStatusSuccess;
+
+    return status;
 }
 
 template <typename Tgpu, typename Tref>
@@ -445,17 +458,18 @@ int NLLLossDriver<Tgpu, Tref>::RunBackwardGPU()
 
     for(int i = 0; i < inflags.GetValueInt("iter"); i++)
     {
-        miopenNLLLossBackward(GetHandle(),
-                              inputGradDesc,
-                              in_grad_dev->GetMem(),
-                              targetDesc,
-                              target_dev->GetMem(),
-                              weightDesc,
-                              weight_dev->GetMem(),
-                              outputGradDesc,
-                              out_grad_dev->GetMem(),
-                              ignore_index,
-                              reduction);
+        auto status = miopenNLLLossBackward(GetHandle(),
+                                            inputGradDesc,
+                                            in_grad_dev->GetMem(),
+                                            targetDesc,
+                                            target_dev->GetMem(),
+                                            weightDesc,
+                                            weight_dev->GetMem(),
+                                            outputGradDesc,
+                                            out_grad_dev->GetMem(),
+                                            ignore_index,
+                                            reduction);
+        MIOPEN_THROW_IF(status != miopenStatusSuccess, "Error in miopenNLLLossBackward");
 
         float time = 0.0;
         miopenGetKernelTime(GetHandle(), &time);
@@ -469,14 +483,21 @@ int NLLLossDriver<Tgpu, Tref>::RunBackwardGPU()
         STOP_TIME
         int iter = inflags.GetValueInt("iter");
         if(WALL_CLOCK)
-            printf("Wall-clock Time Backward NLLLoss Elapsed: %f ms\n", t.gettime_ms() / iter);
+            std::cout << "Wall-clock Time Backward NLLLoss Elapsed: " << t.gettime_ms() / iter
+                      << " ms" << std::endl;
 
         float kernel_average_time =
             iter > 1 ? (kernel_total_time - kernel_first_time) / (iter - 1) : kernel_first_time;
-        printf("GPU Kernel Time Backward NLLLoss Elapsed: %f ms\n", kernel_average_time);
+        std::cout << "GPU Kernel Time Backward NLLLoss Elapsed: " << kernel_average_time << " ms"
+                  << std::endl;
     }
 
-    in_grad_dev->FromGPU(GetStream(), in_grad.data());
+    if(in_grad_dev->FromGPU(GetStream(), in_grad.data()) != 0)
+    {
+        std::cerr << "Error copying (in_grad_dev) from GPU, size: " << in_grad_dev->GetSize()
+                  << std::endl;
+        return miopenStatusInternalError;
+    }
 
     return miopenStatusSuccess;
 }
@@ -484,43 +505,41 @@ int NLLLossDriver<Tgpu, Tref>::RunBackwardGPU()
 template <typename Tgpu, typename Tref>
 int NLLLossDriver<Tgpu, Tref>::RunBackwardCPU()
 {
+    int status = miopenStatusSuccess;
     if(!std::isnan(divisor))
     {
-        mloNLLLossReduceBackwardRunHost<Tgpu, Tref>(inputGradDesc,
-                                                    targetDesc,
-                                                    weightDesc,
-                                                    in_grad_host.data(),
-                                                    target.data(),
-                                                    weight.data(),
-                                                    out_grad.data(),
-                                                    ignore_index,
-                                                    divisor);
+        status = mloNLLLossReduceBackwardRunHost<Tgpu, Tref>(inputGradDesc,
+                                                             targetDesc,
+                                                             weightDesc,
+                                                             in_grad_host.data(),
+                                                             target.data(),
+                                                             weight.data(),
+                                                             out_grad.data(),
+                                                             ignore_index,
+                                                             divisor);
+        MIOPEN_THROW_IF(status != miopenStatusSuccess, "Error in mloNLLLossReduceBackwardRunHost");
     }
     else
     {
-        mloNLLLossUnreduceBackwardRunHost<Tgpu, Tref>(inputGradDesc,
-                                                      targetDesc,
-                                                      weightDesc,
-                                                      outputGradDesc,
-                                                      in_grad_host.data(),
-                                                      target.data(),
-                                                      weight.data(),
-                                                      out_grad.data(),
-                                                      ignore_index);
+        status = mloNLLLossUnreduceBackwardRunHost<Tgpu, Tref>(inputGradDesc,
+                                                               targetDesc,
+                                                               weightDesc,
+                                                               outputGradDesc,
+                                                               in_grad_host.data(),
+                                                               target.data(),
+                                                               weight.data(),
+                                                               out_grad.data(),
+                                                               ignore_index);
+        MIOPEN_THROW_IF(status != miopenStatusSuccess,
+                        "Error in mloNLLLossUnreduceBackwardRunHost");
     }
-    return miopenStatusSuccess;
+    return status;
 }
 
 template <typename Tgpu, typename Tref>
 Tref NLLLossDriver<Tgpu, Tref>::GetTolerance()
 {
-    // Computation error of fp16 is ~2^13 (=8192) bigger than
-    // the one of fp32 because mantissa is shorter by 13 bits.
-    auto tolerance = std::is_same<Tgpu, float>::value ? 1.5e-6 : 8.2e-3;
-
-    // bf16 mantissa has 7 bits, by 3 bits shorter than fp16.
-    if(std::is_same<Tgpu, bfloat16>::value)
-        tolerance *= 8.0;
+    Tref tolerance = std::numeric_limits<Tgpu>::epsilon() * 10;
     return tolerance;
 }
 
@@ -538,7 +557,8 @@ int NLLLossDriver<Tgpu, Tref>::VerifyForward()
     }
     else
     {
-        printf("Forward NLLLoss Verifies on CPU and GPU (err=%f)\n", error);
+        std::cout << "Forward NLLLoss Output Verifies on CPU and GPU (err=" << error << ")"
+                  << std::endl;
     }
 
     return miopenStatusSuccess;
@@ -558,9 +578,7 @@ int NLLLossDriver<Tgpu, Tref>::VerifyBackward()
     }
     else
     {
-        printf("Backward NLLLoss Verifies on CPU and GPU (err=%f)\n", error);
+        std::cout << "Backward NLLLoss Verifies on CPU and GPU (err=" << error << ")" << std::endl;
     }
     return miopenStatusSuccess;
 }
-
-#endif // GUARD_MIOPEN_NLLLOSS_DRIVER_HPP

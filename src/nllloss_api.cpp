@@ -24,7 +24,6 @@
  *
  *******************************************************************************/
 
-#include "miopen/miopen.h"
 #include <miopen/nllloss.hpp>
 #include <miopen/errors.hpp>
 #include <miopen/handle.hpp>
@@ -87,8 +86,8 @@ miopenGetNLLLossForwardWorkspaceSize(miopenHandle_t handle,
                                      const miopenTensorDescriptor_t targetDesc,
                                      const miopenTensorDescriptor_t weightDesc,
                                      const miopenTensorDescriptor_t outputDesc,
-                                     int32_t ignore_index,
-                                     miopenLossReductionMode_t reduction,
+                                     const uint64_t ignore_index,
+                                     const miopenLossReductionMode_t reduction,
                                      size_t* sizeInBytes)
 {
 
@@ -124,7 +123,7 @@ extern "C" miopenStatus_t miopenNLLLossForward(miopenHandle_t handle,
                                                const void* weight,
                                                const miopenTensorDescriptor_t outputDesc,
                                                void* output,
-                                               const int32_t ignore_index,
+                                               const uint64_t ignore_index,
                                                const miopenLossReductionMode_t reduction)
 {
     MIOPEN_LOG_FUNCTION(handle,
@@ -167,8 +166,8 @@ extern "C" miopenStatus_t miopenNLLLossBackward(miopenHandle_t handle,
                                                 const miopenTensorDescriptor_t weightDesc,
                                                 const void* weight,
                                                 const miopenTensorDescriptor_t outputGradDesc,
-                                                void* output_grad,
-                                                const int32_t ignore_index,
+                                                const void* output_grad,
+                                                const uint64_t ignore_index,
                                                 const miopenLossReductionMode_t reduction)
 {
     MIOPEN_LOG_FUNCTION(handle,

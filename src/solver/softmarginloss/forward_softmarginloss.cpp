@@ -26,7 +26,7 @@
 
 #include "miopen/buffer_info.hpp"
 #include "miopen/miopen.h"
-#include "miopen/mlo_internal.hpp"
+#include <miopen/mlo_internal.hpp>
 #include <miopen/datatype.hpp>
 #include <miopen/kernel_build_params.hpp>
 #include <miopen/softmarginloss/invoke_params.hpp>

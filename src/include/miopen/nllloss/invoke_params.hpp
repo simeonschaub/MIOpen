@@ -30,6 +30,7 @@
 #include <miopen/tensor.hpp>
 
 namespace miopen {
+
 namespace nllloss {
 
 struct FwdInvokeParams : public miopen::InvokeParams
@@ -48,7 +49,7 @@ struct FwdInvokeParams : public miopen::InvokeParams
     Data_t output      = nullptr;
 
     miopenLossReductionMode_t reduction;
-    int32_t ignore_index       = -1;
+    uint64_t ignore_index      = -1;
     Data_t workspace           = nullptr;
     std::size_t workspace_size = 0;
 
@@ -72,11 +73,12 @@ struct BwdInvokeParams : public miopen::InvokeParams
     ConstData_t output_grad = nullptr;
 
     miopenLossReductionMode_t reduction;
-    int32_t ignore_index = -1;
+    uint64_t ignore_index = -1;
 
     std::size_t GetWorkspaceSize() const { return 0; }
     Data_t GetWorkspace() const { return nullptr; }
 };
 
 } // namespace nllloss
+
 } // namespace miopen

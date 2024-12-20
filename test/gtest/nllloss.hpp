@@ -34,7 +34,7 @@
 inline std::ostream& operator<<(std::ostream& os, const std::vector<size_t>& v)
 {
     os << '{';
-    for(int i = 0; i < v.size(); ++i)
+    for(size_t i = 0; i < v.size(); ++i)
     {
         if(i != 0)
             os << ',';
@@ -48,7 +48,7 @@ struct NLLLossTestCase
 {
     std::vector<size_t> input;
     bool weight_mode;
-    int32_t ignore_index;
+    uint64_t ignore_index;
     miopenLossReductionMode_t reduction;
     bool contiguous;
 
@@ -116,7 +116,7 @@ protected:
         };
         size_t numclass_C     = in_dim[1];
         auto gen_target_value = [numclass_C](auto...) {
-            return prng::gen_A_to_B<int32_t>(0, numclass_C - 1);
+            return prng::gen_A_to_B<uint64_t>(0, numclass_C - 1);
         };
         auto gen_weight_value = [](auto...) {
             return prng::gen_A_to_B<T>(static_cast<T>(-1.0), static_cast<T>(1.0));
@@ -127,7 +127,7 @@ protected:
         input           = tensor<T>{in_dim, in_strides}.generate(gen_input_value);
 
         auto tar_strides = GetStrides(target_dim, contiguous);
-        target           = tensor<int32_t>{target_dim, tar_strides}.generate(gen_target_value);
+        target           = tensor<uint64_t>{target_dim, tar_strides}.generate(gen_target_value);
 
         auto weight_strides = GetStrides(weight_dim, true);
         if(!weight_mode)
@@ -208,7 +208,6 @@ protected:
                                                  output_dev.get(),
                                                  ignore_index,
                                                  reduction);
-        fflush(stdout);
 
         ASSERT_EQ(status, miopenStatusSuccess);
 
@@ -222,12 +221,13 @@ protected:
         auto error = miopen::rms_range(ref_output, output);
 
         ASSERT_EQ(miopen::range_distance(ref_output), miopen::range_distance(output));
-        EXPECT_LT(error, threshold * 10);
+        EXPECT_LT(error, threshold * 10) << "Error forward Output beyond 10xthreshold : " << error
+                                         << " Tolerance: " << threshold * 10;
     }
     NLLLossTestCase nllloss_config;
 
     tensor<T> input;
-    tensor<int32_t> target;
+    tensor<uint64_t> target;
     tensor<T> weight;
     tensor<T> output;
     tensor<T> ref_output;
@@ -235,7 +235,7 @@ protected:
     tensor<T> ref_workspace;
 
     bool weight_mode;
-    int32_t ignore_index;
+    uint64_t ignore_index;
     miopenLossReductionMode_t reduction;
 
     miopen::Allocator::ManageDataPtr input_dev;
@@ -271,7 +271,7 @@ protected:
 
         size_t numclass_C     = in_dim[1];
         auto gen_target_value = [numclass_C](auto...) {
-            return prng::gen_A_to_B<int32_t>(0, numclass_C - 1);
+            return prng::gen_A_to_B<uint64_t>(0, numclass_C - 1);
         };
         auto gen_weight_value = [](auto...) {
             return prng::gen_A_to_B<T>(static_cast<T>(-1.0), static_cast<T>(1.0));
@@ -290,7 +290,7 @@ protected:
         std::fill(ref_input_grad.begin(), ref_input_grad.end(), static_cast<T>(0.0f));
 
         auto tar_strides = GetStrides(target_dim, contiguous);
-        target           = tensor<int32_t>{target_dim, tar_strides}.generate(gen_target_value);
+        target           = tensor<uint64_t>{target_dim, tar_strides}.generate(gen_target_value);
 
         auto weight_strides = GetStrides(weight_dim, true);
         if(!weight_mode)
@@ -350,18 +350,20 @@ protected:
         double threshold = std::numeric_limits<T>::epsilon();
         auto error       = miopen::rms_range(ref_input_grad, input_grad);
         ASSERT_EQ(miopen::range_distance(ref_input_grad), miopen::range_distance(input_grad));
-        EXPECT_LT(error, threshold * 10);
+        EXPECT_LT(error, threshold * 10)
+            << "Error backward Input grad beyond 10xthreshold : " << error
+            << " Tolerance: " << threshold * 10;
     }
     NLLLossTestCase nllloss_config;
 
     tensor<T> input_grad;
     tensor<T> ref_input_grad;
-    tensor<int32_t> target;
+    tensor<uint64_t> target;
     tensor<T> weight;
     tensor<T> output_grad;
 
     bool weight_mode;
-    int32_t ignore_index;
+    uint64_t ignore_index;
     miopenLossReductionMode_t reduction;
 
     miopen::Allocator::ManageDataPtr input_grad_dev;

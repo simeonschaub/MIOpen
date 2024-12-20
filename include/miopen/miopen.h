@@ -8178,18 +8178,6 @@ MIOPEN_EXPORT miopenStatus_t miopenMultiMarginLossForward(miopenHandle_t handle,
 
 #ifdef MIOPEN_BETA_API
 
-/*! @ingroup LossFunction
- * @enum miopenLossReductionMode_t
- * Reduction mode for loss function
- */
-typedef enum
-{
-    MIOPEN_LOSS_REDUCTION_NONE = 0, /*!< output tensor elements are not reduced */
-    MIOPEN_LOSS_REDUCTION_SUM  = 1, /*!< output tensor elements are summed up */
-    MIOPEN_LOSS_REDUCTION_MEAN = 2, /*!< output tensor elements are summed up and divided with total
-                                       number of elements to get mean value */
-} miopenLossReductionMode_t;
-
 // NLLLoss APIs
 /** @addtogroup LossFunction
  *
@@ -8209,12 +8197,12 @@ typedef enum
  */
 MIOPEN_EXPORT miopenStatus_t
 miopenGetNLLLossForwardWorkspaceSize(miopenHandle_t handle,
-                                     miopenTensorDescriptor_t inputDesc,
-                                     miopenTensorDescriptor_t targetDesc,
-                                     miopenTensorDescriptor_t weightDesc,
-                                     miopenTensorDescriptor_t outputDesc,
-                                     int32_t ignore_index,
-                                     miopenLossReductionMode_t reduction,
+                                     const miopenTensorDescriptor_t inputDesc,
+                                     const miopenTensorDescriptor_t targetDesc,
+                                     const miopenTensorDescriptor_t weightDesc,
+                                     const miopenTensorDescriptor_t outputDesc,
+                                     const uint64_t ignore_index,
+                                     const miopenLossReductionMode_t reduction,
                                      size_t* sizeInBytes);
 
 /*! @brief Execute a NLLLoss forward layer
@@ -8245,7 +8233,7 @@ MIOPEN_EXPORT miopenStatus_t miopenNLLLossForward(miopenHandle_t handle,
                                                   const void* weight,
                                                   const miopenTensorDescriptor_t outputDesc,
                                                   void* output,
-                                                  const int32_t ignore_index,
+                                                  const uint64_t ignore_index,
                                                   const miopenLossReductionMode_t reduction);
 
 /*! @brief Execute a NLLLoss backward layer
@@ -8271,8 +8259,8 @@ MIOPEN_EXPORT miopenStatus_t miopenNLLLossBackward(miopenHandle_t handle,
                                                    const miopenTensorDescriptor_t weightDesc,
                                                    const void* weight,
                                                    const miopenTensorDescriptor_t outputGradDesc,
-                                                   void* output_grad,
-                                                   const int32_t ignore_index,
+                                                   const void* output_grad,
+                                                   const uint64_t ignore_index,
                                                    const miopenLossReductionMode_t reduction);
 /** @} */
 // CLOSEOUT LossFunction DOXYGEN GROUP

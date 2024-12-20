@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "miopen/miopen.h"
 #include <miopen/problem_description_base.hpp>
 #include <miopen/activ.hpp>
 #include <miopen/tensor.hpp>
@@ -43,7 +42,7 @@ struct ProblemDescription : ProblemDescriptionBase
                        const TensorDescriptor& targetDesc_,
                        const TensorDescriptor& weightDesc_,
                        const TensorDescriptor& outputDesc_,
-                       int32_t ignore_index_,
+                       uint64_t ignore_index_,
                        bool is_fwd_,
                        const miopenLossReductionMode_t reduction_)
         : inputDesc(inputDesc_),
@@ -55,6 +54,8 @@ struct ProblemDescription : ProblemDescriptionBase
           reduction(reduction_)
 
     {
+        IsValidLength();
+        IsSameType();
     }
 
     const TensorDescriptor& GetInputDesc() const { return inputDesc; }
@@ -107,20 +108,8 @@ struct ProblemDescription : ProblemDescriptionBase
 
     bool IsAllContiguous() const
     {
-        auto isContiguous = [](TensorDescriptor td) {
-            size_t s = 1;
-            for(int i = td.GetNumDims() - 1; i >= 0; --i)
-            {
-                if(s != td.GetStrides()[i])
-                {
-                    return false;
-                }
-                s *= td.GetLengths()[i];
-            }
-            return true;
-        };
-        return isContiguous(inputDesc) && isContiguous(targetDesc) && isContiguous(weightDesc) &&
-               isContiguous(outputDesc);
+        return inputDesc.IsContiguous() && targetDesc.IsContiguous() && weightDesc.IsContiguous() &&
+               outputDesc.IsContiguous();
     }
 
     NetworkConfig MakeNetworkConfig() const override;
@@ -131,7 +120,7 @@ private:
     TensorDescriptor weightDesc;
     TensorDescriptor outputDesc;
 
-    int32_t ignore_index;
+    uint64_t ignore_index;
     bool is_fwd;
     miopenLossReductionMode_t reduction;
 };

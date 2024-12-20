@@ -24,7 +24,6 @@
  *
  *******************************************************************************/
 
-#include <cstddef>
 #include <miopen/nllloss/problem_description.hpp>
 #include <miopen/names.hpp>
 
@@ -49,15 +48,7 @@ inline std::ostream& operator<<(std::ostream& os, const std::vector<size_t>& v)
 
 NetworkConfig ProblemDescription::MakeNetworkConfig() const
 {
-    auto input_size     = inputDesc.GetLengths();
-    auto input_strides  = inputDesc.GetStrides();
-    auto target_size    = targetDesc.GetLengths();
-    auto target_strides = targetDesc.GetStrides();
-    auto weight_size    = weightDesc.GetLengths();
-    auto weight_strides = weightDesc.GetStrides();
-    auto output_size    = outputDesc.GetLengths();
-    auto output_strides = outputDesc.GetStrides();
-
+    auto input_size  = inputDesc.GetLengths();
     auto input_dtype = inputDesc.GetType();
 
     std::ostringstream ss;
@@ -67,13 +58,7 @@ NetworkConfig ProblemDescription::MakeNetworkConfig() const
     ss << "reduction" << reduction;
     ss << "-input_dtype" << input_dtype;
     ss << "-dIs" << input_size;
-    ss << "-dOs" << output_size;
-    ss << "-dSi" << input_strides;
-    ss << "-dSo" << output_strides;
-    ss << "-dTs" << target_size;
-    ss << "-dTs" << target_strides;
-    ss << "-dWs" << weight_size;
-    ss << "-dWs" << weight_strides;
+    ss << "-c" << IsAllContiguous();
 
     return NetworkConfig{ss.str()};
 }
