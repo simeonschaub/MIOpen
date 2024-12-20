@@ -44,7 +44,7 @@ pipeline {
                         script {
                         echo "Packages Stage"
                         def utils = load "vars/utils.groovy"
-                        utils.buildHipClangJobAndReboot( package_build: "true", needs_gpu:true, needs_reboot:false, build_install: "true", needs_cleanup: "false")
+                        utils.buildHipClangJobAndReboot( package_build: "true", needs_gpu:true, needs_reboot:false, build_install: "true", needs_cleanup:false)
                         }
                     }
                 }
