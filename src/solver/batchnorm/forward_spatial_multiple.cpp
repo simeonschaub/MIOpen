@@ -67,8 +67,6 @@ bool BNFwdTrainIsCaseVariant2(const miopen::batchnorm::ProblemDescription& probl
 bool BnFwdTrainingSpatialMultiple::IsApplicable(
     const ExecutionContext& context, const miopen::batchnorm::ProblemDescription& problem) const
 {
-    if(!problem.IsLayoutNCHW())
-        return false;
     // if NCHW check if variant is 2 else false (for all data type)
     // update get solution to not change variant
     if(!BNFwdTrainIsCaseVariant2(problem))
