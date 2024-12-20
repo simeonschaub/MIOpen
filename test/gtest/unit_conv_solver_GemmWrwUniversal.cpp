@@ -71,7 +71,7 @@ TEST_P(GPU_UnitTestConvGemmUniversalSolverWrw_FP32, GemmWrwUniversal)
     this->RunTest(miopen::solver::conv::GemmWrwUniversal{});
 };
 
-TEST_P(CPU_UnitTestConvSolverDevApplicabilityWrw_NONE, GemmWrwUniversal)
+TEST_P(CPU_UnitTestConvGemmUniversalSolverDevApplicabilityWrw_NONE, GemmWrwUniversal)
 {
     this->RunTest(miopen::solver::conv::GemmWrwUniversal{});
 };
