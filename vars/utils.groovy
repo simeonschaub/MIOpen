@@ -310,7 +310,8 @@ def reboot(){
 def buildHipClangJobAndReboot(Map conf=[:]){
     try{
         buildHipClangJob(conf)
-        cleanWs()
+        if (conf.get("needs_cleanup", true)) {
+            cleanWs()
     }
     catch(e){
         echo "throwing error exception for the stage"
