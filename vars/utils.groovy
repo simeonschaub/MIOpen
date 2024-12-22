@@ -406,7 +406,7 @@ def RunPerfTest(Map conf=[:]){
                 sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/install/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/install/ --override ${params.PERF_TEST_OVERRRIDE}"
             }else
             {
-                sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/install/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/opt/rocm"
+                sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/install/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/install/"
             }
             //sh "export LD_LIBRARY_PATH=${ld_lib} && ${env.WORKSPACE}/install/bin/test_perf.py  --filename ${filename} --install_path ${env.WORKSPACE}/install/"
             jenkins_url = "${env.artifact_path}/${env.BRANCH_NAME}/lastSuccessfulBuild/artifact"
@@ -418,9 +418,9 @@ def RunPerfTest(Map conf=[:]){
                 currentBuild.result = 'SUCCESS'
             }
 
-            archiveArtifacts artifacts: "opt/rocm/bin/perf_results/${filename}", allowEmptyArchive: true, fingerprint: true
+            archiveArtifacts artifacts: "{env.WORKSPACE}/install/bin/perf_results/${filename}", allowEmptyArchive: true, fingerprint: true
             try{
-               sh "${env.WORKSPACE}/opt/rocm/bin/test_perf.py --compare_results --old_results_path ${env.WORKSPACE}/install/bin/old_results --filename ${filename}"
+               sh "${env.WORKSPACE}/install/bin/test_perf.py --compare_results --old_results_path ${env.WORKSPACE}/install/bin/old_results --filename ${filename}"
             }
             catch (Exception err){
                 currentBuild.result = 'SUCCESS'
