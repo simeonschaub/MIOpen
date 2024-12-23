@@ -273,7 +273,8 @@ __device__ void nlllossUnreducedForward5d(const T* __restrict__ input,
 
     FLOAT_ACCUM input_value = CVT_FLOAT2ACCUM(input[input_index]);
 
-    FLOAT_ACCUM val      = -w * input_value;
+    FLOAT_ACCUM val = -w * input_value;
+
     output[output_index] = CVT_ACCUM2FLOAT(val);
 }
 

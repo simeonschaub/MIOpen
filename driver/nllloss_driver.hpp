@@ -121,7 +121,7 @@ private:
     std::unique_ptr<GPUMem> out_grad_dev;
 
     std::vector<Tgpu> in;
-    std::vector<int> target;
+    std::vector<uint64_t> target;
     std::vector<Tgpu> weight;
     std::vector<Tgpu> out;
     std::vector<Tref> out_host;
@@ -189,14 +189,23 @@ int NLLLossDriver<Tgpu, Tref>::GetandSetData()
     if(reduction_param != "none" && reduction_param != "mean" && reduction_param != "sum")
         return miopenStatusInvalidValue;
 
-    input_sizes  = GetInputTensorDimsFromCmd();
-    ignore_index = static_cast<uint64_t>(inflags.GetValueInt("ignore_index"));
+    input_sizes = GetInputTensorDimsFromCmd();
 
     std::vector<int> in_len     = input_sizes;
     std::vector<int> target_len = in_len;
     target_len.erase(std::next(target_len.begin()));
     std::vector<int> weight_len = {in_len[1]};
     std::vector<int> out_len    = target_len;
+
+    int ignore_int = static_cast<uint64_t>(inflags.GetValueInt("ignore_index"));
+    if(ignore_int == -1)
+    {
+        ignore_index = static_cast<uint64_t>(in_len[1]);
+    }
+    else
+    {
+        ignore_index = static_cast<uint64_t>(ignore_int);
+    }
 
     auto in_strides     = GetStrides(in_len, 1);
     auto tar_strides    = GetStrides(target_len, inflags.GetValueInt("contiguous"));
@@ -297,7 +306,7 @@ int NLLLossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     uint32_t ctx = 0;
 
     in_dev        = std::unique_ptr<GPUMem>(new GPUMem(ctx, in_sz, sizeof(Tgpu)));
-    target_dev    = std::unique_ptr<GPUMem>(new GPUMem(ctx, target_sz, sizeof(int)));
+    target_dev    = std::unique_ptr<GPUMem>(new GPUMem(ctx, target_sz, sizeof(uint64_t)));
     weight_dev    = std::unique_ptr<GPUMem>(new GPUMem(ctx, weight_sz, sizeof(Tgpu)));
     out_dev       = std::unique_ptr<GPUMem>(new GPUMem(ctx, out_sz, sizeof(Tgpu)));
     workspace_dev = std::unique_ptr<GPUMem>(new GPUMem(ctx, ws_sizeInBytes, sizeof(std::byte)));
@@ -305,7 +314,7 @@ int NLLLossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
     out_grad_dev  = std::unique_ptr<GPUMem>(new GPUMem(ctx, out_sz, sizeof(Tgpu)));
 
     in             = std::vector<Tgpu>(in_sz, static_cast<Tgpu>(0));
-    target         = std::vector<int>(target_sz, static_cast<int>(0));
+    target         = std::vector<uint64_t>(target_sz, static_cast<uint64_t>(0));
     weight         = std::vector<Tgpu>(weight_sz, static_cast<Tgpu>(1));
     out            = std::vector<Tgpu>(out_sz, static_cast<Tgpu>(0));
     out_host       = std::vector<Tref>(out_sz, static_cast<Tref>(0));
@@ -326,7 +335,8 @@ int NLLLossDriver<Tgpu, Tref>::AllocateBuffersAndCopy()
 
     for(size_t i = 0; i < target_sz; i++)
     {
-        target[i] = prng::gen_A_to_B<int>(static_cast<int>(0), static_cast<int>(weight_sz - 1));
+        target[i] = prng::gen_A_to_B<uint64_t>(static_cast<uint64_t>(0),
+                                               static_cast<uint64_t>(weight_sz - 1));
     }
     status |= target_dev->ToGPU(q, target.data());
 

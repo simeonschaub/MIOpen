@@ -50,9 +50,9 @@ TEST_P(GPU_Nllloss_fwd_BFP16, Test)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full, GPU_Nllloss_fwd_FP32, testing::ValuesIn(NLLLossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(Full, GPU_Nllloss_fwd_FP16, testing::ValuesIn(NLLLossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(Full, GPU_Nllloss_fwd_BFP16, testing::ValuesIn(NLLLossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke, GPU_Nllloss_fwd_FP32, testing::ValuesIn(NLLLossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke, GPU_Nllloss_fwd_FP16, testing::ValuesIn(NLLLossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke, GPU_Nllloss_fwd_BFP16, testing::ValuesIn(NLLLossTestConfigs()));
 
 // BACKWARD TEST
 using GPU_Nllloss_bwd_FP32  = NLLLossTestBwd<float>;
@@ -77,6 +77,6 @@ TEST_P(GPU_Nllloss_bwd_BFP16, Test)
     Verify();
 };
 
-INSTANTIATE_TEST_SUITE_P(Full, GPU_Nllloss_bwd_FP32, testing::ValuesIn(NLLLossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(Full, GPU_Nllloss_bwd_FP16, testing::ValuesIn(NLLLossTestConfigs()));
-INSTANTIATE_TEST_SUITE_P(Full, GPU_Nllloss_bwd_BFP16, testing::ValuesIn(NLLLossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke, GPU_Nllloss_bwd_FP32, testing::ValuesIn(NLLLossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke, GPU_Nllloss_bwd_FP16, testing::ValuesIn(NLLLossTestConfigs()));
+INSTANTIATE_TEST_SUITE_P(Smoke, GPU_Nllloss_bwd_BFP16, testing::ValuesIn(NLLLossTestConfigs()));

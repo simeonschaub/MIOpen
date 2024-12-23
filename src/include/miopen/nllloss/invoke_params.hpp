@@ -73,7 +73,7 @@ struct BwdInvokeParams : public miopen::InvokeParams
     ConstData_t output_grad = nullptr;
 
     miopenLossReductionMode_t reduction;
-    uint64_t ignore_index = -1;
+    uint64_t ignore_index;
 
     std::size_t GetWorkspaceSize() const { return 0; }
     Data_t GetWorkspace() const { return nullptr; }
