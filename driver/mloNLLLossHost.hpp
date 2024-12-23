@@ -26,7 +26,7 @@
 #pragma once
 
 #include <miopen/tensor.hpp>
-#include <miopen/nllloss/utils.hpp>
+#include <miopen/tensor_view_utils.hpp>
 
 template <typename Tgpu, typename Tcheck>
 int32_t mloNLLLossUnreduceForwardRunHost(const miopenTensorDescriptor_t inputDesc,
@@ -96,9 +96,9 @@ int32_t mloNLLLossReduceForward5dRunHost(const miopenTensorDescriptor_t inputDes
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<5>(miopen::deref(inputDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto input_tv  = miopen::get_inner_expanded_tv<5>(miopen::deref(inputDesc));
+    auto target_tv = miopen::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
+    auto weight_tv = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {
@@ -265,10 +265,10 @@ int32_t mloNLLLossUnreduceForwardRunHost2d(const miopenTensorDescriptor_t inputD
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<2>(miopen::deref(inputDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
-    auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(outputDesc));
+    auto input_tv  = miopen::get_inner_expanded_tv<2>(miopen::deref(inputDesc));
+    auto target_tv = miopen::get_inner_expanded_tv<1>(miopen::deref(targetDesc));
+    auto weight_tv = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto output_tv = miopen::get_inner_expanded_tv<1>(miopen::deref(outputDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {
@@ -312,10 +312,10 @@ int32_t mloNLLLossUnreduceForwardRunHost4d(const miopenTensorDescriptor_t inputD
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(inputDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
-    auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(miopen::deref(outputDesc));
+    auto input_tv  = miopen::get_inner_expanded_tv<4>(miopen::deref(inputDesc));
+    auto target_tv = miopen::get_inner_expanded_tv<3>(miopen::deref(targetDesc));
+    auto weight_tv = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto output_tv = miopen::get_inner_expanded_tv<3>(miopen::deref(outputDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {
@@ -364,10 +364,10 @@ int32_t mloNLLLossUnreduceForwardRunHost5d(const miopenTensorDescriptor_t inputD
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_tv  = miopen::solver::nllloss::get_inner_expanded_tv<5>(miopen::deref(inputDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
-    auto output_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(outputDesc));
+    auto input_tv  = miopen::get_inner_expanded_tv<5>(miopen::deref(inputDesc));
+    auto target_tv = miopen::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
+    auto weight_tv = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto output_tv = miopen::get_inner_expanded_tv<4>(miopen::deref(outputDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {
@@ -418,12 +418,10 @@ int32_t mloNLLLossUnreduceBackwardRunHost2d(const miopenTensorDescriptor_t input
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_grad_tv =
-        miopen::solver::nllloss::get_inner_expanded_tv<2>(miopen::deref(inputGradDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
-    auto output_grad_tv =
-        miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(outputGradDesc));
+    auto input_grad_tv  = miopen::get_inner_expanded_tv<2>(miopen::deref(inputGradDesc));
+    auto target_tv      = miopen::get_inner_expanded_tv<1>(miopen::deref(targetDesc));
+    auto weight_tv      = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto output_grad_tv = miopen::get_inner_expanded_tv<1>(miopen::deref(outputGradDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {
@@ -469,11 +467,10 @@ int32_t mloNLLLossUnreduceBackwardRunHost4d(const miopenTensorDescriptor_t input
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(inputGradDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<3>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
-    auto output_grad_tv =
-        miopen::solver::nllloss::get_inner_expanded_tv<3>(miopen::deref(outputGradDesc));
+    auto input_tv       = miopen::get_inner_expanded_tv<4>(miopen::deref(inputGradDesc));
+    auto target_tv      = miopen::get_inner_expanded_tv<3>(miopen::deref(targetDesc));
+    auto weight_tv      = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto output_grad_tv = miopen::get_inner_expanded_tv<3>(miopen::deref(outputGradDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {
@@ -524,12 +521,10 @@ int32_t mloNLLLossUnreduceBackwardRunHost5d(const miopenTensorDescriptor_t input
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_grad_tv =
-        miopen::solver::nllloss::get_inner_expanded_tv<5>(miopen::deref(inputGradDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
-    auto output_grad_tv =
-        miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(outputGradDesc));
+    auto input_grad_tv  = miopen::get_inner_expanded_tv<5>(miopen::deref(inputGradDesc));
+    auto target_tv      = miopen::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
+    auto weight_tv      = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto output_grad_tv = miopen::get_inner_expanded_tv<4>(miopen::deref(outputGradDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {
@@ -581,10 +576,9 @@ int32_t mloNLLLossReduceBackwardRunHost2d(const miopenTensorDescriptor_t inputGr
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_grad_tv =
-        miopen::solver::nllloss::get_inner_expanded_tv<2>(miopen::deref(inputGradDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto input_grad_tv = miopen::get_inner_expanded_tv<2>(miopen::deref(inputGradDesc));
+    auto target_tv     = miopen::get_inner_expanded_tv<1>(miopen::deref(targetDesc));
+    auto weight_tv     = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {
@@ -627,10 +621,9 @@ int32_t mloNLLLossReduceBackwardRunHost5d(const miopenTensorDescriptor_t inputGr
     uint64_t numel = miopen::deref(targetDesc).GetElementSize();
     uint64_t C     = dims[1];
 
-    auto input_grad_tv =
-        miopen::solver::nllloss::get_inner_expanded_tv<5>(miopen::deref(inputGradDesc));
-    auto target_tv = miopen::solver::nllloss::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
-    auto weight_tv = miopen::solver::nllloss::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
+    auto input_grad_tv = miopen::get_inner_expanded_tv<5>(miopen::deref(inputGradDesc));
+    auto target_tv     = miopen::get_inner_expanded_tv<4>(miopen::deref(targetDesc));
+    auto weight_tv     = miopen::get_inner_expanded_tv<1>(miopen::deref(weightDesc));
 
     for(uint64_t i = 0; i < numel; i++)
     {

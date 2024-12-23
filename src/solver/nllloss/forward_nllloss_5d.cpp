@@ -34,7 +34,7 @@
 #include <miopen/datatype.hpp>
 #include <miopen/nllloss.hpp>
 #include <miopen/target_properties.hpp>
-#include <miopen/nllloss/utils.hpp>
+#include <miopen/tensor_view_utils.hpp>
 
 #define LOCAL_SIZE_NON_CON_FWD 1024
 #define LOCAL_SIZE_REDUCE_FWD 256
